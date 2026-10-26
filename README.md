@@ -40,4 +40,4 @@ Arranque: npm ci, configurar .env.local a partir de .env.example, npm run db:mig
 
 ## Primera publicación en Netlify
 
-Preparación local con Node 24, adaptador oficial Next.js/OpenNext y carga directa privada a Supabase. Consulta [NETLIFY-PRIMERA-PUBLICACION.md](docs/NETLIFY-PRIMERA-PUBLICACION.md). La migración 011 está preparada y probada localmente, pero no aplicada remotamente; se necesita antes de utilizar el nuevo formulario de fotos. No se ha desplegado ni cambiado producción.
+Sitio existente: https://splendorous-gumdrop-81a528.netlify.app. Conexión al Supabase original configurada, Next.js Runtime oficial y Function Node 24 comprobados. Consulta [PUBLICACION_NETLIFY.md](docs/PUBLICACION_NETLIFY.md) para evidencias y pendientes de autenticación real. La migración 011 continúa sin aplicar y se requiere antes de utilizar las nuevas cargas de fotos.

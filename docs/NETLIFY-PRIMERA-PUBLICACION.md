@@ -1,6 +1,6 @@
 # Primera publicación en Netlify Free
 
-Fecha: 26 de octubre de 2026. Estado: preparado localmente; SIN despliegue, cambios de Auth ni migraciones remotas.
+Fecha: 26 de octubre de 2026. Actualización: sitio existente publicado y conexión configurada; ver [PUBLICACION_NETLIFY.md](PUBLICACION_NETLIFY.md) para resultados y pendientes actuales. El resto conserva la guía y evidencia de preparación inicial. No se aplicó 011.
 
 ## Configuración elegida
 

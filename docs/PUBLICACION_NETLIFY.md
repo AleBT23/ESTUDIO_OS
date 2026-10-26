@@ -12,7 +12,7 @@ Se configuraron NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY 
 
 El primer intento de API con post-processing fue rechazado con 403; se utilizó post_processing, el valor real de la implementación oficial de CLI. Configuración final comprobada por lectura independiente.
 
-Netlify también marcaba el sitio como Private: una solicitud sin sesión Netlify recibía 401 antes de llegar a Next. El paso Make public está pendiente de autorización específica porque cambia el alcance de acceso a la URL; Supabase Auth y RLS permanecen activos. No se cambió el plan.
+Netlify también marcaba el sitio como Private: una solicitud sin sesión Netlify recibía 401 antes de llegar a Next. El propietario autorizó expresamente Make public y se ejecutó; Netlify confirmó «Your project is public». La URL ya responde sin sesión Netlify. Supabase Auth y RLS permanecen activos y no se cambió el plan.
 
 ## Verificación antes del nuevo despliegue
 
@@ -22,10 +22,23 @@ Netlify también marcaba el sitio como Private: una solicitud sin sesión Netlif
 - Supabase Auth /settings devuelve 200 con email habilitado. REST rechaza acceso sin sesión.
 - Preflight SQL estrictamente READ ONLY: diez migraciones, 011 ausente, buckets privados y huellas de siete tablas de negocio guardadas localmente para comparación final.
 
-## Pendientes de comprobación real
+## Publicación real y pruebas
 
-Publicar el nuevo build con las variables, resolver la restricción Private si se autoriza y comprobar login real, cookies/sesión y lecturas de proyectos/cotizaciones del propietario. No se dispone de la contraseña del usuario y no se debe pedir en el chat ni generar una sesión administrativa para sustituir su login.
+Commit e9534aae88b01005bcfa6686c3def75b36b79756 enviado a GitHub/main. Deploy 6adf9188c1c5c3c5e2b153e3 confirmado ready y published por la API y la interfaz de Netlify; adaptador Next.js Runtime automático, una Function y una Edge Function. Metadatos de la Function confirman nodejs24.x. El registro de publicación registra ocho entradas sin error y Site is live; las etapas de build aparecen Skipped en el detalle y no se obtuvo un registro remoto completo del compilador. La compilación local de producción sí pasó.
+
+- Once comprobaciones HTTP reales sin cookies: /acceso muestra formulario y /configuracion ya no indica Conexión pendiente. Los destinos con requireContext redirigen a /acceso, incluso mediante streaming de Next con HTTP 200. PDF/metadatos rechazan con 403 y fotos con 401, todas las respuestas comprobadas private, no-store.
+- Las páginas generales /, /comercial, /proyectos y /administracion conservan sus carcasas públicas vacías previstas en el código. Ninguna contiene IDs de los registros existentes comprobados por lectura administrativa; no se abrió acceso a las filas. El primer arnés esperaba 307 para esas carcasas y se corrigió contra la implementación real, sin cambiar rutas ni seguridad.
+- 52 JavaScript públicos inspeccionados: URL/clave publicable originales incorporadas correctamente, sin referencia al Supabase de recuperación ni credenciales privilegiadas conocidas. No se imprimieron sus valores. NEXT_PUBLIC es configuración pública de navegador por diseño; la autorización sigue dependiendo de identidad y RLS.
+- 38 entradas de ejecución de la Function consultadas en la ventana comprobada, cero entradas error/fatal. Esto no garantiza ausencia de fallos futuros.
+- Conteos y hashes de projects, project_observations, project_photos, clients, quotes, quote_versions y payments idénticos al preflight (11:52 de Ciudad de México). No se guardaron, emitieron ni eliminaron registros para probar.
+
+## Bloqueos que requieren al propietario
+
+El formulario real está abierto y se solicitó iniciar sesión con el correo/contraseña habituales directamente en la URL. Aún no se recibió confirmación ni se observó una sesión autenticada: login completo, persistencia al recargar, lecturas del propietario y PDF autenticado continúan pendientes. No se dispone de la contraseña del usuario y no se pide en el chat ni se genera una sesión administrativa para sustituir su login.
 
 La migración 011 sigue SIN aplicar; las nuevas fotografías necesitan autorización SQL independiente. No intentar reparar esa ausencia con claves privilegiadas, políticas abiertas o ejecución automática de migraciones. No se crearán observaciones/cobros/cotizaciones para probar sobre los datos existentes.
 
 La configuración Auth Site URL no es necesaria para el flujo actual correo/contraseña sin redirección externa; revisar su valor si posteriormente se implementan enlaces de correo/OAuth. No se modificó Auth de forma preventiva.
+
+
+El cierre documental se envía con [skip netlify] para evitar otro despliegue por cambios solo de documentación; el código funcional publicado sigue siendo e9534aa. No se deshabilitaron builds ni auto-publicación. Evidencias privadas (sin valores de claves) en .local/netlify-*.json y capturas de acceso en la carpeta de visualizaciones de esta conversación.
