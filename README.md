@@ -36,8 +36,8 @@ Los módulos están conectados a datos persistentes, probados, navegables y docu
 
 Código en src/, migraciones aditivas en supabase/migrations y pruebas en tests/. Consulta [estado real](docs/ESTADO.md), [guía de arranque](docs/GUIA-DESARROLLO.md), [auditoría del legado](docs/AUDITORIA-LEGACY.md) y [trazabilidad completa](docs/TRAZABILIDAD.md).
 
-Arranque: npm ci, configurar .env.local a partir de .env.example, npm run db:migrate, npm run dev. Sin Supabase la interfaz muestra conexión pendiente; no simula datos guardados. No se ha desplegado ni migrado información real. El alcance integral continúa en desarrollo.
+Arranque: npm ci, configurar .env.local a partir de .env.example, npm run db:migrate, npm run dev. Sin Supabase la interfaz muestra conexión pendiente; no simula datos guardados. El sitio está conectado al Supabase original y publicado en Netlify; consulta el estado verificado y las limitaciones en docs/PUBLICACION_NETLIFY.md. El alcance integral continúa en desarrollo.
 
 ## Primera publicación en Netlify
 
-Sitio existente: https://splendorous-gumdrop-81a528.netlify.app. Conexión al Supabase original configurada, Next.js Runtime oficial y Function Node 24 comprobados. Consulta [PUBLICACION_NETLIFY.md](docs/PUBLICACION_NETLIFY.md) para evidencias y pendientes de autenticación real. La migración 011 continúa sin aplicar y se requiere antes de utilizar las nuevas cargas de fotos.
+Sitio existente: https://splendorous-gumdrop-81a528.netlify.app. Conexión al Supabase original configurada, Next.js Runtime oficial y Function Node 24 comprobados. Consulta [PUBLICACION_NETLIFY.md](docs/PUBLICACION_NETLIFY.md) para evidencias de autenticación, lectura de datos y PDF real verificados. La migración 011 continúa sin aplicar y se requiere antes de utilizar las nuevas cargas de fotos.

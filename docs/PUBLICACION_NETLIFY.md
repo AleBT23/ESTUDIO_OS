@@ -32,7 +32,7 @@ Commit e9534aae88b01005bcfa6686c3def75b36b79756 enviado a GitHub/main. Deploy 6a
 - 38 entradas de ejecución de la Function consultadas en la ventana comprobada, cero entradas error/fatal. Esto no garantiza ausencia de fallos futuros.
 - Conteos y hashes de projects, project_observations, project_photos, clients, quotes, quote_versions y payments idénticos al preflight (11:52 de Ciudad de México). No se guardaron, emitieron ni eliminaron registros para probar.
 
-## Bloqueos que requieren al propietario
+## Autenticación real y pendientes
 
 El propietario confirmó el inicio de sesión y se verificó en el navegador real. La sesión persistió tras recargar y navegar; Configuración muestra los tres pasos Listo y rol owner. Se cargaron los dos proyectos y clientes existentes, un expediente con notas y cobros, y la cotización guardada. No se crearon registros ni se pulsaron acciones de edición, emisión o cobro. No se extrajeron cookies ni se solicitó/registró la contraseña. No se probó logout ni una expiración forzada del JWT.
 
@@ -44,11 +44,18 @@ PDFKit 0.20.1 usa createRequire(import.meta.url) y #standard-fonts/Helvetica par
 
 Se añadió el glob node_modules/pdfkit/js/standard-fonts/**/*.cjs al tracing de Next y a included_files de Functions. Se conservan Poppins, Noto, membrete, cálculos, importes y archivos anteriores. El postbuild scripts/check-pdf-packaging.mjs verifica ambas rutas, resuelve las 14 fuentes por el contrato público de PDFKit y genera un PDF con solo el PDFKit trazado en un directorio temporal aislado. No carga .env ni utiliza Supabase.
 
-Lint y TypeScript correctos; 117 pruebas correctas, incluyendo ocho de diagnóstico sin mensajes/credenciales/rutas privadas. Guard postbuild correcto. La comprobación del PDF remoto reparado sigue pendiente de la nueva publicación.
+Lint y TypeScript correctos; 117 pruebas correctas, incluyendo ocho de diagnóstico sin mensajes/credenciales/rutas privadas. Guard postbuild correcto. Corrección publicada como 9dec635a9357275e24d9fcbc9d201824d5657244, deploy 6adfa78c9df8a44f788f5d71, confirmado ready/published.
+
+La vista previa autenticada de una cotización existente se descargó del sitio real y se reabrió con PDF-lib/PDF.js: 505,480 bytes, siete páginas de 612 × 792 puntos (carta), marca BORRADOR, Poppins Regular/Medium/SemiBold incrustadas e imagen del membrete en las siete páginas. No se emitió, subió ni guardó una versión en Supabase. El visor/descargador de navegador tardó más de lo previsto; la comprobación válida es la del archivo descargado y sus bytes, no una pantalla en blanco del plugin PDF.
+
+El mismo endpoint real consultado sin cookies devuelve 403 y private, no-store después de la generación autenticada. Configuración sigue mostrando tres pasos Listo y owner tras navegación y publicaciones. Se conservaron 26/26 conteos y hashes de tablas públicas respecto al baseline de la inspección autenticada. Diez migraciones, 011 ausente, 54 políticas y buckets privados. Evidencias en .local/netlify-real-pdf-verification.json y .local/netlify-auth-final-integrity.json; archivos privados excluidos de Git.
 
 La migración 011 sigue SIN aplicar; las nuevas fotografías necesitan autorización SQL independiente. No intentar reparar esa ausencia con claves privilegiadas, políticas abiertas o ejecución automática de migraciones. No se crearán observaciones/cobros/cotizaciones para probar sobre los datos existentes.
 
 La configuración Auth Site URL no es necesaria para el flujo actual correo/contraseña sin redirección externa; revisar su valor si posteriormente se implementan enlaces de correo/OAuth. No se modificó Auth de forma preventiva.
 
 
-El cierre documental se envía con [skip netlify] para evitar otro despliegue por cambios solo de documentación; la primera reparación de conexión se publicó como e9534aa; el diagnóstico PDF posterior como 48f9392. No se deshabilitaron builds ni auto-publicación. Evidencias privadas (sin valores de claves) en .local/netlify-*.json y capturas de acceso en la carpeta de visualizaciones de esta conversación.
+El cierre documental se envía con [skip netlify] para evitar otro despliegue por cambios solo de documentación; la primera reparación de conexión se publicó como e9534aa, el diagnóstico PDF como 48f9392 y la reparación verificada de PDF como 9dec635. No se deshabilitaron builds ni auto-publicación. Evidencias privadas (sin valores de claves) en .local/netlify-*.json y capturas de acceso en la carpeta de visualizaciones de esta conversación.
+
+
+Limitaciones: 011 necesita autorización específica para habilitar nuevas fotografías; no se probó su flujo real ni se ejecutó SQL. No se creó un documento independiente ficticio en producción; su renderer conserva las pruebas locales y el chequeo de trazado de ambas rutas. No se forzó expiración JWT/logout ni se ensayaron iPhone/iPad físicos. No se cambió de plan ni se utilizó el proyecto de recuperación; tampoco se modificaron datos/cálculos existentes. El servidor temporal 127.0.0.1:3107 fue detenido; el servidor habitual no se alteró.
