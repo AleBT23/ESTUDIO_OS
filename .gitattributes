@@ -1,0 +1,21 @@
+# Impide incluir material local/sensible en git archive.
+.env* export-ignore
+.env.example -export-ignore
+.local export-ignore
+.audit export-ignore
+legacy export-ignore
+backups export-ignore
+backup export-ignore
+respaldos export-ignore
+certs export-ignore
+certificates export-ignore
+tests/artifacts export-ignore
+output export-ignore
+*.crt export-ignore
+*.pem export-ignore
+*.key export-ignore
+*.pfx export-ignore
+*.p12 export-ignore
+*.dump export-ignore
+*.backup export-ignore
+*.bak export-ignore

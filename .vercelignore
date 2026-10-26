@@ -1,0 +1,16 @@
+# Deployment payload only; never modifies development files.
+.git/
+node_modules/
+.next/
+.env*
+!.env.example
+.local/
+.audit/
+legacy/
+coverage/
+test-results/
+playwright-report/
+tests/artifacts/
+output/
+*.tsbuildinfo
+*.log

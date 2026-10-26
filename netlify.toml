@@ -1,0 +1,14 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "24"
+  APP_ENV = "production"
+
+# Next.js 16: adaptador oficial OpenNext de Netlify, aplicado automáticamente.
+# No fijar el plugin legacy @netlify/plugin-nextjs ni usar exportación estática.
+# No ejecutar migraciones/seed durante instalación o build.
+[functions]
+  included_files = ["assets/fonts/**", "branding/membretes/MEMBRETA_CARTA_AT.png"]
+  external_node_modules = ["sharp", "@react-pdf/renderer"]
