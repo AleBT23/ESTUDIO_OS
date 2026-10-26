@@ -1,3 +1,4 @@
+import { pdfFailureDetails } from "@/modules/documents/pdf-diagnostics";
 import { z } from "zod";
 import { getContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
@@ -14,10 +15,11 @@ export async function GET(
   const { id } = await params;
   if (!z.uuid().safeParse(id).success)
     return new Response("Referencia inválida", { status: 400 });
+  let stage: "snapshot" | "render" = "snapshot";
   try {
-    const pdf = await new StandaloneRenderer().render(
-      await standalonePreview(id),
-    );
+    const snapshot = await standalonePreview(id);
+    stage = "render";
+    const pdf = await new StandaloneRenderer().render(snapshot);
     return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",
@@ -27,7 +29,8 @@ export async function GET(
         "Content-Security-Policy": "frame-ancestors 'self'",
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("STUDIO_PDF_PREVIEW_FAILED", pdfFailureDetails(error, stage));
     return new Response(
       "No se pudo previsualizar. Revisa el documento guardado y los datos requeridos por sus variables.",
       { status: 422 },

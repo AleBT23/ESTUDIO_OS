@@ -34,7 +34,9 @@ Commit e9534aae88b01005bcfa6686c3def75b36b79756 enviado a GitHub/main. Deploy 6a
 
 ## Bloqueos que requieren al propietario
 
-El formulario real está abierto y se solicitó iniciar sesión con el correo/contraseña habituales directamente en la URL. Aún no se recibió confirmación ni se observó una sesión autenticada: login completo, persistencia al recargar, lecturas del propietario y PDF autenticado continúan pendientes. No se dispone de la contraseña del usuario y no se pide en el chat ni se genera una sesión administrativa para sustituir su login.
+El propietario confirmó el inicio de sesión y se verificó en el navegador real. La sesión persistió tras recargar y navegar; Configuración muestra los tres pasos Listo y rol owner. Se cargaron los dos proyectos y clientes existentes, un expediente con notas y cobros, y la cotización guardada. No se crearon registros ni se pulsaron acciones de edición, emisión o cobro. No se extrajeron cookies ni se solicitó/registró la contraseña. No se probó logout ni una expiración forzada del JWT.
+
+La vista previa PDF autenticada devolvió el error genérico de generación. La misma cotización, leída mediante transacción READ ONLY, pasó el esquema y produjo PDF en el renderizador local. Se añadió diagnóstico seguro de etapa/código/recurso y frames de archivos sin mensaje bruto, datos de cliente, tokens ni rutas privadas; pruebas de privacidad y regresiones PDF correctas. La corrección del fallo de producción sigue en curso; no afirmar todavía PDF operativo.
 
 La migración 011 sigue SIN aplicar; las nuevas fotografías necesitan autorización SQL independiente. No intentar reparar esa ausencia con claves privilegiadas, políticas abiertas o ejecución automática de migraciones. No se crearán observaciones/cobros/cotizaciones para probar sobre los datos existentes.
 

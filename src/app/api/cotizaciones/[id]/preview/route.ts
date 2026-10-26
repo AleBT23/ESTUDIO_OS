@@ -1,3 +1,4 @@
+import { pdfFailureDetails } from "@/modules/documents/pdf-diagnostics";
 import { z } from "zod";
 import { getContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
@@ -25,11 +26,13 @@ export async function GET(
   const raw = new URL(request.url).searchParams.get("options");
   if (raw && raw.length > 5000)
     return new Response("Opciones demasiado extensas", { status: 400 });
+  let stage: "snapshot" | "render" = "snapshot";
   try {
     const options = documentOptionsSchema.parse(
       raw ? JSON.parse(raw) : defaultDocumentOptions,
     );
     const snapshot = await previewSnapshot(id, options);
+    stage = "render";
     const pdf = await new ReactPdfRenderer().render(snapshot);
     return new Response(new Uint8Array(pdf), {
       headers: {
@@ -40,7 +43,8 @@ export async function GET(
         "Content-Security-Policy": "frame-ancestors 'self'",
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("QUOTE_PDF_PREVIEW_FAILED", pdfFailureDetails(error, stage));
     return new Response(
       "No se pudo generar la vista previa. Revisa la propuesta guardada.",
       { status: 422 },
