@@ -10,5 +10,5 @@
 # No fijar el plugin legacy @netlify/plugin-nextjs ni usar exportación estática.
 # No ejecutar migraciones/seed durante instalación o build.
 [functions]
-  included_files = ["assets/fonts/**", "branding/membretes/MEMBRETA_CARTA_AT.png"]
+  included_files = ["assets/fonts/**", "branding/membretes/MEMBRETA_CARTA_AT.png", "node_modules/pdfkit/js/standard-fonts/**/*.cjs"]
   external_node_modules = ["sharp", "@react-pdf/renderer"]

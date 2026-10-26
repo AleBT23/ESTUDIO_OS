@@ -4,7 +4,7 @@ const config: NextConfig = {
   experimental: { serverActions: { bodySizeLimit: "12mb" } },
   serverExternalPackages: ["@react-pdf/renderer"],
   outputFileTracingIncludes: {
-    "/*": ["./assets/fonts/**/*", "./branding/membretes/MEMBRETA_CARTA_AT.png"],
+    "/*": ["./assets/fonts/**/*", "./branding/membretes/MEMBRETA_CARTA_AT.png", "./node_modules/pdfkit/js/standard-fonts/**/*.cjs"],
   },
   async headers() {
     return [

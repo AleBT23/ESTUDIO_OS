@@ -36,11 +36,19 @@ Commit e9534aae88b01005bcfa6686c3def75b36b79756 enviado a GitHub/main. Deploy 6a
 
 El propietario confirmó el inicio de sesión y se verificó en el navegador real. La sesión persistió tras recargar y navegar; Configuración muestra los tres pasos Listo y rol owner. Se cargaron los dos proyectos y clientes existentes, un expediente con notas y cobros, y la cotización guardada. No se crearon registros ni se pulsaron acciones de edición, emisión o cobro. No se extrajeron cookies ni se solicitó/registró la contraseña. No se probó logout ni una expiración forzada del JWT.
 
-La vista previa PDF autenticada devolvió el error genérico de generación. La misma cotización, leída mediante transacción READ ONLY, pasó el esquema y produjo PDF en el renderizador local. Se añadió diagnóstico seguro de etapa/código/recurso y frames de archivos sin mensaje bruto, datos de cliente, tokens ni rutas privadas; pruebas de privacidad y regresiones PDF correctas. La corrección del fallo de producción sigue en curso; no afirmar todavía PDF operativo.
+La vista previa PDF autenticada devolvió el error genérico de generación. La misma cotización, leída mediante transacción READ ONLY, pasó el esquema y produjo PDF en el renderizador local. Se añadió diagnóstico seguro de etapa/código/recurso y frames de archivos sin mensaje bruto, datos de cliente, tokens ni rutas privadas; pruebas de privacidad y regresiones PDF correctas. El registro seguro confirmó MODULE_NOT_FOUND durante render.
+
+### Corrección del empaquetado PDF
+
+PDFKit 0.20.1 usa createRequire(import.meta.url) y #standard-fonts/Helvetica para cargar js/standard-fonts/Helvetica.cjs. El trace real de Next incluía solo las variantes .mjs; el paquete aislado con esos mismos archivos reprodujo MODULE_NOT_FOUND. Al añadir las 15 piezas CJS (14 fuentes y un chunk compartido) se generó el PDF sintético correctamente.
+
+Se añadió el glob node_modules/pdfkit/js/standard-fonts/**/*.cjs al tracing de Next y a included_files de Functions. Se conservan Poppins, Noto, membrete, cálculos, importes y archivos anteriores. El postbuild scripts/check-pdf-packaging.mjs verifica ambas rutas, resuelve las 14 fuentes por el contrato público de PDFKit y genera un PDF con solo el PDFKit trazado en un directorio temporal aislado. No carga .env ni utiliza Supabase.
+
+Lint y TypeScript correctos; 117 pruebas correctas, incluyendo ocho de diagnóstico sin mensajes/credenciales/rutas privadas. Guard postbuild correcto. La comprobación del PDF remoto reparado sigue pendiente de la nueva publicación.
 
 La migración 011 sigue SIN aplicar; las nuevas fotografías necesitan autorización SQL independiente. No intentar reparar esa ausencia con claves privilegiadas, políticas abiertas o ejecución automática de migraciones. No se crearán observaciones/cobros/cotizaciones para probar sobre los datos existentes.
 
 La configuración Auth Site URL no es necesaria para el flujo actual correo/contraseña sin redirección externa; revisar su valor si posteriormente se implementan enlaces de correo/OAuth. No se modificó Auth de forma preventiva.
 
 
-El cierre documental se envía con [skip netlify] para evitar otro despliegue por cambios solo de documentación; el código funcional publicado sigue siendo e9534aa. No se deshabilitaron builds ni auto-publicación. Evidencias privadas (sin valores de claves) en .local/netlify-*.json y capturas de acceso en la carpeta de visualizaciones de esta conversación.
+El cierre documental se envía con [skip netlify] para evitar otro despliegue por cambios solo de documentación; la primera reparación de conexión se publicó como e9534aa; el diagnóstico PDF posterior como 48f9392. No se deshabilitaron builds ni auto-publicación. Evidencias privadas (sin valores de claves) en .local/netlify-*.json y capturas de acceso en la carpeta de visualizaciones de esta conversación.

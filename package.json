@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --webpack --hostname 127.0.0.1",
-    "build": "next build --webpack",
+    "build": "next build --webpack && npm run check:pdf-package",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
@@ -17,7 +17,8 @@
     "audit:legacy": "node scripts/audit-legacy.mjs",
     "dev:lan": "next dev --webpack --hostname 0.0.0.0",
     "start:lan": "next start --hostname 0.0.0.0",
-    "check:publish": "node scripts/check-publish-safety.mjs"
+    "check:publish": "node scripts/check-publish-safety.mjs",
+    "check:pdf-package": "node scripts/check-pdf-packaging.mjs"
   },
   "dependencies": {
     "@fontsource/noto-sans": "^5.3.0",
