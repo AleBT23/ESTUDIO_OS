@@ -200,3 +200,11 @@ Solicitud de arquitectura híbrida recibida. Inspección del estado actual y pre
 - Storage: dos buckets privados restaurados e idénticos; cero objetos en origen/snapshot/destino. No había archivos binarios que descargar o probar. Con futuros archivos, añadir respaldo de bytes independiente del dump SQL.
 - Certificados recovery-verification.json y final-checks.json en ambas copias. Comparación final de origen READ ONLY a 17:07:45Z: ninguna tabla cambió respecto al snapshot; 011 ausente y diez checksums válidos. No se cambió .env.local, Auth/URLs ni aplicación de producción. No hubo despliegue ni escrituras en origen.
 - Procedimiento, limitaciones, incidencias y conservación separada de clave: docs/RESPALDO_Y_RECUPERACION_SUPABASE.md. SQL consolidado y kit de operadores cifrados conservados en ambas copias. El bloqueo por respaldo recuperable queda levantado; **011 sigue SIN aplicar**, pendiente autorización explícita y preflight final. No se repitieron build/lint/suite de aplicación porque no cambió su código; continúan las 109 pruebas anteriores, además de las verificaciones reales de recuperación.
+
+
+## Reparación de configuración Netlify — 26 de octubre de 2026
+
+- Sitio existente splendorous-gumdrop-81a528, repo existente AleBT23/ESTUDIO_OS/main, commit inicial publicado dd5a9a9. Causa comprobada: cero variables de entorno y por tanto isConfigured() false. Dos variables públicas del Supabase ORIGINAL y APP_ENV=production configuradas/verificadas, contexto production, ámbitos Free incluidos Builds/Functions. Sin credenciales privilegiadas, archivos .env ni conexión de recuperación enviados.
+- CLI oficial autenticada y enlazada al ID existente; sin nuevos proyectos/repositorios, plan de pago ni cambios de PATH. Corrección acotada de ESLint para ignorar .local/.netlify. Lint, typecheck sin incremental, build y 109 pruebas correctos.
+- Segundo bloqueo: sitio Private de Netlify responde 401 sin su sesión, previo a Next. Confirmación específica solicitada para Make public conservando Supabase/RLS. Nuevo despliegue y login real pendientes al redactar este registro.
+- Consulta de Supabase READ ONLY confirma 011 ausente y buckets privados; huellas de tablas de negocio guardadas solo en .local. No se aplicó SQL ni se modificaron datos. Las nuevas fotos siguen bloqueadas por 011 pendiente. Seguimiento: docs/PUBLICACION_NETLIFY.md.
