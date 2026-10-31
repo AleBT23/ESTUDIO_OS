@@ -47,7 +47,7 @@ Font.register({
 const styles = StyleSheet.create({
   page: {
     fontFamily: "EstudioPoppins",
-    fontSize: 11,
+    fontSize: 9,
     color: "#182624",
     lineHeight: 1.5,
   },
@@ -60,73 +60,73 @@ const styles = StyleSheet.create({
     objectFit: "contain",
   },
   eyebrow: {
-    fontSize: 9,
+    fontSize: 8,
     color: "#687768",
     letterSpacing: 1.3,
     marginBottom: 14,
   },
-  title: { fontSize: 24, fontWeight: 600, lineHeight: 1.25, marginBottom: 18 },
-  subtitle: { fontSize: 16, fontWeight: 500, marginBottom: 12 },
+  title: { fontSize: 18, fontWeight: 600, lineHeight: 1.25, marginBottom: 18 },
+  subtitle: { fontSize: 12, fontWeight: 500, marginBottom: 8 },
   text: { marginBottom: 12 },
-  small: { fontSize: 9, color: "#64716b" },
+  small: { fontSize: 8, color: "#64716b" },
   row: {
-    flexDirection: "row",
+    flexDirection: "column",
     borderBottom: "1 solid #e3e8df",
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   tableHeader: {
     position: "absolute",
     flexDirection: "row",
-    backgroundColor: "#435e46",
-    color: "#ffffff",
-    paddingVertical: 8,
-    fontSize: 9,
+    backgroundColor: "#eef2ed",
+    color: "#304738",
+    paddingVertical: 7,
+    fontSize: 8,
   },
   tableTitle: {
     position: "absolute",
     fontWeight: 600,
-    fontSize: 24,
+    fontSize: 18,
     lineHeight: 1.25,
   },
-  code: { width: "8%", fontSize: 9, paddingRight: 5 },
-  desc: { width: "35%", paddingRight: 8 },
-  unit: { width: "8%", fontSize: 9, paddingRight: 4 },
-  qty: { width: "9%", textAlign: "right", paddingRight: 7 },
-  price: { width: "20%", textAlign: "right", paddingRight: 7 },
-  amount: { width: "20%", textAlign: "right" },
-  totals: { marginTop: 18, marginLeft: "30%", paddingTop: 10 },
+  code: { width: "8%", fontSize: 8, paddingRight: 5 },
+  desc: { width: "42%", paddingRight: 8 },
+  unit: { width: "8%", fontSize: 8, paddingRight: 4 },
+  qty: { width: "8%", textAlign: "right", paddingRight: 7 },
+  price: { width: "17%", textAlign: "right", paddingRight: 7 },
+  amount: { width: "17%", textAlign: "right" },
+  totals: { marginTop: 12, marginLeft: "30%", paddingTop: 4 },
   totalRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 6,
-    fontSize: 11,
+    marginBottom: 3,
+    fontSize: 9,
   },
   grand: {
     fontWeight: 600,
-    fontSize: 16,
+    fontSize: 12,
     borderTop: "1 solid #435e46",
-    paddingTop: 10,
-    marginTop: 5,
+    paddingTop: 6,
+    marginTop: 3,
   },
   footer: {
     position: "absolute",
-    fontSize: 9,
+    fontSize: 8,
     color: "#64716b",
     textAlign: "right",
   },
   signature: {
     borderTop: "1 solid #182624",
-    marginTop: 70,
+    marginTop: 32,
     paddingTop: 8,
-    width: "75%",
+    width: "47%",
   },
 });
 // Medición con la misma fuente incrustada: limita cada continuación al área útil.
 const measureFont = fontkit.create(
   readFileSync(path.join(process.cwd(), "assets/fonts/Poppins-Regular.ttf")),
 );
-function lines(text: string, width: number, size = 11): string[] {
+function lines(text: string, width: number, size = 9): string[] {
   const measure = (value: string) =>
     (measureFont
       .layout(value)
@@ -154,15 +154,57 @@ function lines(text: string, width: number, size = 11): string[] {
   }
   return result.length ? result : [""];
 }
-function budgetLayout(s: QuoteSnapshot) {
+// Remove only an identical heading paragraph, never deduplicate actual line items.
+function itemDescription(name: string, description: string) {
+  const normalize = (text: string) =>
+    text
+      .normalize("NFC")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLocaleLowerCase("es-MX");
+  const paragraphs = description.trim().split(/\r?\n/);
+  if (normalize(paragraphs[0] || "") === normalize(name)) paragraphs.shift();
+  return paragraphs.join("\n").trim();
+}
+function inlineScope(s: QuoteSnapshot) {
+  const i = s.options.sections.indexOf("budget");
+  return (
+    s.options.sections[i - 1] === "scope" &&
+    lines(
+      s.quote.notes,
+      612 - pt(s.options.margins.left + s.options.margins.right),
+    ).length <= 8
+  );
+}
+function budgetLayout(s: QuoteSnapshot, first = false) {
   const width = 612 - pt(s.options.margins.left + s.options.margins.right);
-  const client = lines("Cliente: " + s.client.name, width - 4, 9);
-  const project = lines("Proyecto: " + s.quote.name, width - 4, 9);
+  const client = lines("Cliente: " + s.client.name, width - 4, 8);
+  const project = lines("Proyecto: " + s.quote.name, width - 4, 8);
   const metaHeight =
-    (client.length + project.length) * 13.5 +
-    (lines(`${s.folio} · ${s.organization.name}`, width - 4, 9).length - 1) *
-      13.5;
-  return { width, client, project, headerHeight: 64 + metaHeight + 20 + 38 };
+    (client.length + project.length) * 12 +
+    (lines(`${s.folio} · ${s.organization.name}`, width - 4, 8).length - 1) *
+      12;
+  const scope = first && inlineScope(s) ? s.quote.notes.trim() : "";
+  const contact =
+    first && inlineScope(s)
+      ? [s.client.email, s.client.phone, s.client.address]
+          .filter(Boolean)
+          .join(" · ")
+      : "";
+  const contactHeight = contact
+    ? lines(contact, width - 4, 8).length * 12 + 4
+    : 0;
+  const scopeHeight =
+    (scope ? 22 + lines(scope, width - 4).length * 13.5 : 0) + contactHeight;
+  return {
+    width,
+    client,
+    project,
+    scope,
+    contact,
+    metaHeight,
+    headerHeight: 100 + metaHeight + scopeHeight,
+  };
 }
 function chunks(
   text: string,
@@ -188,48 +230,59 @@ type BudgetRow = {
 };
 function paginateBudget(s: QuoteSnapshot) {
   const layout = budgetLayout(s);
-  const capacity =
+  const pageCapacity = (first: boolean) =>
     792 -
     pt(s.options.margins.top + s.options.margins.bottom) -
-    layout.headerHeight;
+    budgetLayout(s, first).headerHeight;
+  let capacity = pageCapacity(true);
   const pages: {
     rows: BudgetRow[];
     used: number;
     summary: boolean;
     conditions: boolean;
-  }[] = [{ rows: [], used: 0, summary: false, conditions: false }];
+    acceptance: boolean;
+  }[] = [
+    { rows: [], used: 0, summary: false, conditions: false, acceptance: false },
+  ];
   s.items.forEach((item, index) => {
-    const narrow = layout.width * 0.35 - 12;
+    const narrow = layout.width * 0.92 - 12;
     const nameHeight =
-      lines(item.name + " (continuación)", narrow).length * 16.5;
+      lines(item.name + " (continuación)", layout.width * 0.42 - 12).length *
+      13.5;
     const maxLines = Math.max(
       1,
-      Math.floor((capacity - nameHeight - 40) / 16.5),
+      Math.floor((capacity - nameHeight - 40) / 13.5),
     );
     chunks(
-      item.description,
+      itemDescription(item.name, item.description),
       narrow,
       maxLines,
       layout.width * 0.92 - 12,
     ).forEach((description, part) => {
-      const width = layout.width * (part ? 0.92 : 0.35) - 12;
       const title = item.name + (part ? " (continuación)" : "");
       const descriptionHeight =
-        lines(title, width).length * 16.5 +
-        description.split("\n").length * 16.5 +
-        (part === 0 && Number(item.discount_rate) > 0 ? 13.5 : 0);
+        lines(title, layout.width * (part ? 0.92 : 0.42) - 12).length * 13.5 +
+        description.split("\n").length * 13.5 +
+        (part === 0 && Number(item.discount_rate) > 0 ? 12 : 0);
       const codeHeight = part
         ? 0
-        : lines(item.code || "-", layout.width * 0.08 - 5, 9).length * 13.5;
-      const height = Math.max(descriptionHeight, codeHeight) + 18;
+        : lines(item.code || "-", layout.width * 0.08 - 5, 8).length * 12;
+      const height = Math.max(descriptionHeight, codeHeight) + 28;
       if (height > capacity)
         throw new Error(
           "El contenido requiere más espacio; reduce los márgenes del documento.",
         );
       let page = pages[pages.length - 1];
       if (page.rows.length && page.used + height > capacity) {
-        page = { rows: [], used: 0, summary: false, conditions: false };
+        page = {
+          rows: [],
+          used: 0,
+          summary: false,
+          conditions: false,
+          acceptance: false,
+        };
         pages.push(page);
+        capacity = pageCapacity(false);
       }
       page.rows.push({ index, part, description, height });
       page.used += height;
@@ -237,7 +290,7 @@ function paginateBudget(s: QuoteSnapshot) {
   });
   // Reserva conservadora para resumen, anticipo y vigencia con tipografía real.
   const summaryHeight =
-    160 +
+    110 +
     lines(
       "Anticipo previsto 100%: $90,071,992,547,409.91. Saldo: $90,071,992,547,409.91.",
       layout.width * 0.7,
@@ -246,14 +299,21 @@ function paginateBudget(s: QuoteSnapshot) {
       13.5;
   let last = pages[pages.length - 1];
   if (last.used + summaryHeight > capacity) {
-    last = { rows: [], used: 0, summary: false, conditions: false };
+    last = {
+      rows: [],
+      used: 0,
+      summary: false,
+      conditions: false,
+      acceptance: false,
+    };
     pages.push(last);
+    capacity = pageCapacity(false);
   }
   last.summary = true;
   last.used += summaryHeight;
   const budgetIndex = s.options.sections.indexOf("budget");
   const conditionsHeight =
-    65 +
+    58 +
     lines(
       s.quote.conditions || "No se han indicado condiciones adicionales.",
       layout.width - 4,
@@ -263,18 +323,38 @@ function paginateBudget(s: QuoteSnapshot) {
     s.options.sections[budgetIndex + 1] === "conditions" &&
     last.used + conditionsHeight <= capacity;
   last.conditions = mergeConditions;
-  return { pages, mergeConditions };
+  if (mergeConditions) last.used += conditionsHeight;
+  const acceptanceIndex = budgetIndex + (mergeConditions ? 2 : 1);
+  const acceptanceHeight =
+    125 +
+    Math.max(
+      lines(s.client.name, layout.width * 0.47, 8).length,
+      lines(s.organization.name, layout.width * 0.47, 8).length,
+    ) *
+      12 +
+    lines(
+      `Al aceptar esta propuesta, las partes confirman el alcance y las condiciones indicados en el documento ${s.folio}.`,
+      layout.width,
+    ).length *
+      13.5;
+  const mergeAcceptance =
+    s.options.sections[acceptanceIndex] === "acceptance" &&
+    last.used + acceptanceHeight <= capacity;
+  last.acceptance = mergeAcceptance;
+  return { pages, mergeConditions, mergeAcceptance };
 }
 function PageFrame({
   snapshot,
   letterhead,
   children,
   budget = false,
+  first = false,
 }: {
   snapshot: QuoteSnapshot;
   letterhead: Buffer;
   children: React.ReactNode;
   budget?: boolean;
+  first?: boolean;
 }) {
   const m = snapshot.options.margins;
   return (
@@ -284,7 +364,8 @@ function PageFrame({
         styles.page,
         {
           paddingTop:
-            pt(m.top) + (budget ? budgetLayout(snapshot).headerHeight : 0),
+            pt(m.top) +
+            (budget ? budgetLayout(snapshot, first).headerHeight : 0),
           paddingBottom: pt(m.bottom),
           paddingLeft: pt(m.left),
           paddingRight: pt(m.right),
@@ -299,6 +380,30 @@ function PageFrame({
       />
       {children}
     </Page>
+  );
+}
+function Acceptance({ snapshot: s }: { snapshot: QuoteSnapshot }) {
+  return (
+    <View wrap={false} style={{ marginTop: 18 }}>
+      <Text style={styles.subtitle}>Aceptación</Text>
+      <Text style={styles.text}>
+        Al aceptar esta propuesta, las partes confirman el alcance y las
+        condiciones indicados en el documento {s.folio}.
+      </Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <View style={styles.signature}>
+          <Text style={styles.small}>{s.client.name}</Text>
+          <Text style={styles.small}>Nombre y firma del cliente</Text>
+        </View>
+        <View style={styles.signature}>
+          <Text style={styles.small}>{s.organization.name}</Text>
+          <Text style={styles.small}>Nombre y firma del estudio</Text>
+        </View>
+      </View>
+      <Text style={[styles.small, { marginTop: 16 }]}>
+        Fecha de aceptación: ____________________
+      </Text>
+    </View>
   );
 }
 function QuoteDocument({
@@ -320,8 +425,12 @@ function QuoteDocument({
   );
   const plan = splitAdvance(totals.total, String(s.quote.advance_rate));
   const m = s.options.margins;
-  const layout = budgetLayout(s);
   const pagination = paginateBudget(s);
+  const conditionsIndex = s.options.sections.indexOf("conditions");
+  const acceptanceWithConditions =
+    !pagination.mergeConditions &&
+    s.options.sections[conditionsIndex + 1] === "acceptance" &&
+    conditionsIndex >= 0;
   return (
     <Document
       title={`${s.folio} · ${s.quote.name}`}
@@ -330,184 +439,234 @@ function QuoteDocument({
       language="es-MX"
     >
       {s.options.sections.map((section) =>
-        section === "conditions" &&
-        pagination.mergeConditions ? null : section === "budget" ? (
-          pagination.pages.map((budgetPage, budgetIndex) => (
-            <PageFrame
-              key={section + budgetIndex}
-              snapshot={s}
-              letterhead={letterhead}
-              budget
-            >
-              <Text
-                fixed
-                style={[
-                  styles.tableTitle,
-                  { top: pt(m.top), left: pt(m.left), right: pt(m.right) },
-                ]}
+        (section === "scope" && inlineScope(s)) ||
+        (section === "conditions" && pagination.mergeConditions) ||
+        (section === "acceptance" &&
+          (pagination.mergeAcceptance ||
+            acceptanceWithConditions)) ? null : section === "budget" ? (
+          pagination.pages.map((budgetPage, budgetIndex) => {
+            const layout = budgetLayout(s, budgetIndex === 0);
+            return (
+              <PageFrame
+                key={section + budgetIndex}
+                snapshot={s}
+                letterhead={letterhead}
+                budget
+                first={budgetIndex === 0}
               >
-                COTIZACIÓN
-              </Text>
-              <View
-                fixed
-                style={{
-                  position: "absolute",
-                  top: pt(m.top) + 35,
-                  left: pt(m.left),
-                  right: pt(m.right),
-                }}
-              >
-                <Text style={[styles.small, { marginBottom: 10 }]}>
-                  {s.folio} · {s.organization.name}
-                </Text>
-                <Text style={styles.small}>{layout.client.join("\n")}</Text>
-                <Text style={styles.small}>{layout.project.join("\n")}</Text>
-                <Text style={[styles.small, { marginTop: 5 }]}>
-                  Fecha: {s.issued_at.slice(0, 10)} · Moneda: MXN
-                </Text>
-              </View>
-              {budgetPage.rows.length > 0 ? (
-                <View
-                  fixed
-                  style={[
-                    styles.tableHeader,
-                    {
-                      top: pt(m.top) + layout.headerHeight - 34,
-                      left: pt(m.left),
-                      right: pt(m.right),
-                    },
-                  ]}
-                >
-                  <Text style={styles.code}>CLAVE</Text>
-                  <Text style={styles.desc}>CONCEPTO</Text>
-                  <Text style={styles.unit}>UD.</Text>
-                  <Text style={styles.qty}>CANT.</Text>
-                  <Text style={styles.price}>P. UNIT. / %</Text>
-                  <Text style={[styles.amount, { paddingRight: 5 }]}>
-                    IMPORTE
-                  </Text>
-                </View>
-              ) : (
                 <Text
                   fixed
                   style={[
-                    styles.subtitle,
-                    {
-                      position: "absolute",
-                      top: pt(m.top) + layout.headerHeight - 34,
-                      left: pt(m.left),
-                      right: pt(m.right),
-                    },
+                    styles.tableTitle,
+                    { top: pt(m.top), left: pt(m.left), right: pt(m.right) },
                   ]}
                 >
-                  Resumen económico
+                  COTIZACIÓN
                 </Text>
-              )}
-              {budgetPage.rows.map(({ index, part, description }) => {
-                const item = s.items[index];
-                return (
+                <View
+                  fixed
+                  style={{
+                    position: "absolute",
+                    top: pt(m.top) + 27,
+                    left: pt(m.left),
+                    right: pt(m.right),
+                  }}
+                >
+                  <Text style={[styles.small, { marginBottom: 10 }]}>
+                    {s.folio} · {s.organization.name}
+                  </Text>
+                  <Text style={styles.small}>{layout.client.join("\n")}</Text>
+                  <Text style={styles.small}>{layout.project.join("\n")}</Text>
+                  <Text style={[styles.small, { marginTop: 5 }]}>
+                    Fecha: {s.issued_at.slice(0, 10)} · Moneda: MXN
+                  </Text>
+                </View>
+                {(layout.scope || layout.contact) && (
                   <View
-                    key={`${index}-${part}`}
-                    style={styles.row}
-                    wrap={false}
+                    fixed
+                    style={{
+                      position: "absolute",
+                      top: pt(m.top) + 70 + layout.metaHeight,
+                      left: pt(m.left),
+                      right: pt(m.right),
+                    }}
                   >
-                    <Text style={styles.code}>
-                      {part ? "" : item.code || "-"}
-                    </Text>
-                    <View style={[styles.desc, part ? { width: "92%" } : {}]}>
-                      <Text style={{ fontWeight: 500 }}>
-                        {item.name}
-                        {part ? " (continuación)" : ""}
+                    {layout.contact && (
+                      <Text style={[styles.small, { marginBottom: 4 }]}>
+                        {layout.contact}
                       </Text>
-                      <Text>{description}</Text>
-                      {part === 0 && Number(item.discount_rate) > 0 && (
-                        <Text style={styles.small}>
-                          Descuento: {item.discount_rate}%
-                        </Text>
-                      )}
-                    </View>
-                    {part === 0 && (
+                    )}
+                    {layout.scope && (
                       <>
-                        <Text style={styles.unit}>
-                          {part
-                            ? ""
-                            : (
-                                {
-                                  m2: "m²",
-                                  pct: "%",
-                                  hour: "h",
-                                  visit: "visita",
-                                  unit: "ud.",
-                                  fixed: "fijo",
-                                } as Record<string, string>
-                              )[item.unit] || item.unit}
+                        <Text
+                          style={[
+                            styles.small,
+                            { marginBottom: 4, fontWeight: 600 },
+                          ]}
+                        >
+                          ALCANCE DEL PROYECTO
                         </Text>
-                        <Text style={styles.qty}>
-                          {part ? "" : item.quantity}
-                        </Text>
-                        <Text style={styles.price}>
-                          {part
-                            ? ""
-                            : item.unit === "pct"
-                              ? `${fromCents(item.unit_price_cents)}%`
-                              : formatMoney(item.unit_price_cents)}
-                        </Text>
-                        <Text style={styles.amount}>
-                          {part ? "" : formatMoney(totals.lines[index].net)}
-                        </Text>
+                        <Text>{layout.scope}</Text>
                       </>
                     )}
                   </View>
-                );
-              })}
-              {budgetPage.summary && (
-                <View wrap={false} style={styles.totals}>
-                  {[
-                    ["Subtotal", formatMoney(totals.subtotal)],
-                    ["Descuentos", formatMoney(totals.discount)],
-                    [
-                      s.quote.apply_vat
-                        ? `IVA ${s.quote.vat_rate}%`
-                        : "IVA no aplicado",
-                      formatMoney(totals.tax),
-                    ],
-                  ].map(([label, value]) => (
-                    <View key={label} style={styles.totalRow}>
-                      <Text>{label}</Text>
-                      <Text>{value}</Text>
-                    </View>
-                  ))}
-                  <View style={[styles.totalRow, styles.grand]}>
-                    <Text>Total MXN</Text>
-                    <Text>{formatMoney(totals.total)}</Text>
+                )}
+                {budgetPage.rows.length > 0 ? (
+                  <View
+                    fixed
+                    style={[
+                      styles.tableHeader,
+                      {
+                        top: pt(m.top) + layout.headerHeight - 34,
+                        left: pt(m.left),
+                        right: pt(m.right),
+                      },
+                    ]}
+                  >
+                    <Text style={styles.code}>CLAVE</Text>
+                    <Text style={styles.desc}>CONCEPTO</Text>
+                    <Text style={styles.unit}>UD.</Text>
+                    <Text style={styles.qty}>CANT.</Text>
+                    <Text style={styles.price}>P. UNIT. / %</Text>
+                    <Text style={[styles.amount, { paddingRight: 5 }]}>
+                      IMPORTE
+                    </Text>
                   </View>
-                  <Text style={styles.small}>
-                    Anticipo previsto {s.quote.advance_rate}%:{" "}
-                    {formatMoney(plan.advance)}. Saldo:{" "}
-                    {formatMoney(plan.balance)}.
+                ) : (
+                  <Text
+                    fixed
+                    style={[
+                      styles.subtitle,
+                      {
+                        position: "absolute",
+                        top: pt(m.top) + layout.headerHeight - 34,
+                        left: pt(m.left),
+                        right: pt(m.right),
+                      },
+                    ]}
+                  >
+                    Resumen económico
                   </Text>
-                  <Text style={styles.small}>
-                    Vigencia: {s.quote.valid_until}. Este documento no acredita
-                    pagos recibidos.
-                  </Text>
-                </View>
-              )}
-              {budgetPage.conditions && (
-                <View style={{ marginTop: 24 }}>
-                  <Text style={styles.subtitle} minPresenceAhead={44}>
-                    Condiciones comerciales
-                  </Text>
-                  <Text orphans={3} widows={3}>
-                    {s.quote.conditions ||
-                      "No se han indicado condiciones adicionales."}
-                  </Text>
-                  <Text style={[styles.small, { marginTop: 12 }]}>
-                    Vigencia: {s.quote.valid_until}.
-                  </Text>
-                </View>
-              )}
-            </PageFrame>
-          ))
+                )}
+                {budgetPage.rows.map(({ index, part, description }) => {
+                  const item = s.items[index];
+                  return (
+                    <View
+                      key={`${index}-${part}`}
+                      style={styles.row}
+                      wrap={false}
+                    >
+                      <View style={{ flexDirection: "row" }}>
+                        <Text style={styles.code}>
+                          {part ? "" : item.code || "-"}
+                        </Text>
+                        <View
+                          style={[styles.desc, part ? { width: "92%" } : {}]}
+                        >
+                          <Text style={{ fontWeight: 500 }}>
+                            {item.name}
+                            {part ? " (continuación)" : ""}
+                          </Text>
+                          {part === 0 && Number(item.discount_rate) > 0 && (
+                            <Text style={styles.small}>
+                              Descuento: {item.discount_rate}%
+                            </Text>
+                          )}
+                        </View>
+                        {part === 0 && (
+                          <>
+                            <Text style={styles.unit}>
+                              {part
+                                ? ""
+                                : (
+                                    {
+                                      m2: "m²",
+                                      pct: "%",
+                                      hour: "h",
+                                      visit: "visita",
+                                      unit: "ud.",
+                                      fixed: "fijo",
+                                    } as Record<string, string>
+                                  )[item.unit] || item.unit}
+                            </Text>
+                            <Text style={styles.qty}>
+                              {part ? "" : item.quantity}
+                            </Text>
+                            <Text style={styles.price}>
+                              {part
+                                ? ""
+                                : item.unit === "pct"
+                                  ? `${fromCents(item.unit_price_cents)}%`
+                                  : formatMoney(item.unit_price_cents)}
+                            </Text>
+                            <Text style={styles.amount}>
+                              {part ? "" : formatMoney(totals.lines[index].net)}
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                      {description && (
+                        <Text
+                          style={{
+                            color: "#526058",
+                            marginTop: 5,
+                            marginLeft: "8%",
+                            paddingRight: 8,
+                          }}
+                        >
+                          {description}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+                {budgetPage.summary && (
+                  <View wrap={false} style={styles.totals}>
+                    {[
+                      ["Subtotal", formatMoney(totals.subtotal)],
+                      ["Descuentos", formatMoney(totals.discount)],
+                      [
+                        s.quote.apply_vat
+                          ? `IVA ${s.quote.vat_rate}%`
+                          : "IVA no aplicado",
+                        formatMoney(totals.tax),
+                      ],
+                    ].map(([label, value]) => (
+                      <View key={label} style={styles.totalRow}>
+                        <Text>{label}</Text>
+                        <Text>{value}</Text>
+                      </View>
+                    ))}
+                    <View style={[styles.totalRow, styles.grand]}>
+                      <Text>Total MXN</Text>
+                      <Text>{formatMoney(totals.total)}</Text>
+                    </View>
+                    <Text style={styles.small}>
+                      Anticipo previsto {s.quote.advance_rate}%:{" "}
+                      {formatMoney(plan.advance)}. Saldo:{" "}
+                      {formatMoney(plan.balance)}.
+                    </Text>
+                    <Text style={styles.small}>
+                      Vigencia: {s.quote.valid_until}. Este documento no
+                      acredita pagos recibidos.
+                    </Text>
+                  </View>
+                )}
+                {budgetPage.conditions && (
+                  <View style={{ marginTop: 18 }}>
+                    <Text style={styles.subtitle} minPresenceAhead={44}>
+                      Condiciones comerciales
+                    </Text>
+                    <Text orphans={3} widows={3}>
+                      {s.quote.conditions ||
+                        "No se han indicado condiciones adicionales."}
+                    </Text>
+                  </View>
+                )}
+                {budgetPage.acceptance && <Acceptance snapshot={s} />}
+              </PageFrame>
+            );
+          })
         ) : (
           <PageFrame key={section} snapshot={s} letterhead={letterhead}>
             <Text style={styles.eyebrow}>
@@ -566,27 +725,13 @@ function QuoteDocument({
                   {s.quote.conditions ||
                     "No se han indicado condiciones adicionales."}
                 </Text>
-                <Text>Vigencia: {s.quote.valid_until}.</Text>
+                {!s.options.sections.includes("budget") && (
+                  <Text>Vigencia: {s.quote.valid_until}.</Text>
+                )}
+                {acceptanceWithConditions && <Acceptance snapshot={s} />}
               </>
             ) : (
-              <>
-                <Text style={styles.subtitle} minPresenceAhead={44}>
-                  Aceptación
-                </Text>
-                <Text style={styles.text}>
-                  Al aceptar esta propuesta, las partes confirman el alcance y
-                  las condiciones indicados en el documento {s.folio}.
-                </Text>
-                <Text style={styles.signature}>
-                  {s.client.name} · Nombre y firma del cliente
-                </Text>
-                <Text style={styles.signature}>
-                  {s.organization.name} · Nombre y firma del estudio
-                </Text>
-                <Text style={[styles.small, { marginTop: 30 }]}>
-                  Fecha de aceptación: ____________________
-                </Text>
-              </>
+              <Acceptance snapshot={s} />
             )}
           </PageFrame>
         ),
@@ -635,7 +780,7 @@ export class ReactPdfRenderer implements DocumentRenderer {
     const pages = pdf.getPages();
     pages.forEach((page, index) => {
       const label = `${snapshot.folio} · ${index + 1} / ${pages.length}`;
-      const size = 9;
+      const size = 8;
       page.drawText(label, {
         x:
           612 -

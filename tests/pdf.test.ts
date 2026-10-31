@@ -132,6 +132,11 @@ it("genera tabla multipágina y secciones, sin aceptar totales manipulados", asy
       .map((i) => i.str)
       .join(" ");
     body += text + " ";
+    if (text.includes("CONCEPTO") && !text.includes("Total MXN")) {
+      expect(
+        (text.match(/Diseño arquitectónico/g) || []).length,
+      ).toBeGreaterThanOrEqual(4);
+    }
     expect(text).toContain(index + " / " + document.numPages);
     if (text.includes("Diseño arquitectónico"))
       expect(text).toContain("CONCEPTO");
@@ -230,7 +235,7 @@ it("incrusta Poppins real y conserva conceptos extensos, claves, escalas y encab
       }
     }
   }
-  expect([...sizes].every((size) => [9, 11, 16, 24].includes(size))).toBe(true);
+  expect([...sizes].every((size) => [8, 9, 12, 18].includes(size))).toBe(true);
   for (let i = 1; i <= 4; i++) {
     expect(body).toContain("FIN-CONCEPTO-" + i);
     expect(body).toContain("ARQ-0" + i);
