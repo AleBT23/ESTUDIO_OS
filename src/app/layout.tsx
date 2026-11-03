@@ -4,7 +4,7 @@ import { getContext } from "@/shared/auth/context";
 import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "ESTUDIO OS", template: "%s · ESTUDIO OS" },
-  description: "El espacio de trabajo de Alejandro Torres Arquitectura",
+  description: "El espacio de trabajo de Alejandro Barajas Arquitectura",
   robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";

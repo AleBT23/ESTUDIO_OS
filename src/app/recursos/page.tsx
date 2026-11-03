@@ -21,13 +21,13 @@ export default function ResourcesPage() {
           <h2>La firma de tu estudio</h2>
           <Image
             className="resource-logo"
-            src="/marca/logo.png"
+            src="/marca/logo-ab.png"
             width={330}
-            height={132}
-            alt="Logotipo original de Alejandro Torres Arquitectura"
+            height={110}
+            alt="Logotipo de Alejandro Barajas Arquitectura"
           />
           <p className="muted">
-            Logotipo e isotipo originales, conservando proporciones, colores y
+            Logotipo proporcionado, conservando proporciones, colores y
             transparencia.
           </p>
           <p className="caption">
@@ -41,13 +41,13 @@ export default function ResourcesPage() {
           <h2>Membrete carta</h2>
           <Image
             className="resource-image"
-            src="/marca/membrete.png"
-            width={2550}
-            height={3300}
-            alt="Membrete oficial carta con franja verde a la derecha y datos del estudio al pie"
+            src="/marca/membrete-ab.png"
+            width={1102}
+            height={1427}
+            alt="Membrete oficial carta transparente con franja verde a la derecha y logo superior"
           />
           <p className="caption">
-            PNG original · 2550 × 3300 px · proporción carta exacta. Vista del
+            PNG transparente · 1102 × 1427 px · formato carta. Vista del
             recurso. Ajusta márgenes y secciones al emitir una cotización.
           </p>
         </section>

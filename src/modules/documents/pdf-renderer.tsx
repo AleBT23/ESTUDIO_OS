@@ -290,7 +290,7 @@ function paginateBudget(s: QuoteSnapshot) {
   });
   // Reserva conservadora para resumen, anticipo y vigencia con tipografía real.
   const summaryHeight =
-    110 +
+    (s.quote.discount_cents ? 110 : 93) +
     lines(
       "Anticipo previsto 100%: $90,071,992,547,409.91. Saldo: $90,071,992,547,409.91.",
       layout.width * 0.7,
@@ -326,7 +326,7 @@ function paginateBudget(s: QuoteSnapshot) {
   if (mergeConditions) last.used += conditionsHeight;
   const acceptanceIndex = budgetIndex + (mergeConditions ? 2 : 1);
   const acceptanceHeight =
-    125 +
+    121 +
     Math.max(
       lines(s.client.name, layout.width * 0.47, 8).length,
       lines(s.organization.name, layout.width * 0.47, 8).length,
@@ -384,7 +384,7 @@ function PageFrame({
 }
 function Acceptance({ snapshot: s }: { snapshot: QuoteSnapshot }) {
   return (
-    <View wrap={false} style={{ marginTop: 18 }}>
+    <View wrap={false} style={{ marginTop: 14 }}>
       <Text style={styles.subtitle}>Aceptación</Text>
       <Text style={styles.text}>
         Al aceptar esta propuesta, las partes confirman el alcance y las
@@ -631,12 +631,17 @@ function QuoteDocument({
                           : "IVA no aplicado",
                         formatMoney(totals.tax),
                       ],
-                    ].map(([label, value]) => (
-                      <View key={label} style={styles.totalRow}>
-                        <Text>{label}</Text>
-                        <Text>{value}</Text>
-                      </View>
-                    ))}
+                    ]
+                      .filter(
+                        ([label]) =>
+                          label !== "Descuentos" || totals.discount > 0,
+                      )
+                      .map(([label, value]) => (
+                        <View key={label} style={styles.totalRow}>
+                          <Text>{label}</Text>
+                          <Text>{value}</Text>
+                        </View>
+                      ))}
                     <View style={[styles.totalRow, styles.grand]}>
                       <Text>Total MXN</Text>
                       <Text>{formatMoney(totals.total)}</Text>
@@ -741,7 +746,17 @@ function QuoteDocument({
 }
 export class ReactPdfRenderer implements DocumentRenderer {
   async render(input: QuoteSnapshot) {
-    const snapshot = quoteSnapshotSchema.parse(input);
+    const parsed = quoteSnapshotSchema.parse(input);
+    const snapshot = {
+      ...parsed,
+      options: {
+        ...parsed.options,
+        margins: {
+          ...parsed.options.margins,
+          top: Math.max(32, parsed.options.margins.top),
+        },
+      },
+    };
     const computed = calculateQuote(
       snapshot.items.map((i) => ({
         unit: i.unit,

@@ -54,7 +54,7 @@ export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> 
             fontSize: 10,
             color: "#182624",
             lineHeight: 1.65,
-            paddingTop: pt(s.margins.top),
+            paddingTop: pt(Math.max(32, s.margins.top)),
             paddingBottom: pt(s.margins.bottom),
             paddingLeft: pt(s.margins.left),
             paddingRight: pt(s.margins.right),

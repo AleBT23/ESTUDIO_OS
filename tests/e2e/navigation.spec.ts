@@ -67,7 +67,7 @@ test("móvil abre menú, navega y evita desbordamiento horizontal", async ({
 });
 test("marca oficial carga y captura escritorio", async ({ page }) => {
   await page.goto("/");
-  const logo = page.getByAltText("Isotipo oficial del estudio");
+  const logo = page.getByAltText("Logo de Alejandro Barajas Arquitectura");
   await expect(logo).toBeVisible();
   expect(
     await logo.evaluate((img: HTMLImageElement) => img.naturalWidth),

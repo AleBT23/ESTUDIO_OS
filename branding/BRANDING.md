@@ -42,3 +42,5 @@ No crear marcas independientes para cada línea salvo que se proporcionen recurs
 No inventar logotipos, isotipos, nombres comerciales, colores corporativos ni variaciones de marca que no estén documentadas.
 
 Si falta información sobre colores o tipografías oficiales, registrar la decisión como pendiente antes de establecerla como definitiva.
+## Actualización de recursos — 31 de octubre de 2026
+Logo oficial actual: Alejandro Barajas Arquitectura, PNG transparente 2172 × 724 px, conservado en logos/logo color.png y public/marca/logo-ab.png. Membrete actual: PNG transparente 1102 × 1427 px, conservado en membretes/MEMBRETA_CARTA_AT.png por compatibilidad del empaquetado y en public/marca/membrete-ab.png para la interfaz. El nombre histórico del archivo interno no determina la identidad visible. Reserva superior mínima efectiva: 32 mm. Recursos anteriores respaldados privadamente; isotipos/negativos anteriores no se consideran variantes nuevas aprobadas.

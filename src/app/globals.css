@@ -386,8 +386,8 @@ main {
   border-left: 1px solid #d9e0d0;
 }
 .brand-composition img {
-  height: 176px;
-  width: 176px;
+  height: auto;
+  width: min(100%, 280px);
   object-fit: contain;
   z-index: 1;
 }

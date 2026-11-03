@@ -87,10 +87,10 @@ export function Shell({
       >
         <Link href="/" className="studio-brand" onClick={() => setOpen(false)}>
           <Image
-            src="/marca/isotipo.png"
-            alt="Alejandro Torres Arquitectura"
-            width={38}
-            height={38}
+            src="/marca/logo-ab.png"
+            alt="Alejandro Barajas Arquitectura"
+            width={90}
+            height={30}
           />
           <span>
             ESTUDIO OS<small>Espacio de trabajo</small>
@@ -185,7 +185,7 @@ export function Shell({
           {children}
         </main>
         <footer className="page-footer">
-          <span>ESTUDIO OS · Alejandro Torres Arquitectura</span>
+          <span>ESTUDIO OS · Alejandro Barajas Arquitectura</span>
           <span>Hecho para dar espacio a lo importante.</span>
         </footer>
       </div>

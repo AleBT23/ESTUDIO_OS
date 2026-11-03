@@ -6,6 +6,7 @@ export default defineConfig([
   ...nextTs,
   globalIgnores([
     ".next/**",
+    ".next-local/**",
     ".netlify/**",
     ".local/**",
     ".audit/**",
@@ -14,3 +15,4 @@ export default defineConfig([
     "test-results/**",
   ]),
 ]);
+

@@ -34,7 +34,7 @@ export const documentOptionsSchema = z.object({
 export type DocumentOptions = z.infer<typeof documentOptionsSchema>;
 export const defaultDocumentOptions: DocumentOptions = {
   sections: ["scope", "budget", "conditions", "acceptance"],
-  margins: { top: 26, bottom: 29, left: 16, right: 32 },
+  margins: { top: 32, bottom: 29, left: 16, right: 32 },
 };
 export const quoteSnapshotSchema = z.object({
   folio: z.string(),

@@ -9,10 +9,10 @@ export default async function LoginPage() {
   return (
     <div className="auth-card panel">
       <Image
-        src="/marca/logo.png"
-        alt="Alejandro Torres Arquitectura"
+        src="/marca/logo-ab.png"
+        alt="Alejandro Barajas Arquitectura"
         width={270}
-        height={108}
+        height={90}
         className="auth-logo"
       />
       <p className="eyebrow">BIENVENIDO A TU ESPACIO</p>

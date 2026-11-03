@@ -231,7 +231,7 @@ it("incrusta Poppins real y conserva conceptos extensos, claves, escalas y encab
           612 - (32 * 72) / 25.4 + 2,
         );
         expect(item.transform[5]).toBeGreaterThan((29 * 72) / 25.4 - 25);
-        expect(item.transform[5]).toBeLessThan(792 - (22 * 72) / 25.4);
+        expect(item.transform[5]).toBeLessThan(792 - (32 * 72) / 25.4);
       }
     }
   }

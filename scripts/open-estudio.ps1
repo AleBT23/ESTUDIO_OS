@@ -1,13 +1,14 @@
 param([switch]$NoBrowser)
 $ErrorActionPreference = 'Stop'
+$env:ESTUDIO_LOCAL_BUILD = '1'
 $estudioRoot = [System.IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
 $estudioLocal = Join-Path $estudioRoot '.local'
-$estudioUrl = 'http://localhost:3000'
+$estudioUrl = 'http://localhost:3001'
 $estudioMutex = New-Object System.Threading.Mutex($false, 'Local\ESTUDIO_OS_Launcher')
 $estudioLocked = $false
 function Test-EstudioReady {
     try {
-        $response = Invoke-WebRequest -Uri 'http://127.0.0.1:3000/acceso' -UseBasicParsing -TimeoutSec 2
+        $response = Invoke-WebRequest -Uri 'http://127.0.0.1:3001/acceso' -UseBasicParsing -TimeoutSec 2
         return ($response.StatusCode -eq 200 -and $response.Content -match '<title>[^<]*ESTUDIO OS')
     } catch { return $false }
 }
@@ -23,9 +24,9 @@ try {
     if (-not (Test-EstudioReady)) {
         $tcp = New-Object System.Net.Sockets.TcpClient
         try {
-            $connection = $tcp.ConnectAsync('127.0.0.1', 3000)
+            $connection = $tcp.ConnectAsync('127.0.0.1', 3001)
             if ($connection.Wait(700) -and $tcp.Connected) {
-                throw 'El puerto 3000 lo esta usando otro proceso. Cierra la otra aplicacion e intenta nuevamente.'
+                throw 'El puerto 3001 lo esta usando otro proceso. Cierra la otra aplicacion e intenta nuevamente.'
             }
         } catch [System.AggregateException] { } finally { $tcp.Dispose() }
         $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
@@ -33,11 +34,11 @@ try {
         $next = Join-Path $estudioRoot 'node_modules\next\dist\bin\next'
         if (-not (Test-Path -LiteralPath $next)) { throw 'Faltan las dependencias del estudio. Solicita preparar la instalacion.' }
         [void][System.IO.Directory]::CreateDirectory($estudioLocal)
-        if (-not (Test-Path -LiteralPath (Join-Path $estudioRoot '.next\BUILD_ID'))) {
+        if (-not (Test-Path -LiteralPath (Join-Path $estudioRoot '.next-local\BUILD_ID'))) {
             $build = Start-Process -FilePath $nodeCommand.Source -ArgumentList ('"' + $next + '" build --webpack') -WorkingDirectory $estudioRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $estudioLocal 'launcher-build.log') -RedirectStandardError (Join-Path $estudioLocal 'launcher-build-error.log') -PassThru -Wait
             if ($build.ExitCode -ne 0) { throw 'No se pudo preparar la aplicacion. Solicita revisar la compilacion antes de continuar.' }
         }
-        $server = Start-Process -FilePath $nodeCommand.Source -ArgumentList ('"' + $next + '" start --hostname 0.0.0.0 --port 3000') -WorkingDirectory $estudioRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $estudioLocal 'launcher-server.log') -RedirectStandardError (Join-Path $estudioLocal 'launcher-server-error.log') -PassThru
+        $server = Start-Process -FilePath $nodeCommand.Source -ArgumentList ('"' + $next + '" start --hostname 0.0.0.0 --port 3001') -WorkingDirectory $estudioRoot -WindowStyle Hidden -RedirectStandardOutput (Join-Path $estudioLocal 'launcher-server.log') -RedirectStandardError (Join-Path $estudioLocal 'launcher-server-error.log') -PassThru
         $ready = $false
         for ($attempt = 0; $attempt -lt 45; $attempt++) {
             if (Test-EstudioReady) { $ready = $true; break }
@@ -57,3 +58,4 @@ try {
     if ($estudioLocked) { $estudioMutex.ReleaseMutex() }
     $estudioMutex.Dispose()
 }
+

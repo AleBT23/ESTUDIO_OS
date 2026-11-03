@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   poweredByHeader: false,
+  distDir: process.env.ESTUDIO_LOCAL_BUILD === "1" ? ".next-local" : ".next",
   experimental: { serverActions: { bodySizeLimit: "12mb" } },
   serverExternalPackages: ["@react-pdf/renderer"],
   outputFileTracingIncludes: {

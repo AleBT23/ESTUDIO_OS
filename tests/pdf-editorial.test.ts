@@ -16,7 +16,7 @@ function sample(): QuoteSnapshot {
   return {
     folio: "MUESTRA · SIN VALIDEZ",
     issued_at: "2026-10-31T12:00:00Z",
-    organization: { name: "Alejandro Torres Arquitectura" },
+    organization: { name: "Alejandro Barajas Arquitectura" },
     client: { name: "Cliente de ejemplo", email: "", phone: "", address: "" },
     quote: {
       name: "Proyecto residencial · Estudio de suelos",

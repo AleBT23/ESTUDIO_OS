@@ -163,7 +163,7 @@ export function StudioDocumentForm({
         <div className="form-grid">
           {(
             [
-              ["top", "Superior", 22, 60],
+              ["top", "Superior", 32, 60],
               ["bottom", "Inferior", 26, 60],
               ["left", "Izquierdo", 12, 45],
               ["right", "Derecho", 24, 50],

@@ -75,18 +75,18 @@ export default async function HomePage({
           <div className="draft-line vertical" />
           <div className="draft-line horizontal" />
           <Image
-            src="/marca/isotipo.png"
-            alt="Isotipo oficial del estudio"
-            width={210}
-            height={210}
+            src="/marca/logo-ab.png"
+            alt="Logo de Alejandro Barajas Arquitectura"
+            width={240}
+            height={80}
             priority
           />
           <span className="composition-label">
-            ALEJANDRO TORRES
+            ALEJANDRO BARAJAS
             <br />
             ARQUITECTURA
           </span>
-          <span className="drawing-ref">AT / 01</span>
+          <span className="drawing-ref">AB / 01</span>
         </div>
       </section>
       <div className="section-heading">
