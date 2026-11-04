@@ -109,12 +109,19 @@ export function estimateFees(
   netRevenueCents: number,
   externalCost: string,
   estimatedHours: string,
+  hourlyCost?: string,
 ) {
   if (!Number.isSafeInteger(netRevenueCents) || netRevenueCents < 0)
     throw new Error("Ingreso inválido");
   const externalCostCents = toCents(externalCost);
   const hours = positive(estimatedHours);
-  const profitCents = netRevenueCents - externalCostCents;
+  const laborCostCents = hourlyCost
+    ? cents(hours.mul(positive(hourlyCost)))
+    : null;
+  const totalCostCents = externalCostCents + (laborCostCents ?? 0);
+  if (!Number.isSafeInteger(totalCostCents))
+    throw Error("Costos fuera de rango");
+  const profitCents = netRevenueCents - totalCostCents;
   const marginPercent = marginOnRevenue(
     BigInt(profitCents),
     BigInt(netRevenueCents),
@@ -126,6 +133,7 @@ export function estimateFees(
     throw new Error("La tarifa por hora supera el rango permitido.");
   return {
     externalCostCents,
+    laborCostCents,
     profitCents,
     marginPercent,
     effectiveHourlyCents: hourly?.toNumber() ?? null,

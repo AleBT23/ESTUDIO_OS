@@ -84,6 +84,7 @@ export const quoteHeaderSchema = z.object({
   conditions: z.string().max(20000),
   estimated_hours: decimalInput,
   externalCost: moneyInput,
+  hourlyCost: z.union([moneyInput, z.literal("")]).optional(),
 });
 export const quoteSchema = z.object({
   header: quoteHeaderSchema,

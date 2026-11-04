@@ -553,3 +553,6 @@ Configuración permite al propietario descargar los registros visibles de cinco 
 
 ### Paquetes de trabajo por proyecto
 Los administradores pueden agregar paquetes operativos a proyectos activos o pausados y editar su nombre e instrucciones con control de versión. La ficha identifica por separado el alcance contratado. La prueba cubre dos líneas en el mismo proyecto, reintento sin duplicado, edición obsoleta, permisos y rechazo de cambios después del cierre. Crear el paquete no programa cobros ni asigna un ingreso contratado. Pasaron 220 pruebas y la restauración con 80 migraciones.
+
+### Tarifa interna prevista en cotizaciones
+El editor permite guardar un costo horario opcional y distingue una tarifa de cero de una tarifa pendiente. El costo imputado se redondea al centavo tras multiplicar horas por tarifa, se descuenta una sola vez y se mantiene fuera del PDF para el cliente. La ficha muestra el margen interno sobre el ingreso sin IVA. Se probaron pérdidas, compatibilidad con borradores anteriores, rechazo de importes fuera de rango y conservación de la versión tras un fallo. Pasaron 222 pruebas y la restauración sintética con 81 migraciones.

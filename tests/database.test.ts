@@ -2885,3 +2885,16 @@ it("gestiona paquetes por línea sin crear obligaciones ni cambiar el alcance co
  await db.query("select edit_project_details(organization_id,id,version,name,location,start_date,target_end,lead_id,'closed') from projects where id=$1",[project]);
  await expect(save(one,2,line,"Actualización tardía")).rejects.toThrow("disponible");
 });
+it("conserva tarifa interna entre clientes de distintas versiones y la excluye del snapshot público",async()=>{
+ const {line}=await commercialFixture(),items=[{business_line_id:line,name:"Diseño",unit:"fixed",quantity:"1",unit_price_cents:2500000,discount_rate:"0"}];
+ const header={...quoteHeader(),hourly_cost_cents:80000};
+ const quote=await draft(items,null,0,header);
+ const read=async()=>(await db.query<{version:number;rate:number|null}>("select version,hourly_cost_cents::int rate from quotes where id=$1",[quote])).rows[0];
+ let row=await read();expect(row.rate).toBe(80000);
+ expect((await db.query("select labor_cents,profit_cents,margin_pct from quote_fee_estimates where id=$1",[quote])).rows).toEqual([{labor_cents:"960000",profit_cents:"1537500",margin_pct:"61.50"}]);
+ await draft(items,quote,row.version);row=await read();expect(row.rate).toBe(80000);
+ await expect(draft(items,quote,row.version,{...header,estimated_hours:"999999999999"})).rejects.toThrow();
+ expect(await read()).toEqual(row);
+ const prepared=(await db.query<{snap:string}>("select (prepare_quote_version($1,$2,$3,$4::jsonb)->'snapshot')::text snap",[org,quote,row.version,JSON.stringify(defaultDocumentOptions)])).rows[0].snap;
+ expect(prepared).not.toMatch(/hourly_cost|external_cost|estimated_hours/);
+});

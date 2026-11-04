@@ -215,12 +215,18 @@ export async function saveQuote(
       error: "Revisa los importes: la propuesta supera el rango permitido.",
     };
   }
-  const { externalCost, ...header } = input.data.header;
+  const { externalCost, hourlyCost, ...header } = input.data.header;
   const { data, error } = await ctx.db.rpc("save_quote_with_layout", {
     org: ctx.organization.id,
     quote: identity.data.id || null,
     expected_version: identity.data.version,
-    header: { ...header, external_cost_cents: toCents(externalCost) },
+    header: {
+      ...header,
+      ...(hourlyCost !== undefined && {
+        hourly_cost_cents: hourlyCost === "" ? null : toCents(hourlyCost),
+      }),
+      external_cost_cents: toCents(externalCost),
+    },
     items: input.data.items.map(({ unitPrice, discount, ...item }) => ({
       ...item,
       unit_price_cents: toCents(unitPrice),

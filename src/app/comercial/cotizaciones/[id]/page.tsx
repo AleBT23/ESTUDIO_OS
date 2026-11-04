@@ -21,7 +21,7 @@ export default async function QuotePage({
   const { id } = await params;
   const { edit } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
-  const [quoteResult, itemsResult] = await Promise.all([
+  const [quoteResult, itemsResult, fees] = await Promise.all([
     ctx.db
       .from("quotes")
       .select("*")
@@ -35,6 +35,12 @@ export default async function QuotePage({
       .eq("organization_id", ctx.organization.id)
       .eq("quote_id", id)
       .order("position"),
+    ctx.db
+      .from("quote_fee_estimates")
+      .select("labor_cents,profit_cents,margin_pct")
+      .eq("organization_id", ctx.organization.id)
+      .eq("id", id)
+      .maybeSingle(),
   ]);
   if (quoteResult.error || itemsResult.error)
     throw new Error("No se pudo cargar la cotización.");
@@ -104,6 +110,8 @@ export default async function QuotePage({
     conditions: quote.conditions,
     estimated_hours: String(quote.estimated_hours),
     externalCost: fromCents(quote.external_cost_cents),
+    hourlyCost:
+      quote.hourly_cost_cents == null ? "" : fromCents(quote.hourly_cost_cents),
   };
   return (
     <>
@@ -212,6 +220,33 @@ export default async function QuotePage({
               <dd>{formatMoney(quote.total_cents)}</dd>
             </div>
           </dl>
+          <details>
+            <summary>Rentabilidad interna prevista</summary>
+            {fees.error || !fees.data ? (
+              <p>Estimación no disponible.</p>
+            ) : (
+              <dl>
+                <dt>Costo previsto de horas</dt>
+                <dd>
+                  {fees.data.labor_cents === null
+                    ? "Sin tarifa asignada"
+                    : formatMoney(BigInt(fees.data.labor_cents))}
+                </dd>
+                <dt>
+                  {fees.data.labor_cents === null
+                    ? "Resultado antes de costo de horas"
+                    : "Resultado después de costos"}
+                </dt>
+                <dd>{formatMoney(BigInt(fees.data.profit_cents))}</dd>
+                <dt>Margen previsto sobre ingreso sin IVA</dt>
+                <dd>
+                  {fees.data.margin_pct === null
+                    ? "Sin ingreso"
+                    : fees.data.margin_pct + " %"}
+                </dd>
+              </dl>
+            )}
+          </details>
           {quote.conditions && (
             <div style={{ whiteSpace: "pre-wrap" }}>
               <h3>Condiciones</h3>

@@ -149,6 +149,7 @@ export function QuoteEditor({
       totals.net,
       header.externalCost,
       header.estimated_hours,
+      header.hourlyCost,
     );
   } catch {
     /* Mostrar estado incompleto durante captura; validación al guardar. */
@@ -518,6 +519,16 @@ export function QuoteEditor({
                 />
               </label>
               <label>
+                Costo interno por hora MXN (opcional)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={header.hourlyCost ?? ""}
+                  onChange={(e) => updateHeader("hourlyCost", e.target.value)}
+                />
+              </label>
+              <label>
                 Costos externos previstos MXN
                 <input
                   type="number"
@@ -536,11 +547,27 @@ export function QuoteEditor({
                 <dd>{totals ? formatMoney(totals.net) : "—"}</dd>
               </div>
               <div>
-                <dt>Resultado antes de costo de horas</dt>
+                <dt>Costo interno previsto de horas</dt>
+                <dd>
+                  {estimate?.laborCostCents != null
+                    ? formatMoney(estimate.laborCostCents)
+                    : "Sin tarifa asignada"}
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  {estimate?.laborCostCents != null
+                    ? "Resultado después de costos internos y externos"
+                    : "Resultado antes del costo de horas"}
+                </dt>
                 <dd>{estimate ? formatMoney(estimate.profitCents) : "—"}</dd>
               </div>
               <div>
-                <dt>Margen estimado</dt>
+                <dt>
+                  {estimate?.laborCostCents != null
+                    ? "Margen con costo de horas"
+                    : "Margen antes del costo de horas"}
+                </dt>
                 <dd>
                   {estimate?.marginPercent !== null &&
                   estimate?.marginPercent !== undefined
@@ -559,11 +586,10 @@ export function QuoteEditor({
               </div>
             </dl>
             <p className="caption">
-              Fórmulas: resultado = ingreso neto sin IVA menos costos externos;
-              margen = resultado / ingreso neto; ingreso por hora = ingreso neto
-              / horas. El costo imputado de horas se reportará por separado
-              cuando se definan tarifas. Esta estimación no representa cobros ni
-              utilidad real.
+              El resultado descuenta del ingreso sin IVA los costos externos y,
+              cuando capturas una tarifa interna, las horas previstas
+              multiplicadas por esa tarifa. El margen divide el resultado entre
+              el ingreso sin IVA. El ingreso por hora usa las horas previstas.
             </p>
           </section>
         </div>
