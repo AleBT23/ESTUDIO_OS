@@ -25,11 +25,8 @@ export async function Changes({
   const org = ctx.organization.id;
   const [changes, quotes] = await Promise.all([
     ctx.db
-      .from("scope_changes")
-      .select(
-        "id,description,days_impact,quote_id,quotes(name,status,total_cents,deleted_at)",
-        { count: "exact" },
-      )
+      .from("scope_change_statement")
+      .select("*", { count: "exact" })
       .eq("organization_id", org)
       .eq("project_id", project)
       .order("created_at", { ascending: false })
@@ -79,23 +76,17 @@ export async function Changes({
       </details>
       {changes.data.length ? (
         changes.data.map((c) => {
-          const q = c.quotes as unknown as {
-            name: string;
-            status: string;
-            total_cents: number;
-            deleted_at: string | null;
-          } | null;
           return (
             <article key={c.id} className="activity-row">
               <p className="note-body">{c.description}</p>
               <small>Impacto en plazo · {c.days_impact} días</small>
-              {q ? (
+              {c.quote_id ? (
                 <p>
                   <Link href={"/comercial/cotizaciones/" + c.quote_id}>
-                    {q.name}
+                    {c.quote_name}
                   </Link>{" "}
-                  · {q.deleted_at ? "Archivada" : states[q.status]} ·{" "}
-                  {formatMoney(q.total_cents)}
+                  · {c.quote_deleted_at ? "Archivada" : states[c.quote_status]}{" "}
+                  · {formatMoney(BigInt(c.quote_total))}
                 </p>
               ) : (
                 <details>
@@ -122,6 +113,21 @@ export async function Changes({
                     </label>
                   </RecordForm>
                 </details>
+              )}
+              {c.scheduled !== null && (
+                <dl className="finance-summary">
+                  {[
+                    ["Programado vigente", c.scheduled],
+                    ["Cobrado por esta ampliación", c.received],
+                    ["Pendiente de cobro", c.outstanding],
+                    ["Saldo cancelado", c.cancelled],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{formatMoney(BigInt(value))}</dd>
+                    </div>
+                  ))}
+                </dl>
               )}
             </article>
           );

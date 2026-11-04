@@ -43,7 +43,8 @@
 - A: PDF con PNG real probado con fixture sintético; **presets reales no migrados**. No aceptado.
 - B: prueba SQL correcta de propuesta emitida/enviada/aceptada → proyecto mixto → obligaciones sin cobro automático. Falta flujo UI real y aceptación.
 - C. El expediente muestra por paquete el presupuesto, los cobros, los gastos y los minutos trabajados. El reporte por línea permite filtrar el periodo. Los pagos generales quedan sin asignar (086). Pendiente conciliación autenticada.
-- D, E: pendientes.
+- D. La aceptación del extra crea paquetes y obligaciones en el proyecto original. La conciliación por solicitud cubre parcialidades, reversos, reprogramaciones y cancelaciones (088). Falta el recorrido autenticado.
+- E. Pendiente conciliación contra una copia real respaldada.
 - F: minuta independiente de 1 página y reporte de visita de 3 páginas generados, reabiertos y revisados visualmente con PNG real; persistencia/versiones/Storage verificadas en PostgreSQL de pruebas. Falta E2E remoto/aceptación.
 
 ## Secuencia para retomar

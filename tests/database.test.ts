@@ -2172,6 +2172,17 @@ it("aceptar la cotización complementaria añade paquetes y planes solo al proye
  expect((await db.query("select sum(amount_cents)=(select total_cents from quotes where id=$2) reconciles from payment_schedules where scope_change_id=$1",[request,id])).rows).toEqual([{reconciles:true}]);
  expect((await db.query("select collected_cents::int collected from project_financial_summary where project_id=$1",[project])).rows).toEqual([{collected:0}]);
  expect((await db.query("select id from projects where quote_version_id=$1",[prepared.id])).rows).toHaveLength(0);
+ const plan=(await db.query<{id:string;amount:number}>("select id,amount_cents::int amount from payment_schedules where scope_change_id=$1 order by id limit 1",[request])).rows[0];
+ const total=(await db.query<{total:number}>("select total_cents::int total from quotes where id=$1",[id])).rows[0].total;
+ const statement=()=>db.query("select scheduled::int,received::int,outstanding::int,cancelled::int from scope_change_statement where id=$1",[request]);
+ await db.query("select record_payment($1,id,100,current_date,'Pago base',$3) from payment_schedules where project_id=$2 and scope_change_id is null",[org,project,crypto.randomUUID()]);
+ const payment=(await db.query<{id:string}>("select record_payment($1,$2,275,current_date,'Cobro de extra',$3) id",[org,plan.id,crypto.randomUUID()])).rows[0].id;
+ expect((await statement()).rows).toEqual([{scheduled:total,received:275,outstanding:total-275,cancelled:0}]);
+ await db.query("select reverse_payment($1,$2,1,'Corrección de referencia')",[org,payment]);
+ await db.query("select replan_schedule($1,$2,$3,current_date,$4,$4,600,current_date+10)",[org,plan.id,crypto.randomUUID(),plan.amount]);
+ await db.query("select cancel_schedule_balance($1,id,$3,due_date,600,600,'Descuento autorizado') from payment_schedules where scope_change_id=$2 and due_date=current_date+10",[org,request,crypto.randomUUID()]);
+ expect((await statement()).rows).toEqual([{scheduled:total-600,received:0,outstanding:total-600,cancelled:600}]);
+ await asUser(reader);expect((await statement()).rows).toHaveLength(0);await asUser(owner);
  await asUser(other);expect((await db.query("select * from scope_changes where id=$1",[request])).rows).toHaveLength(0);await asUser(owner);
 });
 

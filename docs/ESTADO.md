@@ -578,3 +578,6 @@ Cada paquete muestra su presupuesto sin IVA, cobros, pagos y minutos, con acceso
 
 ### Honorarios por área y origen de fondos
 La captura del honorario pide el área y el origen del dinero antes de crear la cuenta por pagar. Los honorarios históricos conservan su clasificación original. Una prueba registra pagos parciales de servicio, obra con fondos propios y obra con fondos del cliente y concilia los tres saldos contra el expediente. Pasaron 228 pruebas y la restauración de 87 migraciones.
+
+### Estado de cuenta por cambio de alcance
+Cada solicitud vinculada muestra la cotización y sus obligaciones vigentes, cobros efectivos, saldo pendiente y cancelaciones. La prueba de aceptación comprueba que un cobro al contrato base queda fuera de la ampliación y verifica el efecto de un cobro parcial, su reverso y una cancelación tras reprogramar. El lector no puede consultar el estado de cuenta. Pasaron 228 pruebas y se restauraron 88 migraciones en PostgreSQL 17.
