@@ -129,6 +129,10 @@ export function StudioDocumentForm({
               ["Cliente", "{{cliente.nombre}}"],
               ["Proyecto", "{{proyecto.nombre}}"],
               ["Subtítulo", "\n## Título de sección\n"],
+              [
+                "Tabla",
+                "\n| Concepto | Detalle |\n| --- | --- |\n| Elemento | Descripción |\n",
+              ],
               ["Lista", "\n- Elemento\n"],
               ["Salto de página", "\n[[salto]]\n"],
             ].map(([label, value]) => (
@@ -158,9 +162,9 @@ export function StudioDocumentForm({
       </div>
       <p className="caption">
         Las variables se completan con los datos asociados al documento. Si
-        falta un dato, la emisión se detendrá para que lo revises. Tablas,
-        imágenes y plantillas reutilizables se añadirán al editor en otro
-        incremento.
+        falta un dato, la emisión se detendrá para que lo revises. Para insertar
+        una tabla de dos a seis columnas, conserva la línea de guiones bajo los
+        encabezados y separa cada celda con una barra vertical.
       </p>
       <details>
         <summary className="text-link">Ajustar márgenes del membrete</summary>

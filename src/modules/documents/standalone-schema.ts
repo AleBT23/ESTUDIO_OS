@@ -87,8 +87,11 @@ export type StudioDocument = z.output<typeof standaloneInputSchema> & {
   id: string;
   version: number;
 };
-export function resolveDocumentBody(snapshot: StandaloneSnapshot) {
-  return resolveVariables(snapshot.body, {
+export function resolveDocumentBody(
+  snapshot: StandaloneSnapshot,
+  body = snapshot.body,
+) {
+  return resolveVariables(body, {
     "despacho.nombre": snapshot.organization.name,
     "cliente.nombre": snapshot.client?.name,
     "proyecto.nombre": snapshot.project?.name,

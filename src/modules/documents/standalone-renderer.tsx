@@ -1,3 +1,4 @@
+import { documentLines } from "./document-lines";
 import {
   Document,
   Page,
@@ -40,7 +41,14 @@ const pt = (mm: number) => (mm * 72) / 25.4;
 export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> {
   async render(input: StandaloneSnapshot) {
     const s = standaloneSnapshotSchema.parse(input);
-    const body = resolveDocumentBody(s);
+    const lines = documentLines(s.body).map((block) =>
+      typeof block === "string"
+        ? resolveDocumentBody(s, block)
+        : {
+            ...block,
+            cells: block.cells.map((cell) => resolveDocumentBody(s, cell)),
+          },
+    );
     const letterhead = await readFile(
       path.join(process.cwd(), "branding/membretes/MEMBRETA_CARTA_AT.png"),
     );
@@ -102,8 +110,33 @@ export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> 
               )}
             </View>
           )}
-          {body.split("\n").map((line, index) =>
-            line.trim() === "[[salto]]" ? (
+          {lines.map((line, index) =>
+            typeof line !== "string" ? (
+              <View
+                key={index}
+                wrap={line.cells.some((c) => c.length > 200)}
+                minPresenceAhead={line.header ? 26 : 0}
+                style={{
+                  flexDirection: "row",
+                  backgroundColor: line.header ? "#e6eee9" : "#ffffff",
+                  borderBottom: "0.5pt solid #b5c2bb",
+                }}
+              >
+                {line.cells.map((cell, column) => (
+                  <Text
+                    key={column}
+                    style={{
+                      width: 100 / line.cells.length + "%",
+                      padding: 4,
+                      fontSize: 9,
+                      fontWeight: line.header ? 600 : 400,
+                    }}
+                  >
+                    {cell || " "}
+                  </Text>
+                ))}
+              </View>
+            ) : line.trim() === "[[salto]]" ? (
               <View key={index} break />
             ) : line.startsWith("## ") ? (
               <Text
