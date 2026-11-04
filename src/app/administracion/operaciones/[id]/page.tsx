@@ -132,6 +132,9 @@ export default async function Operation({
                 {e.paid_on} · {e.direction === "in" ? "Cobro" : "Pago"}
                 {e.advance ? " anticipado" : ""} · {formatMoney(e.amount_cents)}
               </p>
+              <Link href={"/administracion/comprobantes/" + e.id}>
+                Ver o adjuntar comprobantes
+              </Link>
               {e.reversed_at ? (
                 <p>Revertido · {e.reversal_reason}</p>
               ) : (

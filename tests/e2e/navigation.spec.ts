@@ -84,6 +84,7 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
 }) => {
   const id = "11111111-1111-4111-8111-111111111111";
   for (const path of [
+    "/api/comprobantes/" + id,
     "/api/documentos/" + id,
     "/api/cotizaciones/" + id + "/preview",
     "/api/documentos-estudio/" + id + "/preview",

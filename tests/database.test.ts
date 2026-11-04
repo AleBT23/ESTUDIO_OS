@@ -2049,3 +2049,20 @@ it("completar un pendiente semanal genera una única ocurrencia y conserva prior
  await expect(db.query("update project_notes set assignee=$2 where id=$1",[id,other])).rejects.toThrow();
  await expect(db.query("update project_notes set due_on=null where id=$1",[id])).rejects.toThrow();
 });
+
+it("publica comprobantes solo tras cargar el objeto y limita acceso, sustitución y borrado",async()=>{
+ await asUser(owner);
+ const account=crypto.randomUUID(),entry=crypto.randomUUID(),receipt=crypto.randomUUID(),hash="a".repeat(64),path=[org,entry,hash].join("/");
+ await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values($1,$2,'Reembolso','service',100,0)",[account,org]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',100,current_date-1)",[entry,org,account]);
+ const put=(name:string)=>db.query("insert into storage.objects(bucket_id,name) values('finance-receipts',$1)",[name]);
+ await expect(put(path)).rejects.toThrow();
+ await db.query("insert into finance_receipts(id,organization_id,entry_id,filename,mime,sha256,size_bytes) values($1,$2,$3,'Nota.pdf','application/pdf',$4,10)",[receipt,org,entry,hash]);
+ const list=()=>db.query("select id from available_receipts where entry_id=$1",[entry]);expect((await list()).rows).toHaveLength(0);
+ await asUser(other);await expect(put(path)).rejects.toThrow();await asUser(owner);await put(path);
+ expect((await list()).rows).toEqual([{id:receipt}]);
+ expect((await db.query("delete from storage.objects where name=$1 returning name",[path])).rows).toHaveLength(0);
+ expect((await db.query("update storage.objects set name=name where name=$1 returning name",[path])).rows).toHaveLength(0);
+ for(const user of [reader,other]){await asUser(user);expect((await list()).rows).toHaveLength(0);expect((await db.query("select name from storage.objects where name=$1",[path])).rows).toHaveLength(0);}
+ await asUser(owner);
+});

@@ -299,3 +299,6 @@ Migración 023. Cada partida incluye un registro físico de recursos por fecha, 
 
 ### Recurrencia y asignación de pendientes
 Migración 024. Los pendientes del expediente admiten prioridad, responsable del estudio y repetición diaria, semanal o quincenal. Al completar se crea la ocurrencia siguiente respecto a la fecha programada, en la misma transacción. Reabrir y completar nuevamente conserva una sola sucesora. La agenda incorpora vistas de prioridad alta y asignados a mí. Se probaron cambio de año, restricciones de fecha y membresía y ausencia de duplicados. TypeScript, ESLint, 132 pruebas y build con empaquetado PDF correctos.
+
+### Comprobantes privados de movimientos
+Migración 025 agrega metadatos y bucket privado finance-receipts. El historial de los acuerdos permite adjuntar y descargar PDF/JPEG/PNG de hasta 2 MiB por movimiento. La descarga verifica SHA-256, tamaño y firma. Una carga incompleta no aparece en la lista de archivos disponibles y el mismo archivo se puede reintentar. Probados aislamiento, restricción a roles financieros, inmutabilidad y endpoint sin sesión. TypeScript, ESLint, 134 pruebas, build, seis casos Chromium y 42 comprobaciones responsive correctos. Una prueba exclusiva para instalación sin credenciales se omitió. Falta ensayo autenticado de transporte contra Storage aislado.
