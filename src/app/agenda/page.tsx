@@ -39,6 +39,7 @@ export default async function Agenda({
       <header className="page-heading">
         <p className="eyebrow">INICIO</p>
         <h1>Agenda del estudio</h1>
+        <Link href="/agenda/notificaciones">Mis notificaciones</Link>
         <p>
           Seguimiento de los pendientes de proyecto en la zona horaria del
           estudio.

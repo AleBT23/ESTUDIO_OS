@@ -2233,3 +2233,18 @@ it("la agenda reprograma el seguimiento comercial y retira publicaciones y oport
  expect((await db.query("select id from agenda_events where id=$1 and due_on=current_date+1",[opp])).rows).toHaveLength(1);
  await db.query("update opportunities set stage='won' where id=$1",[opp]);expect((await db.query("select id from agenda_events where id=$1",[opp])).rows).toHaveLength(0);
 });
+
+it("leer un aviso es personal y una reprogramación genera un aviso sin leer",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Avisos internos',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body,due_on) values($1,$2,'task','Revisar expediente',current_date-2) returning id",[org,project])).rows[0].id;
+ const inbox=()=>db.query("select read_at is not null as seen from agenda_notifications where id=$1",[id]);
+ const mark=()=>db.query("insert into agenda_notification_reads(organization_id,kind,event_id,due_on) select organization_id,kind,id,due_on from agenda_events where id=$1",[id]);
+ await mark();expect((await inbox()).rows).toEqual([{seen:true}]);
+ await asUser(reader);expect((await inbox()).rows).toEqual([{seen:false}]);await mark();
+ await db.query("delete from agenda_notification_reads where event_id=$1",[id]);expect((await inbox()).rows).toEqual([{seen:false}]);
+ await asUser(other);expect((await inbox()).rows).toHaveLength(0);
+ await asUser(owner);expect((await inbox()).rows).toEqual([{seen:true}]);
+ await db.query("update project_notes set due_on=current_date-1 where id=$1",[id]);expect((await inbox()).rows).toEqual([{seen:false}]);
+ await db.query("update project_notes set due_on=current_date+2 where id=$1",[id]);expect((await inbox()).rows).toHaveLength(0);await expect(mark()).rejects.toThrow();
+});

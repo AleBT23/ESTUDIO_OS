@@ -28,7 +28,7 @@ export default async function HomePage({
   if (ctx?.organization && ctx.membership) {
     const org = ctx.organization.id;
     const commercial = canManageCommercial(ctx.membership.role);
-    const [projects, quotes, balances] = await Promise.all([
+    const [projects, quotes, balances, notifications] = await Promise.all([
       ctx.db
         .from("projects")
         .select("id", { head: true, count: "exact" })
@@ -53,6 +53,11 @@ export default async function HomePage({
             .order("project_id")
             .limit(5)
         : null,
+      ctx.db
+        .from("agenda_notifications")
+        .select("id", { head: true, count: "exact" })
+        .eq("organization_id", org)
+        .is("read_at", null),
     ]);
     const ids = balances?.data?.map((row) => row.project_id) ?? [];
     const names = ids.length
@@ -142,6 +147,14 @@ export default async function HomePage({
           </section>
         )}
         <AreaIndicators />
+        <p>
+          <Link href="/agenda/notificaciones">
+            Notificaciones internas
+            {notifications.error
+              ? ""
+              : " · " + (notifications.count ?? 0) + " sin leer"}
+          </Link>
+        </p>
         <DashboardTasks page={pendingPage} />
       </>
     );

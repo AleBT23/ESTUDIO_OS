@@ -342,3 +342,6 @@ El expediente permite aplicar una plantilla, avanzar y reabrir fases. Administra
 
 ### Vencimientos comerciales y editoriales en la agenda
 La agenda incorpora seguimientos activos del pipeline y publicaciones programadas. Las vistas Hoy, Semana, Fecha, Vencidos y Lista muestran además los cobros pendientes y entregas desde sus registros originales. Reprogramar, cerrar la oportunidad o publicar el contenido actualiza el calendario y los conteos diarios. Los permisos comerciales se conservan. 147 pruebas, TypeScript, lint, build y 37 migraciones locales verificados. Migración 037 pendiente de producción y recorrido autenticado pendiente.
+
+### Notificaciones personales de agenda
+Inicio muestra el número de avisos sin leer y Agenda abre la bandeja individual. Los vencimientos de hoy y atrasados reutilizan los permisos de sus eventos y la zona horaria del estudio. Marcar leído o sin leer no cambia la tarea ni el cobro. Cambiar a otra fecha pendiente produce un aviso para esa fecha. Verificados aislamiento entre usuarios, reprogramación y exclusión de eventos futuros. Pasaron 148 pruebas, lint, TypeScript, build y 38 migraciones locales. La migración 038 y el recorrido autenticado en preview siguen pendientes.
