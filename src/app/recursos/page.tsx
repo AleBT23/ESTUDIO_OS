@@ -11,7 +11,7 @@ export default function ResourcesPage() {
       <nav className="tabs" aria-label="Recursos">
         <span className="selected">Identidad gráfica</span>
         <Link href="/recursos/documentos">Documentos</Link>
-        <span className="planned">Plantillas · pendiente</span>
+        <Link href="/recursos/plantillas">Plantillas</Link>
         <span className="planned">Biblioteca · pendiente</span>
         <span className="planned">Procedimientos · pendiente</span>
       </nav>

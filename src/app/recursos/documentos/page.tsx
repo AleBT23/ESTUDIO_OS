@@ -1,3 +1,4 @@
+import { TemplatePanel } from "@/modules/documents/template-panel";
 import Link from "next/link";
 import { z } from "zod";
 import { requireContext } from "@/shared/auth/context";
@@ -16,6 +17,7 @@ export default async function StudioDocumentsPage({
 }: {
   searchParams: Promise<{
     new?: string;
+    plantilla?: string;
     selected?: string;
     edit?: string;
     q?: string;
@@ -58,6 +60,19 @@ export default async function StudioDocumentsPage({
     if (result.error) throw new Error("No se pudo cargar el documento.");
     selected = (result.data as StudioDocument) || undefined;
   }
+  const template =
+    filter.new === "1" && filter.plantilla
+      ? await ctx.db
+          .from("document_templates")
+          .select("title,kind,body,margins")
+          .eq("organization_id", ctx.organization.id)
+          .eq("id", filter.plantilla)
+          .maybeSingle()
+      : null;
+  if (template && (template.error || !template.data))
+    return (
+      <p className="notice">La versión de plantilla no está disponible.</p>
+    );
   const editing = filter.new === "1" || (selected && filter.edit === "1");
   const [clients, projects] = editing
     ? await Promise.all([
@@ -108,13 +123,17 @@ export default async function StudioDocumentsPage({
         <Link href="/recursos/documentos" className="selected">
           Documentos
         </Link>
-        <span className="planned">Plantillas · pendiente</span>
+        <Link href="/recursos/plantillas">Plantillas</Link>
         <span className="planned">Biblioteca · pendiente</span>
         <span className="planned">Procedimientos · pendiente</span>
       </nav>
+      {selected && !editing && (
+        <TemplatePanel source={selected.id} version={selected.version} />
+      )}
       {editing ? (
         <StudioDocumentForm
-          key={filter.new === "1" ? "new" : selected?.id}
+          key={filter.new === "1" ? (filter.plantilla ?? "new") : selected?.id}
+          template={template?.data ?? undefined}
           document={filter.new === "1" ? undefined : selected}
           clients={clients.data || []}
           projects={projects.data || []}

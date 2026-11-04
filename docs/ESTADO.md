@@ -323,3 +323,6 @@ Migración 030. Administración → Reportes calcula cobrado, pagado, flujo, min
 
 ### Solicitudes de cambio y cotizaciones complementarias
 Migración 031. El expediente registra el alcance solicitado y su impacto en días. Administración vincula un borrador del mismo cliente, lo emite y registra la aceptación por el flujo de cotizaciones existente. Al aprobar, los paquetes adicionales y las obligaciones se vinculan a la solicitud y al proyecto original en una transacción. Se conservan el alcance y los cobros anteriores. Se probó la aceptación con dos líneas, reintento, conciliación con la cotización, ausencia de cobro automático y aislamiento. TypeScript, ESLint, 141 pruebas, 31 migraciones en PostgreSQL local y build con verificación PDF correctos.
+
+### Plantillas documentales versionadas
+Migración 032 pendiente de producción. Recursos permite guardar un documento como plantilla, publicar revisiones y generar documentos independientes desde versiones anteriores. Se conserva el contenido sin copiar la asociación al cliente o proyecto. Las 142 pruebas automatizadas pasaron localmente.

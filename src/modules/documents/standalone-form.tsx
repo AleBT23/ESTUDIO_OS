@@ -8,10 +8,12 @@ import { documentKinds, type StudioDocument } from "./standalone-schema";
 import { saveStudioDocument, issueStudioDocument } from "./standalone-actions";
 export function StudioDocumentForm({
   document,
+  template,
   clients,
   projects,
 }: {
   document?: StudioDocument;
+  template?: Pick<StudioDocument, "kind" | "margins" | "title" | "body">;
   clients: { id: string; name: string }[];
   projects: { id: string; name: string; client_id: string }[];
 }) {
@@ -19,13 +21,15 @@ export function StudioDocumentForm({
   const [version] = useState(document?.version || 0);
   const [dirty, setDirty] = useState(false);
   const [fields, setFields] = useState({
-    title: document?.title || "",
-    kind: document?.kind || "letter",
-    body: document?.body || "",
+    title: document?.title || template?.title || "",
+    kind: document?.kind || template?.kind || "letter",
+    body: document?.body || template?.body || "",
     client_id: document?.client_id || "",
     project_id: document?.project_id || "",
     margins:
-      document?.margins || structuredClone(defaultDocumentOptions.margins),
+      document?.margins ||
+      template?.margins ||
+      structuredClone(defaultDocumentOptions.margins),
   });
   const textArea = useRef<HTMLTextAreaElement>(null);
   useUnsavedChanges(dirty);

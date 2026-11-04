@@ -2149,3 +2149,14 @@ it("aceptar la cotización complementaria añade paquetes y planes solo al proye
  expect((await db.query("select id from projects where quote_version_id=$1",[prepared.id])).rows).toHaveLength(0);
  await asUser(other);expect((await db.query("select * from scope_changes where id=$1",[request])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("las versiones de plantilla conservan su texto al editar el documento de origen",async()=>{
+ await asUser(owner);const header={title:"Carta técnica",kind:"letter",body:"Para {{cliente.nombre}}",client_id:client,project_id:null,margins:defaultDocumentOptions.margins};
+ const source=(await db.query<{id:string}>("select save_studio_document($1,null,0,$2::jsonb) id",[org,JSON.stringify(header)])).rows[0].id;
+ const publish=(rev:number,v:number)=>db.query("insert into document_templates(id,organization_id,source_id,source_version,name,version) values($1,$2,$3,$4,'Carta base',$5)",[crypto.randomUUID(),org,source,rev,v]);
+ await publish(1,1);await db.query("select save_studio_document($1,$2,1,$3::jsonb)",[org,source,JSON.stringify({...header,body:"Versión revisada para {{cliente.nombre}}"})]);
+ await expect(publish(1,2)).rejects.toThrow();await publish(2,2);await expect(publish(2,2)).rejects.toThrow();
+ expect((await db.query("select body from document_templates where source_id=$1 order by version",[source])).rows).toEqual([{body:header.body},{body:"Versión revisada para {{cliente.nombre}}"}]);
+ expect((await db.query("select version from latest_document_templates where organization_id=$1 and name='Carta base'",[org])).rows).toEqual([{version:2}]);
+ await asUser(other);expect((await db.query("select * from document_templates where source_id=$1",[source])).rows).toHaveLength(0);await asUser(owner);
+});
