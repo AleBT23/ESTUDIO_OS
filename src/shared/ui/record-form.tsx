@@ -5,10 +5,12 @@ export function RecordForm({
   save,
   id,
   children,
+  submitLabel = "Guardar",
 }: {
   save: (prev: RecordState, data: FormData) => Promise<RecordState>;
   id: string;
   children: React.ReactNode;
+  submitLabel?: string;
 }) {
   const [state, action, pending] = useActionState(save, {} as RecordState);
   return (
@@ -16,7 +18,7 @@ export function RecordForm({
       <input type="hidden" name="id" value={state.nextId ?? id} />
       <div className="form-grid">{children}</div>
       <button disabled={pending} className="button button-primary">
-        {pending ? "Guardando…" : "Guardar"}
+        {pending ? "Guardando…" : submitLabel}
       </button>
       <p role="status">{state.error || state.success}</p>
     </form>

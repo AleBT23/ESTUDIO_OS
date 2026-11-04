@@ -97,6 +97,7 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
     "/buscar",
     "/agenda?view=board",
     "/agenda/notificaciones",
+    "/agenda/recordatorios",
     "/comercial/marketing",
     "/recursos/biblioteca",
     "/recursos/procedimientos",

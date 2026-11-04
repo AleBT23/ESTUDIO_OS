@@ -1,3 +1,4 @@
+import { canWriteProject } from "@/shared/permissions";
 import { TaskBoard } from "@/modules/projects/task-board";
 import { studioToday } from "@/modules/projects/agenda-window";
 import { AgendaDeadlines, StudioCalendar } from "@/modules/projects/calendar";
@@ -42,6 +43,9 @@ export default async function Agenda({
       <header className="page-heading">
         <p className="eyebrow">INICIO</p>
         <h1>Agenda del estudio</h1>
+        {canWriteProject(ctx.membership.role) && (
+          <Link href="/agenda/recordatorios">Mis recordatorios</Link>
+        )}
         <Link href="/agenda/notificaciones">Mis notificaciones</Link>
         <p>
           Seguimiento de los pendientes de proyecto en la zona horaria del

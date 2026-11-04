@@ -142,6 +142,15 @@ try {
       if (pending) await pending;
     }
   }
+  const reminder = randomUUID();
+  await first`insert into personal_reminders(id,organization_id,label,due_on,repeat_days) values(${reminder},${org},'Revisar licencias',current_date,7)`;
+  await race(
+    (db) =>
+      db`update personal_reminders set completed=true where id=${reminder}`,
+  );
+  const [recurrence] =
+    await first`select count(*)::int instances from personal_reminders where organization_id=${org} and label='Revisar licencias' and not completed and due_on=current_date+7`;
+  assert.equal(recurrence.instances, 1);
   const account = randomUUID();
   await first`insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values(${account},${org},'Honorarios','architecture',100,0)`;
   await race(
@@ -184,6 +193,7 @@ try {
         "cobros concurrentes",
         "estimaciones concurrentes",
         "repartos concurrentes",
+        "cierre simultáneo de recordatorios",
       ],
     }),
   );

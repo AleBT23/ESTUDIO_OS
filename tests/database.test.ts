@@ -2389,3 +2389,19 @@ it("los vencimientos del acuerdo siguen el saldo parcial, la liquidación y el r
   await asUser(other);expect(await notices()).toEqual([]);
   await asUser(owner);
 });
+
+it("reprograma un recordatorio privado y genera una sola recurrencia al cerrarlo", async () => {
+  await asUser(owner);
+  const id=crypto.randomUUID();
+  await db.query("insert into personal_reminders(id,organization_id,label,due_on,repeat_days) values($1,$2,'Renovar licencia','2026-03-01',7)",[id,org]);
+  const events=()=>db.query("select due_on::text from agenda_events where organization_id=$1 and kind='personal' and label='Renovar licencia'",[org]);
+  expect((await events()).rows).toEqual([{due_on:"2026-03-01"}]);
+  await db.query("update personal_reminders set due_on='2026-03-02' where id=$1 and version=1",[id]);
+  const close=()=>db.query("update personal_reminders set completed=true where id=$1 and version=2 returning id",[id]);
+  expect((await close()).rows).toHaveLength(1);expect((await close()).rows).toHaveLength(0);
+  expect((await events()).rows).toEqual([{due_on:"2026-03-09"}]);
+  await asUser(reader);expect((await events()).rows).toHaveLength(0);
+  await expect(db.query("insert into personal_reminders(organization_id,label,due_on) values($1,'Privado',current_date)",[org])).rejects.toThrow();
+  await asUser(other);expect((await events()).rows).toHaveLength(0);
+  await asUser(owner);
+});
