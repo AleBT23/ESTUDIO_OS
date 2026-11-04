@@ -17,10 +17,13 @@ import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import postgres from "postgres";
 const run = promisify(execFile);
+const restore = process.argv.includes("--restore");
 const exe = (name) =>
   path.join(
     process.env.ESTUDIO_PG_BIN ||
-      ".local/pg-validation/node_modules/@embedded-postgres/windows-x64/native/bin",
+      (restore
+        ? ".local/tools/postgresql-17.11/pgsql/bin"
+        : ".local/pg-validation/node_modules/@embedded-postgres/windows-x64/native/bin"),
     name + (process.platform === "win32" ? ".exe" : ""),
   );
 await run(exe("postgres"), ["--version"], { windowsHide: true });
@@ -38,11 +41,11 @@ await new Promise((resolve, reject) =>
 const port = listener.address().port;
 await new Promise((resolve) => listener.close(resolve));
 const clients = [];
-function connect() {
+function connect(database = "postgres") {
   const sql = postgres({
     host: "127.0.0.1",
     port,
-    database: "postgres",
+    database,
     username: "validator",
     password,
     ssl: false,
@@ -185,11 +188,109 @@ try {
   const [fee] =
     await first`select sum(cost_cents)::int cost from finance_cases where package_id=${pack}`;
   assert.equal(fee.cost, 6001);
+  if (restore) {
+    const header = {
+      title: "Documento de recuperación",
+      kind: "letter",
+      body: "Prueba de restauración",
+      margins: { top: 32, bottom: 29, left: 16, right: 32 },
+    };
+    const [{ id: document }] =
+      await first`select save_studio_document(${org},null,0,${first.json(header)}::jsonb) id`;
+    const [{ prepared }] =
+      await first`select prepare_studio_document(${org},${document},1) prepared`;
+    await first`insert into storage.objects(bucket_id,name) values('estudio-documents',${prepared.storage_path})`;
+    const checksum = "a".repeat(64);
+    await first`select finalize_studio_document(${org},${prepared.id},${checksum})`;
+    await first`select set_studio_document_archived(${org},${document},1,true)`;
+
+    const dump = path.join(dir, "synthetic.dump");
+    const connection = [
+      "--host=127.0.0.1",
+      "--port=" + port,
+      "--username=validator",
+      "--no-password",
+    ];
+    const options = {
+      windowsHide: true,
+      env: { ...process.env, PGPASSWORD: password },
+    };
+    await run(
+      exe("pg_dump"),
+      [...connection, "--format=custom", "--file=" + dump, "--dbname=postgres"],
+      options,
+    );
+    await admin`create database estudio_restored template template0`;
+    await run(
+      exe("pg_restore"),
+      [
+        ...connection,
+        "--single-transaction",
+        "--exit-on-error",
+        "--dbname=estudio_restored",
+        dump,
+      ],
+      options,
+    );
+    const recovered = connect("estudio_restored");
+    const audit = await readFile(
+      "scripts/sql/audit-finance-associations.sql",
+      "utf8",
+    );
+    await recovered.begin("read only", async (tx) => {
+      const discrepancies = await tx.unsafe(audit);
+      assert.equal(discrepancies.length, 0);
+    });
+    await recovered`set role authenticated`;
+    await recovered`select set_config('request.jwt.claim.sub',${owner},false)`;
+    const [funds] =
+      await recovered`select received_cents::int collected,receivable_cents::int outstanding from finance_case_balances where id=${account}`;
+    assert.deepEqual({ ...funds }, { ...balance });
+    const [copy] =
+      await recovered`select g.snapshot,g.sha256,g.storage_path,d.version,d.deleted_at is not null archived from generated_documents g join studio_documents d on d.id=g.document_id where g.id=${prepared.id} and g.state='issued'`;
+    assert.deepEqual(
+      { ...copy },
+      {
+        snapshot: prepared.snapshot,
+        sha256: checksum,
+        storage_path: prepared.storage_path,
+        version: 2,
+        archived: true,
+      },
+    );
+    const [object] =
+      await recovered`select name from storage.objects where name=${prepared.storage_path}`;
+    assert.equal(object.name, prepared.storage_path);
+    await recovered`select set_config('request.jwt.claim.sub',${randomUUID()},false)`;
+    assert.equal(
+      (
+        await recovered`select id from finance_case_balances where id=${account}`
+      ).length,
+      0,
+    );
+    assert.equal(
+      (
+        await recovered`select id from generated_documents where id=${prepared.id}`
+      ).length,
+      0,
+    );
+    assert.equal(
+      (
+        await recovered`select name from storage.objects where name=${prepared.storage_path}`
+      ).length,
+      0,
+    );
+  }
   console.log(
     JSON.stringify({
       postgres: server.version,
       migrations: migrations.length,
       verified: [
+        ...(restore
+          ? [
+              "restauración SQL sintética, saldos, documentos, RLS y auditoría 046",
+            ]
+          : []),
         "cobros concurrentes",
         "estimaciones concurrentes",
         "repartos concurrentes",
