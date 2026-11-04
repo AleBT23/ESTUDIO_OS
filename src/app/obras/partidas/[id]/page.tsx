@@ -24,8 +24,8 @@ export default async function Item({
   const org = ctx.organization.id;
   const [item, entries] = await Promise.all([
     ctx.db
-      .from("work_budget_items")
-      .select("id,work_id,chapter,description,unit,quantity,estimated_quantity")
+      .from("work_item_progress")
+      .select("id,work_id,chapter,description,unit,quantity,measured,remaining,budget,earned,outstanding")
       .eq("organization_id", org)
       .eq("id", id)
       .maybeSingle(),
@@ -45,10 +45,6 @@ export default async function Item({
     return <p className="notice">No se pudo consultar la estimación.</p>;
   const r = item.data;
   if (!r) notFound();
-  const remaining =
-    (Math.round(r.quantity * 10000) -
-      Math.round(r.estimated_quantity * 10000)) /
-    10000;
   return (
     <>
       <Link href={"/obras?obra=" + r.work_id + "#presupuesto"}>
@@ -58,11 +54,16 @@ export default async function Item({
         <p className="eyebrow">{r.chapter}</p>
         <h1>{r.description}</h1>
         <p>
-          Estimado {r.estimated_quantity} de {r.quantity} {r.unit} · Pendiente{" "}
-          {remaining} {r.unit}
+          Estimado {r.measured} de {r.quantity} {r.unit} · Pendiente{" "}
+          {r.remaining} {r.unit}
         </p>
+        <dl>
+          <dt>Presupuesto</dt><dd>{formatMoney(BigInt(r.budget))}</dd>
+          <dt>Avance estimado</dt><dd>{formatMoney(BigInt(r.earned))}</dd>
+          <dt>Pendiente de estimar</dt><dd>{formatMoney(BigInt(r.outstanding))}</dd>
+        </dl>
       </header>
-      {remaining > 0 && (
+      {Number(r.remaining) > 0 && (
         <details>
           <summary>Registrar estimación de avance</summary>
           <RecordForm id={crypto.randomUUID()} save={saveEstimate}>
@@ -77,7 +78,7 @@ export default async function Item({
               <input
                 type="number"
                 min=".0001"
-                max={remaining}
+                max={r.remaining}
                 step=".0001"
                 name="quantity"
                 required

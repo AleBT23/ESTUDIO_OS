@@ -8,9 +8,9 @@ export async function WorkBudget({ id, page }: { id: string; page: number }) {
   if (!canReadFinance(ctx.membership.role)) return null;
   const [items, total] = await Promise.all([
     ctx.db
-      .from("work_budget_items")
+      .from("work_item_progress")
       .select(
-        "id,chapter,description,quantity,unit,unit_price_cents,total:total_cents::text",
+        "id,chapter,description,quantity,unit,price,budget,earned,outstanding",
         { count: "exact" },
       )
       .eq("organization_id", ctx.organization.id)
@@ -47,7 +47,9 @@ export async function WorkBudget({ id, page }: { id: string; page: number }) {
                   "Cantidad",
                   "Unidad",
                   "Precio unitario",
-                  "Importe",
+                  "Presupuesto",
+                  "Avance estimado",
+                  "Pendiente de estimar",
                 ].map((s) => (
                   <th key={s}>{s}</th>
                 ))}
@@ -64,8 +66,10 @@ export async function WorkBudget({ id, page }: { id: string; page: number }) {
                   </td>
                   <td>{r.quantity}</td>
                   <td>{r.unit}</td>
-                  <td>{formatMoney(r.unit_price_cents)}</td>
-                  <td>{formatMoney(BigInt(r.total))}</td>
+                  <td>{formatMoney(BigInt(r.price))}</td>
+                  <td>{formatMoney(BigInt(r.budget))}</td>
+                  <td>{formatMoney(BigInt(r.earned))}</td>
+                  <td>{formatMoney(BigInt(r.outstanding))}</td>
                 </tr>
               ))}
             </tbody>

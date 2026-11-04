@@ -405,3 +405,6 @@ Administración → Reportes y el CSV incluyen cobros propios efectivos por hora
 
 ### Exportación de avance de obra
 Obras permite descargar por separado el balance financiero y el avance por partida. La vista 047 calcula cantidades e importes pendientes a partir de las estimaciones acumuladas. El CSV conserva los centavos, escapa texto libre y recorre el presupuesto por páginas. Pasaron 166 pruebas, TypeScript, ESLint y concurrencia en PostgreSQL local con 47 migraciones. Falta validar la descarga autenticada en preview y restaurar un respaldo antes de migrar producción.
+
+### Consulta del avance en el presupuesto
+El presupuesto y el detalle de partida muestran el valor acumulado estimado y el importe pendiente con el mismo cálculo del CSV. El máximo del formulario proviene de la cantidad pendiente en SQL. Pasaron 166 pruebas, lint, compilación con verificación PDF y TypeScript. Playwright pasó siete recorridos y omitió el de instalación sin credenciales. Pendiente probar la captura autenticada.
