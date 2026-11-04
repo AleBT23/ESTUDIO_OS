@@ -2122,6 +2122,25 @@ it("el reparto compromete un único costo, limita los porcentajes y concilia pag
  await asUser(reader);expect((await db.query("select * from collaborator_fees where id=$1",[fee])).rows).toHaveLength(0);await asUser(owner);
 });
 
+it("clasifica honorarios propios y de obra antes de conciliar los pagos del colaborador", async () => {
+  await asUser(owner);
+  const project = (await db.query<{id:string}>("select create_project_record($1,$2,'Servicios y ejecución',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+  const add = (id:string, area:string, managed:boolean) => db.query(
+    "insert into collaborator_fees(id,organization_id,project_id,member_id,label,fixed_cents,area,managed) values($1,$2,$3,$4,'Honorario',12000,$5,$6)",
+    [id,org,project,owner,area,managed],
+  );
+  for (const [area, managed, amount] of [["service",false,900],["construction",true,700],["construction",false,300]] as const) {
+    const id = crypto.randomUUID();
+    await add(id,area,managed);
+    await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'out',$4,current_date)",[crypto.randomUUID(),org,id,amount]);
+    expect((await db.query("select area,managed,payable_cents::int outstanding from finance_case_balances where id=$1",[id])).rows).toEqual([{area,managed,outstanding:12000-amount}]);
+  }
+  expect((await db.query("select paid,managed_paid from project_package_execution($1,$2)",[org,project])).rows).toEqual([{paid:"1200",managed_paid:"700"}]);
+  const invalid = crypto.randomUUID();
+  await expect(add(invalid,"service",true)).rejects.toThrow();
+  expect((await db.query("select id from finance_cases where id=$1",[invalid])).rows).toHaveLength(0);
+});
+
 it("el reporte por periodo separa cobros sin atribuir y concilia pagos y horas del paquete",async()=>{
  await asUser(owner);const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Productividad',current_date,10000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
  const pack=crypto.randomUUID();await db.exec("reset role");

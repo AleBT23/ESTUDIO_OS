@@ -1,3 +1,4 @@
+import { financeAreas } from "./expense-categories";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
@@ -23,9 +24,12 @@ export async function FeePanel({
       .order("created_at"),
     ctx.db
       .from("collaborator_fees")
-      .select("id,label,member_id,fixed_cents,rate_bps,base_cents", {
-        count: "exact",
-      })
+      .select(
+        "id,label,area,managed,member_id,fixed_cents,rate_bps,base_cents",
+        {
+          count: "exact",
+        },
+      )
       .eq("organization_id", ctx.organization.id)
       .eq("project_id", project)
       .order("created_at", { ascending: false })
@@ -45,7 +49,8 @@ export async function FeePanel({
             {r.member_id === ctx.user.id
               ? "Mi cuenta"
               : "Miembro " + r.member_id.slice(0, 8)}{" "}
-            ·{" "}
+            · {financeAreas[r.area as keyof typeof financeAreas]} ·{" "}
+            {r.managed ? "Fondos del cliente" : "Fondos propios"} ·{" "}
             {r.rate_bps
               ? r.rate_bps / 100 + "% de " + formatMoney(r.base_cents)
               : formatMoney(r.fixed_cents)}
@@ -94,6 +99,24 @@ export async function FeePanel({
                   {p.name}
                 </option>
               ))}
+            </select>
+          </label>
+          <label>
+            Área y origen de fondos
+            <select name="classification" required defaultValue="">
+              <option value="" disabled>
+                Selecciona el origen del pago
+              </option>
+              <option value="architecture">
+                Proyecto arquitectónico · fondos propios
+              </option>
+              <option value="service">
+                Servicio complementario · fondos propios
+              </option>
+              <option value="construction">Obra · fondos propios</option>
+              <option value="managed_construction">
+                Obra · fondos del cliente
+              </option>
             </select>
           </label>
           <label>

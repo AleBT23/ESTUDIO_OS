@@ -575,3 +575,6 @@ El expediente suma los honorarios sin IVA y los costos directos, externos y de h
 
 ### Ejecución por paquete en el expediente
 Cada paquete muestra su presupuesto sin IVA, cobros, pagos y minutos, con acceso al reporte filtrado. Los movimientos generales permanecen en una fila separada. El flujo propio excluye los fondos de clientes para obra, visibles en sus propias columnas. Las pruebas verifican atribución por obra, anticipos generales, minutos, separación de fondos y permisos de lector. Pasaron 227 pruebas, ESLint, compilación, TypeScript y nueve recorridos Playwright con uno omitido. PostgreSQL 17 restauró las 86 migraciones en una base sintética. El plan de solo lectura registra diez aplicadas y 76 pendientes, sin divergencias.
+
+### Honorarios por área y origen de fondos
+La captura del honorario pide el área y el origen del dinero antes de crear la cuenta por pagar. Los honorarios históricos conservan su clasificación original. Una prueba registra pagos parciales de servicio, obra con fondos propios y obra con fondos del cliente y concilia los tres saldos contra el expediente. Pasaron 228 pruebas y la restauración de 87 migraciones.

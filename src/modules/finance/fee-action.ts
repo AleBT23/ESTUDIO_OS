@@ -10,6 +10,9 @@ const schema = z
     id: z.uuid(),
     project_id: z.uuid(),
     member_id: z.uuid(),
+    classification: z
+      .enum(["architecture", "construction", "managed_construction", "service"])
+      .default("architecture"),
     package_id: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
     label: z.string().trim().min(2).max(145),
     mode: z.enum(["fixed", "percent"]),
@@ -33,14 +36,17 @@ export async function saveFee(
       error:
         "Revisa el importe o el porcentaje y selecciona un paquete para los repartos porcentuales.",
     };
-  const { value, mode, ...fields } = parsed.data;
-  const { error } = await ctx.db
-    .from("collaborator_fees")
-    .insert({
-      ...fields,
-      organization_id: ctx.organization.id,
-      [mode === "fixed" ? "fixed_cents" : "rate_bps"]: value,
-    });
+  const { value, mode, classification, ...fields } = parsed.data;
+  const { error } = await ctx.db.from("collaborator_fees").insert({
+    ...fields,
+    area:
+      classification === "managed_construction"
+        ? "construction"
+        : classification,
+    managed: classification === "managed_construction",
+    organization_id: ctx.organization.id,
+    [mode === "fixed" ? "fixed_cents" : "rate_bps"]: value,
+  });
   if (error)
     return {
       error:
