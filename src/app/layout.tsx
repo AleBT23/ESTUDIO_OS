@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { canReadFinance } from "@/shared/permissions";
+import { canReadFinance, canWriteProject } from "@/shared/permissions";
 import { cookies } from "next/headers";
 import { Shell } from "@/shared/ui/shell";
 import { getContext } from "@/shared/auth/context";
@@ -30,6 +30,7 @@ export default async function RootLayout({
           compactMenu={
             (await cookies()).get("studio-menu-compact")?.value === "1"
           }
+          writable={!!ctx?.membership && canWriteProject(ctx.membership.role)}
           finance={!!ctx?.membership && canReadFinance(ctx.membership.role)}
           organization={ctx?.organization?.name}
           email={ctx?.user.email}

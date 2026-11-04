@@ -351,3 +351,6 @@ Inicio → Mis favoritos reúne registros guardados desde la búsqueda global. S
 
 ### Actividad reciente en Inicio
 La cronología paginada enlaza cambios de estado de cotizaciones, revisiones de entregables, cobros de proyecto, movimientos y reversos financieros y versiones de biblioteca. La fecha corresponde al registro del evento y se presenta en la zona horaria del estudio. Se verificaron el movimiento original, su reverso y su aislamiento por rol y organización. Pasaron 150 pruebas, TypeScript, lint, build y 40 migraciones en PostgreSQL local. Pendientes la preview autenticada y la migración 040 en producción.
+
+### Crear registro desde la navegación
+El menú del estudio abre las acciones rápidas de Inicio según el rol. Administración puede abrir directamente los formularios comerciales, de proyectos, obras y acuerdos. Los colaboradores pueden elegir un proyecto por nombre y abrir la captura de pendientes o visitas. Los lectores no reciben acciones de escritura. Pasaron 151 pruebas, TypeScript, ESLint y compilación con verificación PDF. Bloque sin migración. Falta recorrer los enlaces con sesiones autenticadas en preview.

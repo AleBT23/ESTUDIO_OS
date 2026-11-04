@@ -1,3 +1,4 @@
+import { QuickActions } from "@/modules/dashboard/quick-actions";
 import { RecentActivity } from "@/modules/dashboard/recent-activity";
 import Link from "next/link";
 import Image from "next/image";
@@ -94,22 +95,7 @@ export default async function HomePage({
             </Link>
           )}
         </div>
-        {commercial && (
-          <nav aria-label="Acciones rápidas" className="form-actions">
-            <Link
-              className="button button-primary"
-              href="/comercial/cotizaciones/nueva"
-            >
-              Nueva cotización
-            </Link>
-            <Link className="button button-outline" href="/proyectos/nuevo">
-              Nuevo proyecto
-            </Link>
-            <Link className="button button-outline" href="/administracion">
-              Consultar cobros
-            </Link>
-          </nav>
-        )}
+        <QuickActions role={ctx.membership.role} />
         {balances && (
           <section className="panel padded">
             <h2>Proyectos con mayor saldo por cobrar</h2>

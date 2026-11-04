@@ -5,11 +5,17 @@ import { canReadFinance } from "@/shared/permissions";
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; crear?: string }>;
 }) {
   const ctx = await getContext();
   const filter = await searchParams;
   const q = typeof filter.q === "string" ? filter.q.slice(0, 120) : "";
+  const section =
+    filter.crear === "pendiente"
+      ? "#pendientes"
+      : filter.crear === "visita"
+        ? "#bitacora"
+        : "";
   let projects: {
     id: string;
     name: string;
@@ -34,11 +40,19 @@ export default async function ProjectsPage({
       <div className="page-heading">
         <p className="eyebrow">DE LA IDEA A LA ENTREGA</p>
         <h1>Proyectos y producción</h1>
-        <p>Un expediente compartido para arquitectura y visualización.</p>
+        <p>
+          {section
+            ? "Selecciona el proyecto para registrar " +
+              (filter.crear === "visita" ? "la visita." : "el pendiente.")
+            : "Un expediente compartido para arquitectura y visualización."}
+        </p>
       </div>
       {ctx?.organization && (
         <div className="toolbar">
           <form className="search-form" style={{ marginBottom: 24 }}>
+            {section && (
+              <input type="hidden" name="crear" value={filter.crear} />
+            )}
             <input
               type="search"
               name="q"
@@ -61,7 +75,7 @@ export default async function ProjectsPage({
             <Link
               key={project.id}
               className="panel overview-card"
-              href={`/proyectos/${project.id}`}
+              href={`/proyectos/${project.id}${section}`}
             >
               <Layers3 size={22} />
               <h3>{project.name}</h3>

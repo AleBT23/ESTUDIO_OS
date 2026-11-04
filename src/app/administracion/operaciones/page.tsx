@@ -35,12 +35,12 @@ function Association({
 export default async function Operations({
   searchParams,
 }: {
-  searchParams: Promise<{ area?: string; page?: string }>;
+  searchParams: Promise<{ area?: string; page?: string; crear?: string }>;
 }) {
   const ctx = await requireContext();
   if (!canReadFinance(ctx.membership.role))
     return <p className="notice">Tu rol no permite consultar finanzas.</p>;
-  const { area, page } = await searchParams;
+  const { area, page, crear } = await searchParams;
   const org = ctx.organization.id,
     index = Math.max(1, Math.min(10000, parseInt(page ?? "1") || 1));
   let query = ctx.db
@@ -185,7 +185,7 @@ export default async function Operations({
           )}
         </div>
       </section>
-      <details>
+      <details id="nuevo-acuerdo" open={crear === "acuerdo"}>
         <summary>Registrar acuerdo de ingreso o costo</summary>
         <OperationForm kind="case" id={crypto.randomUUID()}>
           <label>
@@ -257,7 +257,7 @@ export default async function Operations({
           </label>
         </OperationForm>
       </details>
-      <details>
+      <details id="nueva-obra" open={crear === "obra"}>
         <summary>Registrar obra</summary>
         <OperationForm kind="work" id={crypto.randomUUID()}>
           <label>

@@ -5,7 +5,7 @@
 | Requisito | Estado y evidencia | Pendiente |
 | --- | --- | --- |
 | DASH-01, DASH-02 | Pendiente; Inicio es bienvenida honesta | KPIs, periodos, filtro global persistente y atribución consolidada |
-| DASH-03 | Pendiente | Búsqueda global, favoritos, actividad consolidada y crear global |
+| DASH-03 | Implementado localmente | Búsqueda global, favoritos personales (039), actividad reciente (040) y captura desde el menú por rol. Pendiente preview autenticada. |
 | CRM-01 | Parcial: clientes/contactos/notas/origen, búsqueda/paginación, archivo y auditoría; src/modules/crm, database.test | Adjuntos y expediente vinculado completo; E2E real |
 | CRM-02 | Parcial: pipeline seis etapas, notas y fecha de seguimiento, señales vencidas; pipeline-schema y database.test | Historial detallado de interacciones y notificaciones persistentes |
 | QUO-01 | Parcial: catálogo editable, línea, costo/precio, vigencia, archivo, clave única | Categorías como catálogo normalizado; E2E |

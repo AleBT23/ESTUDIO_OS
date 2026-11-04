@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  Plus,
   HardHat,
   CalendarDays,
   Home,
@@ -35,6 +36,7 @@ export function Shell({
   email,
   compactMenu,
   darkTheme,
+  writable,
   finance,
 }: {
   children: React.ReactNode;
@@ -42,6 +44,7 @@ export function Shell({
   email?: string;
   darkTheme?: boolean;
   compactMenu?: boolean;
+  writable?: boolean;
   finance?: boolean;
 }) {
   const pathname = usePathname();
@@ -153,6 +156,18 @@ export function Shell({
         </nav>
         {organization && (
           <nav aria-label="Herramientas del estudio" className="area-shortcuts">
+            {writable && (
+              <Link
+                href="/#crear"
+                title="Crear registro"
+                aria-label="Crear registro"
+                className="nav-link"
+                onClick={() => setOpen(false)}
+              >
+                <Plus size={18} />
+                <span>Crear registro</span>
+              </Link>
+            )}
             <Link
               href="/agenda"
               title="Agenda"
