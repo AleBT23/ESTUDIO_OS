@@ -2019,6 +2019,9 @@ it("estima el avance parcial con redondeo acumulado y protege la partida de rein
  await db.query("insert into work_budget_items(id,organization_id,work_id,chapter,description,unit,quantity,unit_price_cents) values($1,$2,$3,'Acabados','Pintura','m2',1,3)",[item,org,work]);
  const add=(id:string,q:string)=>db.query("insert into work_estimates(id,organization_id,work_id,item_id,measured_on,quantity) values($1,$2,$3,$4,current_date,$5) on conflict do nothing",[id,org,work,item,q]);
  const first=crypto.randomUUID();await add(first,"0.5");await add(first,"0.5");
+ const progress=()=>db.query("select budget,earned,outstanding from work_item_progress where id=$1",[item]);
+ expect((await progress()).rows).toEqual([{budget:"3",earned:"2",outstanding:"1"}]);
+ await asUser(other);expect((await progress()).rows).toHaveLength(0);await asUser(owner);
  await expect(add(crypto.randomUUID(),"0.6")).rejects.toThrow();
  await add(crypto.randomUUID(),"0.5");
  expect((await db.query("select count(*)::int entries,sum(amount_cents)::int total from work_estimates where item_id=$1",[item])).rows).toEqual([{entries:2,total:3}]);

@@ -119,6 +119,12 @@ export default async function Works({
           >
             Exportar balance CSV
           </a>
+          <a
+            className="button button-outline"
+            href={"/api/obras/" + id + "/reporte?detalle=partidas"}
+          >
+            Exportar avance por partida CSV
+          </a>
         </section>
       )}
       {id && current?.data && (

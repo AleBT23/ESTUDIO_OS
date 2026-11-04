@@ -402,3 +402,6 @@ Inicio y el expediente solicitan como texto los totales en centavos de project_f
 
 ### Cobrado por hora en reportes
 Administración → Reportes y el CSV incluyen cobros propios efectivos por hora registrada junto al flujo por hora después de pagos. Ambos usan el mismo filtro y cálculo en centavos. La tasa queda vacía para fondos administrados y periodos sin horas. Pasaron 165 pruebas, TypeScript y ESLint. Pendiente validar la presentación autenticada.
+
+### Exportación de avance de obra
+Obras permite descargar por separado el balance financiero y el avance por partida. La vista 047 calcula cantidades e importes pendientes a partir de las estimaciones acumuladas. El CSV conserva los centavos, escapa texto libre y recorre el presupuesto por páginas. Pasaron 166 pruebas, TypeScript, ESLint y concurrencia en PostgreSQL local con 47 migraciones. Falta validar la descarga autenticada en preview y restaurar un respaldo antes de migrar producción.
