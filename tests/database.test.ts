@@ -1960,3 +1960,15 @@ it("presupuesta cantidades fraccionarias redondeadas por partida sin registrar p
  await asUser(reader);expect((await sum()).rows).toHaveLength(0);await expect(add()).rejects.toThrow();
  await asUser(owner);
 });
+
+it("facturar deja intactos caja y cartera, y el folio identifica duplicados dentro del estudio", async()=>{
+ await asUser(owner);const id=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values($1,$2,'Honorarios','architecture',10000,0)",[id,org]);
+ const add=(ref:string)=>db.query("insert into case_invoices(id,organization_id,case_id,reference,issued_on,amount_cents) values($1,$2,$3,$4,current_date,4000)",[crypto.randomUUID(),org,id,ref]);
+ await add("A-25");await expect(add(" a-25 ")).rejects.toThrow();
+ const total=()=>db.query("select invoiced_cents from case_invoice_totals where case_id=$1",[id]);
+ expect((await total()).rows).toEqual([{invoiced_cents:"4000"}]);
+ expect((await db.query("select received_cents::int,receivable_cents::int from finance_case_balances where id=$1",[id])).rows).toEqual([{received_cents:0,receivable_cents:10000}]);
+ await asUser(other);expect((await total()).rows).toHaveLength(0);await expect(add("B-25")).rejects.toThrow();
+ await asUser(owner);
+});

@@ -1,4 +1,5 @@
 "use client";
+import { saveInvoice } from "./invoice-action";
 import { saveBudgetItem } from "./budget-action";
 import { useActionState } from "react";
 import {
@@ -11,12 +12,16 @@ export function OperationForm({
   id,
   children,
 }: {
-  kind: "work" | "case" | "entry" | "budget";
+  kind: "work" | "case" | "entry" | "budget" | "invoice";
   id: string;
   children: React.ReactNode;
 }) {
   const [state, action, pending] = useActionState(
-    kind === "budget" ? saveBudgetItem : saveOperation.bind(null, kind),
+    kind === "invoice"
+      ? saveInvoice
+      : kind === "budget"
+        ? saveBudgetItem
+        : saveOperation.bind(null, kind),
     {} as OperationState,
   );
   return (

@@ -1,3 +1,4 @@
+import { CaseInvoices } from "@/modules/finance/case-invoices";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -13,7 +14,7 @@ export default async function Operation({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; facturas?: string }>;
 }) {
   const ctx = await requireContext();
   if (!canReadFinance(ctx.membership.role))
@@ -146,6 +147,13 @@ export default async function Operation({
           <Link href={"?page=" + (page + 1)}>Siguiente</Link>
         )}
       </section>
+      <CaseInvoices
+        id={id}
+        page={Math.max(
+          1,
+          Math.min(10000, parseInt((await searchParams).facturas ?? "1") || 1),
+        )}
+      />
     </>
   );
 }
