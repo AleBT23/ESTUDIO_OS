@@ -2,6 +2,7 @@ import { DeliveryPanel } from "@/modules/projects/delivery-panel";
 import { canManageCommercial } from "@/shared/permissions";
 import { TimePanel } from "@/modules/projects/time-panel";
 import { FeePanel } from "@/modules/finance/fee-panel";
+import { Changes } from "@/modules/projects/change-panel";
 import Link from "next/link";
 import { z } from "zod";
 import { notFound } from "next/navigation";
@@ -27,6 +28,7 @@ export default async function ProjectPage({
     payments?: string;
     tiempo?: string;
     honorarios?: string;
+    cambios?: string;
     entregas?: string;
     entrega?: string;
     revisiones?: string;
@@ -121,6 +123,11 @@ export default async function ProjectPage({
         selected={filter.entrega}
         historyPage={page(filter.revisiones)}
       />
+      <Changes
+        project={id}
+        client={project.client_id}
+        page={page(filter.cambios)}
+      />
       <ProjectWorkspace
         project={id}
         notesPage={page(filter.notes)}
@@ -139,11 +146,6 @@ export default async function ProjectPage({
         manual={!project.quote_version_id}
         page={page(filter.payments)}
       />
-      <p className="notice" style={{ marginTop: 24 }}>
-        Las notas y fotografías se comparten con el estudio. Las dependencias y
-        los cambios de alcance formales se incorporarán en siguientes
-        incrementos.
-      </p>
     </>
   );
 }

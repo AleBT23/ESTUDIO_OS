@@ -2132,3 +2132,20 @@ it("el reporte por periodo separa cobros sin atribuir y concilia pagos y horas d
  expect((await report(0)).rows).toHaveLength(0);
  await asUser(reader);expect((await report(1)).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("aceptar la cotización complementaria añade paquetes y planes solo al proyecto original",async()=>{
+ const {id,version,prepared}=await issuedFixture();
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto con extra',current_date,5000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const request=crypto.randomUUID();await db.query("insert into scope_changes(id,organization_id,client_id,project_id,description,days_impact) values($1,$2,$3,$4,'Ampliación de alcance',3)",[request,org,client,project]);
+ await db.query("update scope_changes set quote_id=$1 where id=$2",[id,request]);
+ await db.query("select mark_quote_sent($1,$2,$3,$4)",[org,id,version,prepared.id]);
+ const ver=(await db.query<{version:number}>("select version from quotes where id=$1",[id])).rows[0].version;
+ const accept=()=>db.query("select accept_quote($1,$2,$3,current_date,current_date) id",[org,id,ver]);
+ expect((await accept()).rows).toEqual([{id:project}]);await expect(accept()).rejects.toThrow();
+ expect((await db.query("select count(*)::int packages from project_service_packages where project_id=$1 and scope_change_id=$2",[project,request])).rows).toEqual([{packages:2}]);
+ expect((await db.query("select amount_cents::int amount from payment_schedules where project_id=$1 and scope_change_id is null",[project])).rows).toEqual([{amount:5000}]);
+ expect((await db.query("select sum(amount_cents)=(select total_cents from quotes where id=$2) reconciles from payment_schedules where scope_change_id=$1",[request,id])).rows).toEqual([{reconciles:true}]);
+ expect((await db.query("select collected_cents::int collected from project_financial_summary where project_id=$1",[project])).rows).toEqual([{collected:0}]);
+ expect((await db.query("select id from projects where quote_version_id=$1",[prepared.id])).rows).toHaveLength(0);
+ await asUser(other);expect((await db.query("select * from scope_changes where id=$1",[request])).rows).toHaveLength(0);await asUser(owner);
+});

@@ -281,9 +281,7 @@ export function DocumentPanel({
           <input type="hidden" name="version" value={version} />
           <h3>Aceptación y plan de cobro</h3>
           <p className="muted">
-            Confirma que el cliente aceptó la versión enviada. Se creará un
-            proyecto con paquetes por línea y obligaciones de pago; el cobrado
-            permanecerá en cero.
+            Confirma que el cliente aceptó la versión enviada. Si es una cotización complementaria, los paquetes y el plan de cobro se incorporan al proyecto vinculado. Para una propuesta inicial se crea un proyecto.
           </p>
           <div className="form-grid">
             <label>
@@ -307,8 +305,8 @@ export function DocumentPanel({
           </div>
           <Button disabled={accepting}>
             {accepting
-              ? "Creando proyecto…"
-              : "Registrar aceptación y crear proyecto"}
+              ? "Registrando aceptación…"
+              : "Registrar aceptación y plan de cobro"}
           </Button>
           {acceptState.error && (
             <p className="notice error" role="alert">
