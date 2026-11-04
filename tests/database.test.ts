@@ -1933,3 +1933,18 @@ it("calcula por obra y custodia, sin mezclar obras ni organizaciones", async () 
  await asUser(other); expect((await balances()).rows).toHaveLength(0);
  await asUser(owner);
 });
+
+it("un reverso conserva el importe y el actor y libera el saldo una sola vez",async()=>{
+ await asUser(owner);
+ const id=crypto.randomUUID(),entry=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values($1,$2,'Costo independiente','service',0,12345)",[id,org]);
+ const pay=(key:string)=>db.query("insert into finance_entries(id,organization_id,case_id,direction,paid_on,amount_cents) values($1,$2,$3,'out',current_date-1,12345)",[key,org,id]);
+ await pay(entry);
+ const reverse=()=>db.query("update finance_entries set reversal_reason='Referencia equivocada' where id=$1 returning id",[entry]);
+ await asUser(other);expect((await reverse()).rows).toHaveLength(0);
+ await asUser(owner);await reverse();await expect(reverse()).rejects.toThrow();
+ await expect(db.query("update finance_entries set amount_cents=0 where id=$1",[entry])).rejects.toThrow();
+ expect((await db.query("select amount_cents::int,reversed_by from finance_entries where id=$1",[entry])).rows[0]).toEqual({amount_cents:12345,reversed_by:owner});
+ expect((await db.query("select payable_cents::int,paid_cents::int from finance_case_balances where id=$1",[id])).rows[0]).toEqual({payable_cents:12345,paid_cents:0});
+ await pay(crypto.randomUUID());
+});

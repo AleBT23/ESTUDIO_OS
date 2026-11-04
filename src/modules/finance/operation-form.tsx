@@ -1,6 +1,10 @@
 "use client";
 import { useActionState } from "react";
-import { saveOperation, type OperationState } from "./operations-actions";
+import {
+  reverseEntry,
+  saveOperation,
+  type OperationState,
+} from "./operations-actions";
 export function OperationForm({
   kind,
   id,
@@ -23,5 +27,28 @@ export function OperationForm({
       </button>
       <p role="status">{state.error || state.success}</p>
     </form>
+  );
+}
+
+export function ReverseEntryForm({ id }: { id: string }) {
+  const [state, action, pending] = useActionState(
+    reverseEntry,
+    {} as OperationState,
+  );
+  return (
+    <details>
+      <summary>Revertir movimiento</summary>
+      <form action={action}>
+        <input type="hidden" name="id" value={id} />
+        <label>
+          Motivo de la corrección
+          <input name="reason" minLength={3} maxLength={500} required />
+        </label>
+        <button className="button button-outline" disabled={pending}>
+          Confirmar reverso
+        </button>
+        <p role="status">{state.error || state.success}</p>
+      </form>
+    </details>
   );
 }

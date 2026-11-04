@@ -4,7 +4,10 @@ import { z } from "zod";
 import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
-import { OperationForm } from "@/modules/finance/operation-form";
+import {
+  ReverseEntryForm,
+  OperationForm,
+} from "@/modules/finance/operation-form";
 export default async function Operation({
   params,
   searchParams,
@@ -123,10 +126,17 @@ export default async function Operation({
         <h2>Historial</h2>
         {history.data.length ? (
           history.data.map((e) => (
-            <p key={e.id}>
-              {e.paid_on} · {e.direction === "in" ? "Cobro" : "Pago"}
-              {e.advance ? " anticipado" : ""} · {formatMoney(e.amount_cents)}
-            </p>
+            <div key={e.id}>
+              <p>
+                {e.paid_on} · {e.direction === "in" ? "Cobro" : "Pago"}
+                {e.advance ? " anticipado" : ""} · {formatMoney(e.amount_cents)}
+              </p>
+              {e.reversed_at ? (
+                <p>Revertido · {e.reversal_reason}</p>
+              ) : (
+                <ReverseEntryForm id={e.id} />
+              )}
+            </div>
           ))
         ) : (
           <p>Sin movimientos en esta página.</p>

@@ -264,3 +264,6 @@ Migración 013 y resumen en Inicio: cobrado, pagado, cartera, cuentas por pagar,
 
 ### Expedientes de obra y exportación
 La ruta Obras lista expedientes y presenta saldos por origen del dinero, con exportación CSV privada por obra. La migración 014 agrega exclusivamente un índice y una vista con permisos del invocador. Pruebas con dos obras, dos custodias y otro usuario verifican la separación. Se prueba exportación de números mayores que el rango entero seguro de JavaScript. Typecheck, lint, 122 pruebas y build correctos. Los capítulos, partidas, estimaciones y comprobantes de obra siguen pendientes.
+
+### Reversos del nuevo registro financiero
+Migración 015 probada localmente. Cada movimiento se puede revertir una vez indicando el motivo; PostgreSQL conserva importe, actor y fecha del reverso, recalcula saldos y permite registrar la corrección. No se conceden permisos para editar importes ni borrar movimientos. Pruebas de regresión verifican reverso único, aislamiento y liberación del saldo. Typecheck, ESLint, 123 pruebas y build correctos. Las migraciones 012–015 están pendientes de validación sobre una copia Supabase aislada y respaldo.

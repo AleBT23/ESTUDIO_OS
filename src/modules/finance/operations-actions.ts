@@ -80,7 +80,39 @@ export async function saveOperation(
           ? "No se registró el movimiento. Verifica el saldo, la fecha y si ya aparece en el historial."
           : "No se pudo guardar. Revisa los datos y si el registro ya existe.",
     };
+  revalidatePath("/obras");
   revalidatePath("/");
   revalidatePath("/administracion/operaciones", "layout");
   return { success: "Registro guardado.", nextId: crypto.randomUUID() };
+}
+
+export async function reverseEntry(
+  _prev: OperationState,
+  form: FormData,
+): Promise<OperationState> {
+  const ctx = await requireContext();
+  if (!canReadFinance(ctx.membership.role))
+    return { error: "Permisos insuficientes." };
+  const input = z
+    .object({ id: z.uuid(), reason: z.string().trim().min(3).max(500) })
+    .safeParse(Object.fromEntries(form));
+  if (!input.success)
+    return { error: "Indica el movimiento y el motivo de la corrección." };
+  const result = await ctx.db
+    .from("finance_entries")
+    .update({ reversal_reason: input.data.reason })
+    .eq("organization_id", ctx.organization.id)
+    .eq("id", input.data.id)
+    .is("reversed_at", null)
+    .select("id")
+    .maybeSingle();
+  if (result.error || !result.data)
+    return {
+      error:
+        "No se pudo revertir. Actualiza el historial y verifica el estado.",
+    };
+  revalidatePath("/");
+  revalidatePath("/obras");
+  revalidatePath("/administracion/operaciones", "layout");
+  return { success: "Movimiento revertido." };
 }
