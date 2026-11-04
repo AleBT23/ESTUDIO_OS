@@ -40,8 +40,8 @@ test("administración registra un anticipo propio y concilia el saldo después d
 test("el lector autenticado carece de acceso a captura financiera y exportación", async ({
   page,
 }) => {
-  await login(page, "READER");
-  await page.goto("/administracion/operaciones");
+  await login(page, "READER", "/administracion/operaciones");
+
   await expect(
     page.getByText("Tu rol no permite consultar finanzas."),
   ).toBeVisible();

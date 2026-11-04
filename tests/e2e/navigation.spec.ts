@@ -36,7 +36,7 @@ test("configuración sin credenciales explica el bloqueo y no inventa conexión"
     page.getByText("Conexión pendiente", { exact: true }),
   ).toBeVisible();
   await page.goto("/comercial/clientes/nuevo");
-  await expect(page).toHaveURL(/\/acceso$/);
+  await expect(page).toHaveURL(url=>url.pathname==="/acceso");
   await expect(
     page.getByText("El estudio aún no está conectado.", { exact: false }),
   ).toBeVisible();
@@ -118,7 +118,8 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
     "/recursos/documentos",
   ]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/acceso$/);
+    await expect(page).toHaveURL(url=>url.pathname==="/acceso" && url.searchParams.get("volver")===path);
+
   }
 });
 

@@ -4,8 +4,14 @@ import { redirect } from "next/navigation";
 import { getContext } from "@/shared/auth/context";
 import { isConfigured } from "@/shared/db/server";
 import { LoginForm } from "@/shared/ui/auth-forms";
-export default async function LoginPage() {
-  if (await getContext()) redirect("/");
+import { studioDestination } from "@/shared/auth/destination";
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ volver?: string }>;
+}) {
+  const volver = studioDestination((await searchParams).volver);
+  if (await getContext()) redirect(volver);
   return (
     <div className="auth-card panel">
       <Image
@@ -22,7 +28,7 @@ export default async function LoginPage() {
       </p>
       {isConfigured() ? (
         <>
-          <LoginForm />
+          <LoginForm volver={volver} />
           <Link href="/invitaciones">
             Entrar con una invitación del estudio
           </Link>

@@ -601,3 +601,6 @@ La compilación final, TypeScript y ESLint pasaron. Playwright completó nueve r
 
 ### Navegación al cambiar de tamaño de pantalla
 Al ampliar la ventana con el menú móvil abierto se libera el desplazamiento y el foco pasa a la navegación de escritorio. Escape devuelve el foco al botón del menú en móvil. Playwright verificó ambas transiciones y que al volver al ancho móvil el menú permanezca cerrado. Pasaron 231 pruebas Vitest, diez recorridos de navegador, ESLint, TypeScript y la compilación. Un recorrido quedó omitido por configuración. El Supabase de ensayo no respondió en el puerto local 54321.
+
+### Acceso desde enlaces internos
+La pantalla de acceso conserva la ruta y los filtros de la página protegida solicitada. La acción de inicio de sesión valida el destino y devuelve al usuario a esa página. Portal e invitaciones conservan sus propios destinos. Playwright verificó la llegada a acceso desde enlaces directos, incluido el tablero de Agenda. La prueba con credenciales del lector queda pendiente del entorno de ensayo. Pasaron 232 pruebas Vitest, diez recorridos de navegador, la compilación, ESLint y TypeScript. Un recorrido quedó omitido por configuración.

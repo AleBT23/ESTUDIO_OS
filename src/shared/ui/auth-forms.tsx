@@ -4,11 +4,13 @@ import { signIn, createWorkspace } from "@/shared/auth/actions";
 import { Button } from "./button";
 export function LoginForm({
   portal = false,
+  volver,
   invitation = false,
-}: { portal?: boolean; invitation?: boolean } = {}) {
+}: { volver?: string; portal?: boolean; invitation?: boolean } = {}) {
   const [state, action, pending] = useActionState(signIn, {});
   return (
     <form action={action} className="form-stack">
+      {volver && <input type="hidden" name="volver" value={volver} />}
       {invitation && (
         <input type="hidden" name="destination" value="invitation" />
       )}

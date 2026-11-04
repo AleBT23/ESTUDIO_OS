@@ -1,7 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const forward = () => {
+    const headers = new Headers(request.headers);
+    headers.set(
+      "x-estudio-destination",
+      request.nextUrl.pathname + request.nextUrl.search,
+    );
+    return NextResponse.next({ request: { headers } });
+  };
+  let response = forward();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return response;
@@ -10,7 +18,7 @@ export async function proxy(request: NextRequest) {
       getAll: () => request.cookies.getAll(),
       setAll(values) {
         values.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = forward();
         values.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );

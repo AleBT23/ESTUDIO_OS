@@ -1,4 +1,6 @@
 import "server-only";
+import { headers } from "next/headers";
+import { studioDestination } from "./destination";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { database, isConfigured } from "@/shared/db/server";
@@ -49,7 +51,16 @@ export const getContext = cache(async () => {
 });
 export async function requireContext() {
   const ctx = await getContext();
-  if (!ctx) redirect("/acceso");
+  if (!ctx) {
+    const target = studioDestination(
+      (await headers()).get("x-estudio-destination"),
+    );
+    redirect(
+      target === "/"
+        ? "/acceso"
+        : "/acceso?volver=" + encodeURIComponent(target),
+    );
+  }
   if (!ctx.membership || !ctx.organization) redirect("/configuracion");
   return { ...ctx, membership: ctx.membership, organization: ctx.organization };
 }

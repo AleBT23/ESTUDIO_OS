@@ -1,4 +1,5 @@
 "use server";
+import { studioDestination } from "./destination";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { database, isConfigured } from "@/shared/db/server";
@@ -27,7 +28,7 @@ export async function signIn(
       ? "/invitaciones"
       : destination === "portal"
         ? "/portal"
-        : "/",
+        : studioDestination(form.get("volver")),
   );
 }
 export async function signOut() {
