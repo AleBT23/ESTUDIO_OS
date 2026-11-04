@@ -143,6 +143,9 @@ export async function ProjectFinance({
               <span className="tag">
                 {payment.state === "posted" ? "Recibido" : "Revertido"}
               </span>
+              <a href={"/api/recibos/" + payment.id + "?origen=proyecto"}>
+                Descargar recibo PDF
+              </a>
               {payment.reversal_reason && (
                 <p className="caption">{payment.reversal_reason}</p>
               )}

@@ -176,6 +176,9 @@ export default async function Operation({
                 {e.paid_on} · {e.direction === "in" ? "Cobro" : "Pago"}
                 {e.advance ? " anticipado" : ""} · {formatMoney(e.amount_cents)}
               </p>
+              <a href={"/api/recibos/" + e.id + "?origen=acuerdo"}>
+                Descargar recibo PDF
+              </a>
               <Link href={"/administracion/comprobantes/" + e.id}>
                 Ver o adjuntar comprobantes
               </Link>

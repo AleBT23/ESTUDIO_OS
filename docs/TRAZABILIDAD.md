@@ -21,7 +21,7 @@
 | TASK-01 | Implementado localmente | Tareas con responsables, prioridades, fechas, recurrencias, subtareas y dependencia previa. Lista, calendario y tablero en Agenda. Pendiente preview autenticada. |
 | DEL-01 | Pendiente | Entregables, archivos, revisiones y aprobaciones |
 | CHG-01 | Pendiente | Impacto, aprobación, extra y alcance trazable |
-| FIN-01 | Parcial: obligaciones, pago efectivo, saldo, idempotencia, no sobrepago, reverso auditado; SQL y UI | Editor de planes/parcialidades/cancelaciones, recibos y E2E |
+| FIN-01 | Planes, saldos, pagos efectivos, reversos y reprogramación total o por parcialidades. Recibos PDF por movimiento de proyecto o acuerdo. Pruebas SQL de conservación y concurrencia, permisos y lectura del PDF. | Cancelaciones de obligaciones y E2E autenticado en preview. |
 | FIN-02 | Pendiente | Gastos/categorías/proveedores/comprobantes y atribución |
 | FIN-03 | Pendiente | Colaboradores/reglas/repartos y pagos |
 | TIME-01 | Implementado localmente | Captura y corrección versionada por usuario, proyecto, paquete y tarea. Historial paginado en expediente. Pendiente recorrido autenticado en preview. |
@@ -35,7 +35,7 @@
 | SOP-01 | Implementado localmente | Procedimientos reutilizables, ejecuciones independientes por proyecto y pasos reversibles. Preview autenticada pendiente. |
 | CORE-01 | Parcial: Supabase SSR, roles, RLS y autorización servidor probados SQL | Credenciales y E2E Auth, invitaciones/roles editables, revisión de acceso por proyecto |
 | CORE-02 | Parcial: auditoría, versiones, archivo de clientes/contactos/servicios, reversos de cobro | Completar recuperación en restantes entidades |
-| CORE-03 | Parcial: exportador legado/validador SHA-256, migrador con checksums | Importación staging/reconciliación, backups BD/archivos, exportación general y restauración ensayada |
+| CORE-03 | Exportador legado con SHA-256, migraciones con checksums y respaldo real hasta 010. db:restore-test restaura en base vacía la estructura actual con datos sintéticos y comprueba saldos, documentos y RLS. | Importación staging, conciliación completa, exportación general y validación de la copia real actual con archivos de Storage. |
 | CORE-04 | Agenda y avisos internos por usuario. Incluye seguimientos, vencimientos de acuerdos según saldo y recordatorios privados sin proyecto, con reprogramación y recurrencia (038, 048 y 049). | Verificación autenticada de punta a punta y evaluación del proveedor de notificaciones externas. |
 | CORE-05 | Parcial: shell responsive, formularios, foco/reduced-motion; E2E móvil | E2E de formularios autenticados y accesibilidad ampliada |
 

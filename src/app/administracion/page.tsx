@@ -201,6 +201,9 @@ export default async function FinancePage({
               <p className="caption" style={{ marginTop: 7 }}>
                 {payment.paid_on} · {payment.reference || "Sin referencia"}
               </p>
+              <a href={"/api/recibos/" + payment.id + "?origen=proyecto"}>
+                Descargar recibo PDF
+              </a>
               {payment.reversal_reason && (
                 <p className="caption">Motivo: {payment.reversal_reason}</p>
               )}

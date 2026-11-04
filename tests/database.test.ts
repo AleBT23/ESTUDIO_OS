@@ -2459,3 +2459,17 @@ it("divide un saldo parcialmente cobrado, conserva la cartera y protege el cambi
  expect((await history()).rows).toEqual([{project_id:project,project_name:"Reprogramación",amount_cents:"500"}]);
  await asUser(reader);expect((await history()).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el recibo separa el origen, resuelve la obra y refleja el reverso sin exponer fondos a lectores",async()=>{
+ await asUser(owner);
+ const proj=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto de recibo',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const payment=(await db.query<{id:string}>("select record_payment($1,id,725,current_date-1,'Transferencia',$3) id from payment_schedules where project_id=$2",[org,proj,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID(),account=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,project_id,name) values($1,$2,$3,'Obra de recibo')",[work,org,proj]);
+ await db.query("insert into finance_cases(id,organization_id,work_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Material','construction',true,0,600)",[account,org,work]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,paid_on,amount_cents) values($1,$2,$3,'out',current_date-1,350)",[payment,org,account]);
+ await db.query("update finance_entries set reversal_reason='Concepto equivocado' where id=$1",[payment]);
+ const rows=()=>db.query("select source,amount,direction,managed,reversed,project_name from movement_receipts where id=$1 order by source",[payment]);
+ expect((await rows()).rows).toEqual([{source:"acuerdo",amount:"350",direction:"out",managed:true,reversed:true,project_name:"Proyecto de recibo"},{source:"proyecto",amount:"725",direction:"in",managed:false,reversed:false,project_name:"Proyecto de recibo"}]);
+ await asUser(reader);expect((await rows()).rows).toHaveLength(0);await asUser(other);expect((await rows()).rows).toHaveLength(0);await asUser(owner);
+});
