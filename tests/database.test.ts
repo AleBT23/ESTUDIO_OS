@@ -1990,3 +1990,15 @@ it("las comunicaciones y la bitácora usan su expediente, categorías y permisos
  await asUser(other);expect((await db.query("select * from journal_entries where organization_id=$1",[org])).rows).toHaveLength(0);
  await expect(add("call",client,null)).rejects.toThrow();await asUser(owner);
 });
+
+it("el entregable conserva revisiones ordenadas y se cierra al aprobar",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Proyecto de revisiones',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=crypto.randomUUID();
+ await db.query("insert into project_deliverables(id,organization_id,project_id,stage,name,due_on,assignee) values($1,$2,$3,'Ejecutivo','Plano de cimentación',current_date,$4)",[id,org,project,owner]);
+ const add=(version:number,state:string)=>db.query("insert into deliverable_revisions(id,organization_id,project_id,deliverable_id,revision,state,notes) values($1,$2,$3,$4,$5,$6,'Comentarios del plano')",[crypto.randomUUID(),org,project,id,version,state]);
+ await expect(add(1,"approved")).rejects.toThrow();
+ await add(1,"review");await expect(add(1,"review")).rejects.toThrow();
+ await add(2,"changes");await add(3,"review");await add(4,"approved");await expect(add(5,"review")).rejects.toThrow();
+ await asUser(reader);expect((await db.query("select state,revision from deliverable_status where id=$1",[id])).rows).toEqual([{state:"approved",revision:4}]);await expect(add(5,"review")).rejects.toThrow();
+ await asUser(other);expect((await db.query("select * from deliverable_revisions where deliverable_id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
+});

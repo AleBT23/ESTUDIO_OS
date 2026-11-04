@@ -284,3 +284,6 @@ Búsqueda por nombre en clientes, proyectos, cotizaciones, documentos, obras y a
 
 ### Comunicaciones con clientes y bitácora de obra
 Migración 019. Los expedientes incluyen entradas fechadas, historial paginado y autor registrado. Los clientes archivados conservan el historial en modo lectura. Se prueban las categorías permitidas para cada expediente y el aislamiento entre organizaciones. TypeScript, ESLint, 127 pruebas y compilación con empaquetado PDF correctos.
+
+### Entregables y revisiones de proyecto
+Migración 020. Desde cada proyecto se registran etapa, entregable, responsable y fecha. Los colaboradores pueden presentar revisiones con notas y enlace HTTPS. Administración solicita cambios o aprueba sobre una revisión enviada. La aprobación cierra el historial; los reintentos con una versión obsoleta se rechazan en PostgreSQL. Se probaron las transiciones, lectura por rol y aislamiento. TypeScript, lint, 128 pruebas y compilación con guard PDF correctos. Continúan pendientes las plantillas editables de etapas y la validación autenticada en preview.

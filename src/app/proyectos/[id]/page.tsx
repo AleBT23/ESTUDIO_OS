@@ -1,3 +1,4 @@
+import { DeliveryPanel } from "@/modules/projects/delivery-panel";
 import Link from "next/link";
 import { z } from "zod";
 import { notFound } from "next/navigation";
@@ -17,7 +18,14 @@ export default async function ProjectPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notes?: string; visits?: string; payments?: string }>;
+  searchParams: Promise<{
+    notes?: string;
+    visits?: string;
+    payments?: string;
+    entregas?: string;
+    entrega?: string;
+    revisiones?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   const { id } = await params;
@@ -97,6 +105,12 @@ export default async function ProjectPage({
           </div>
         </>
       ) : null}
+      <DeliveryPanel
+        id={id}
+        page={page(filter.entregas)}
+        selected={filter.entrega}
+        historyPage={page(filter.revisiones)}
+      />
       <ProjectWorkspace
         project={id}
         notesPage={page(filter.notes)}
@@ -110,8 +124,9 @@ export default async function ProjectPage({
         page={page(filter.payments)}
       />
       <p className="notice" style={{ marginTop: 24 }}>
-        Las notas y fotografías se comparten con el estudio. Fases, dependencias
-        y cambios de alcance formales se incorporarán en siguientes incrementos.
+        Las notas y fotografías se comparten con el estudio. Las dependencias y
+        los cambios de alcance formales se incorporarán en siguientes
+        incrementos.
       </p>
     </>
   );
