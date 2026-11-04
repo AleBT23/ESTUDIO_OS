@@ -2704,3 +2704,20 @@ it("importa clientes solo a staging habilitado, evita duplicados y revierte el l
  await expect(apply([{id:"cl-c",name:"Cliente independiente",email:a.email}])).rejects.toThrow("Posible duplicado");
  await asUser(other);await expect(apply([a])).rejects.toThrow("no habilitado");await asUser(owner);
 });
+it("emite variables comerciales desde una cotización concreta y conserva el vínculo con clientes anteriores",async()=>{
+ await asUser(owner);
+ const {prepared}=await issuedFixture();
+ const header={title:"Carta de anticipo",kind:"letter",body:"{{cotizacion.folio}} · {{cotizacion.total}} · {{cotizacion.anticipo}}",margins:defaultDocumentOptions.margins,client_id:null,project_id:null};
+ const save=(h:object,id:string|null=null,v=0)=>db.query<{id:string}>("select save_studio_document($1,$2,$3,$4::jsonb) id",[org,id,v,JSON.stringify(h)]);
+ await expect(save({...header,quote_version_id:prepared.id,client_id:crypto.randomUUID()})).rejects.toThrow("no corresponde");
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Otro proyecto del cliente',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ await expect(save({...header,quote_version_id:prepared.id,project_id:project})).rejects.toThrow("no corresponde");
+ const id=(await save({...header,quote_version_id:prepared.id})).rows[0].id;
+ await save(header,id,1);
+ const {snapshot}=(await db.query<{snapshot:unknown}>("select prepare_studio_document($1,$2,2)->'snapshot' snapshot",[org,id])).rows[0];
+ const parsed=standaloneSnapshotSchema.parse(snapshot);
+ expect(parsed.quote?.folio).toBe(prepared.snapshot.folio);
+ expect(resolveDocumentBody(parsed)).toContain("$25,000.00");
+ expect(resolveDocumentBody(parsed)).toContain("$12,500.00");
+ await asUser(other);expect((await db.query("select id from document_quote_context where id=$1",[prepared.id])).rows).toEqual([]);await asUser(owner);
+});

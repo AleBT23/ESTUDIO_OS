@@ -58,6 +58,10 @@ export const standaloneInputSchema = z
     body: z.string().trim().min(1).max(40000),
     client_id: z.union([z.literal(""), z.uuid()]).transform((v) => v || null),
     project_id: z.union([z.literal(""), z.uuid()]).transform((v) => v || null),
+    quote_version_id: z
+      .union([z.literal(""), z.uuid()])
+      .optional()
+      .transform((v) => (v === undefined ? undefined : v || null)),
     margins: marginsSchema.default(defaultDocumentOptions.margins),
   })
   .superRefine((input, ctx) => {
@@ -77,6 +81,13 @@ export const standaloneSnapshotSchema = z.object({
   title: z.string(),
   kind: z.enum(["letter", "official", "minutes", "site_report"]),
   body: z.string(),
+  quote: z
+    .object({
+      folio: z.string(),
+      total_cents: z.coerce.number().int().safe().nonnegative(),
+      advance_rate: z.coerce.string(),
+    })
+    .nullish(),
   folio: z.string(),
   date: z.string(),
   organization: z.object({ name: z.string() }),
@@ -94,13 +105,13 @@ export function resolveDocumentBody(
   body = snapshot.body,
 ) {
   return resolveVariables(body, {
+    ...(snapshot.quote ? quoteTemplateValues(snapshot.quote) : {}),
     "despacho.nombre": snapshot.organization.name,
     "cliente.nombre": snapshot.client?.name,
     "proyecto.nombre": snapshot.project?.name,
     fecha: snapshot.date,
   });
 }
-// Reservado para plantillas vinculadas a una versión de cotización; no inventa contexto.
 export function quoteTemplateValues(quote: {
   folio: string;
   total_cents: number;

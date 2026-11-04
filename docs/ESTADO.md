@@ -1,6 +1,10 @@
 # Estado de implementación
 
-Actualización: **26 de octubre de 2026**. Plataforma integral en desarrollo; Supabase conectado. Sin despliegue público ni importación de datos del legado.
+**4 de noviembre de 2026 · Rama `feature/estudio-os-v2`**
+
+La rama incorpora finanzas por área y origen de fondos, cartera, proyectos, obras, agenda, documentos y equipo. Las últimas secciones registran las pruebas y limitaciones de cada cambio. La conexión Supabase configurada conserva las migraciones 001–010. La versión publicada en Netlify precede a estos cambios.
+
+La aceptación integral sigue pendiente. Faltan los recorridos autenticados de la rama en un Supabase aislado, la conciliación con una copia real actualizada y las funcionalidades abiertas en [TRAZABILIDAD.md](TRAZABILIDAD.md). Los apuntes cronológicos que siguen incluyen el estado conocido en cada fecha.
 
 ## Auditoría
 - Documentación inicial completa leída; carpeta inventariada. RAR preservado y extraído para análisis sin inicializar tabulador.
@@ -504,3 +508,6 @@ El propietario puede seleccionar la exportación JSON en Configuración. El nave
 
 ### Importación de clientes a staging
 Configuración incorpora clientes por ID legado, reutiliza coincidencias exactas y rechaza registros archivados, diferencias y coincidencias ambiguas. Requiere entorno staging, rol propietario y habilitación expresa del estudio en la base aislada. Se probó que un conflicto al final revierte todo el lote. Pasaron 203 pruebas, TypeScript, lint, build, nueve recorridos Playwright y restauración sintética con 68 migraciones. Sin carga de datos reales. Restan catálogo, presets, propuestas y verificación del respaldo en staging.
+
+### Variables de cotización en documentos y plantillas
+El editor vincula una versión emitida. El folio, total y anticipo provienen de su snapshot tanto en la vista previa como en la preparación de la versión documental. Se validan la organización, el cliente y, cuando se selecciona, el proyecto. Una edición desde el cliente anterior conserva el vínculo. Los documentos previos sin cotización mantienen su formato. Se verificó una propuesta de 25.000 MXN con anticipo de 12.500 MXN. Pasaron 204 pruebas, TypeScript, lint, build, nueve recorridos Playwright y restauración sintética con 69 migraciones. Pendiente emisión autenticada en staging.

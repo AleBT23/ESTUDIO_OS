@@ -82,7 +82,7 @@ export default async function StudioDocumentsPage({
       <p className="notice">La versión de plantilla no está disponible.</p>
     );
   const editing = filter.new === "1" || (selected && filter.edit === "1");
-  const [clients, projects, images] = editing
+  const [clients, projects, images, quotes] = editing
     ? await Promise.all([
         ctx.db
           .from("clients")
@@ -99,13 +99,20 @@ export default async function StudioDocumentsPage({
           .order("name")
           .limit(500),
         listLibraryImages(ctx),
+        ctx.db
+          .from("document_quote_context")
+          .select("id,folio,client_id,project_id")
+          .eq("organization_id", ctx.organization.id)
+          .is("deleted_at", null)
+          .order("folio", { ascending: false })
+          .limit(500),
       ])
     : [
         { data: [], error: null },
         { data: [], error: null },
         { data: [], error: null },
       ];
-  if (clients.error || projects.error)
+  if (clients.error || projects.error || quotes?.error)
     throw new Error("No se pudieron consultar clientes y proyectos.");
   const versions =
     selected && !editing
@@ -148,6 +155,7 @@ export default async function StudioDocumentsPage({
           document={filter.new === "1" ? undefined : selected}
           clients={clients.data || []}
           projects={projects.data || []}
+          quotes={quotes?.data || []}
           images={images.data || []}
           imageError={!!images.error}
         />

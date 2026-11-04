@@ -12,12 +12,19 @@ export function StudioDocumentForm({
   template,
   clients,
   projects,
+  quotes = [],
   images = [],
   imageError = false,
 }: {
   document?: StudioDocument;
   template?: Pick<StudioDocument, "kind" | "margins" | "title" | "body">;
   clients: { id: string; name: string }[];
+  quotes?: {
+    id: string;
+    folio: string;
+    client_id: string;
+    project_id: string | null;
+  }[];
   images?: { id: string; title: string; filename: string; version: number }[];
   imageError?: boolean;
   projects: { id: string; name: string; client_id: string }[];
@@ -33,6 +40,7 @@ export function StudioDocumentForm({
     body: source.content,
     client_id: document?.client_id || "",
     project_id: document?.project_id || "",
+    quote_version_id: document?.quote_version_id || "",
     margins:
       document?.margins ||
       template?.margins ||
@@ -104,7 +112,15 @@ export function StudioDocumentForm({
           Cliente (opcional)
           <select
             value={fields.client_id}
-            onChange={(e) => update("client_id", e.target.value)}
+            onChange={(e) => {
+              setFields({
+                ...fields,
+                client_id: e.target.value,
+                project_id: "",
+                quote_version_id: "",
+              });
+              setDirty(true);
+            }}
           >
             <option value="">Sin cliente asociado</option>
             {clients.map((c) => (
@@ -123,6 +139,7 @@ export function StudioDocumentForm({
               setFields({
                 ...fields,
                 project_id: e.target.value,
+                quote_version_id: "",
                 client_id: project?.client_id || fields.client_id,
               });
               setDirty(true);
@@ -136,6 +153,40 @@ export function StudioDocumentForm({
             ))}
           </select>
         </label>
+        <label className="full">
+          Versión emitida de cotización (opcional)
+          <select
+            value={fields.quote_version_id}
+            onChange={(e) => {
+              const q = quotes.find((q) => q.id === e.target.value);
+              setFields({
+                ...fields,
+                quote_version_id: e.target.value,
+                client_id: q?.client_id ?? fields.client_id,
+              });
+              setDirty(true);
+            }}
+          >
+            <option value="">Sin cotización</option>
+            {fields.quote_version_id &&
+              !quotes.some((q) => q.id === fields.quote_version_id) && (
+                <option value={fields.quote_version_id}>
+                  Versión vinculada · {fields.quote_version_id.slice(0, 8)}
+                </option>
+              )}
+            {quotes
+              .filter(
+                (q) =>
+                  (!fields.client_id || q.client_id === fields.client_id) &&
+                  (!fields.project_id || q.project_id === fields.project_id),
+              )
+              .map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.folio}
+                </option>
+              ))}
+          </select>
+        </label>
         <div className="full">
           <p className="caption">Insertar en el texto</p>
           <div className="document-tools">
@@ -144,6 +195,9 @@ export function StudioDocumentForm({
               ["Estudio", "{{despacho.nombre}}"],
               ["Cliente", "{{cliente.nombre}}"],
               ["Proyecto", "{{proyecto.nombre}}"],
+              ["Folio de cotización", "{{cotizacion.folio}}"],
+              ["Total cotizado", "{{cotizacion.total}}"],
+              ["Anticipo cotizado", "{{cotizacion.anticipo}}"],
               ["Subtítulo", "\n## Título de sección\n"],
               [
                 "Tabla",

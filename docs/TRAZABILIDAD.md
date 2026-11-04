@@ -1,6 +1,6 @@
 # Requisitos y evidencia
 
-19 de octubre de 2026. **Ningún bloque integral está aceptado todavía**: falta conexión real Supabase, E2E autenticado y validación del propietario. “Implementado” aquí describe código/migraciones/pruebas locales, nunca datos productivos ni despliegue.
+**4 de noviembre de 2026.** Las pruebas locales y el historial de producción se documentan por separado. Supabase tiene diez migraciones registradas. La aceptación de la rama requiere un recorrido autenticado en staging y validación con el propietario.
 
 | Requisito | Estado y evidencia | Pendiente |
 | --- | --- | --- |
@@ -27,15 +27,15 @@
 | TIME-01 | Implementado localmente | Captura y corrección versionada por usuario, proyecto, paquete y tarea. Historial paginado en expediente. Pendiente recorrido autenticado en preview. |
 | PROF-01 | Presupuesto aceptado, margen previsto, cobrado y flujo por hora, margen sobre cobros propios. Las horas usan tarifa vigente por miembro y reportan minutos sin tarifa por separado (056). | Validar datos de referencia, indirectos y aceptación del reporte en preview. |
 | REP-01 | Reportes de flujo y egresos por categoría con filtros de periodo, cliente, proyecto, obra, paquete y línea. CSV con centavos exactos. | Recorrido autenticado, descarga y conciliación con datos representativos. |
-| DOC-01 | Parcial: motor de variables con lista blanca, sintaxis/missing-data y sustitución no recursiva probados; documentos con párrafos/subtítulos/listas/saltos | Tablas paginadas e imágenes versionadas verificadas en PDF. Pendiente contexto completo de cotización y prueba autenticada |
-| DOC-02 | Parcial: PNG real carta, proporción preservada, márgenes seguros y preview PDF | Membretes múltiples privados/carga, aviso de proporción/ajuste y guías visuales |
+| DOC-01 | Parcial: motor de variables con lista blanca, sintaxis/missing-data y sustitución no recursiva probados; documentos con párrafos/subtítulos/listas/saltos | Tablas paginadas, imágenes, membretes y variables vinculadas a una versión emitida (069). Pendiente emisión autenticada. |
+| DOC-02 | Parcial: PNG real carta, proporción preservada, márgenes seguros y preview PDF | Membretes privados por revisión en cartas y cotizaciones. Pendiente validar proporción y márgenes con los membretes reales. |
 | DOC-03 | Parcial: seis secciones opcionales/reordenables, presupuesto obligatorio; Unicode, 1/12 páginas, encabezado repetido y firmas; pdf.test | Personalización de textos/plantillas/anexos y escenarios extremos de contenido |
 | DOC-04 | Cartas, oficios, minutas y reportes con borradores, contexto, emisión y versiones privadas. Recursos permite archivar y recuperar documentos con auditoría y versión optimista (051). | Tablas e imágenes privadas incorporadas. Pendiente emisión autenticada. |
 | LIB-01 | Implementado localmente | Biblioteca buscable, etiquetas, vínculos, revisiones inmutables y adjuntos privados de hasta 2 MiB por versión. Pendiente preview autenticada. |
 | SOP-01 | Implementado localmente | Procedimientos reutilizables, ejecuciones independientes por proyecto y pasos reversibles. Preview autenticada pendiente. |
 | CORE-01 | Supabase SSR, roles, RLS y cambio de rol auditado de miembros existentes por el propietario (057). Prueba de concesión y retiro de acceso financiero en SQL. | Invitaciones con caducidad y verificación de correo (058). Pendientes alcance por proyecto y validación autenticada con dos cuentas. |
 | CORE-02 | Parcial: auditoría, versiones, archivo de clientes/contactos/servicios, reversos de cobro | Completar recuperación en restantes entidades |
-| CORE-03 | Exportador legado con SHA-256, migraciones con checksums y respaldo real hasta 010. db:restore-test restaura en base vacía la estructura actual con datos sintéticos y comprueba saldos, documentos y RLS. | Importación staging, conciliación completa, exportación general y validación de la copia real actual con archivos de Storage. |
+| CORE-03 | Exportador legado con SHA-256, migraciones con checksums y respaldo real hasta 010. db:restore-test restaura en base vacía la estructura actual con datos sintéticos y comprueba saldos, documentos y RLS. | Revisión de JSON en navegador e importación transaccional de clientes en staging (068). Faltan catálogo y propuestas, exportación general y validación de la copia real actual con archivos de Storage. |
 | CORE-04 | Agenda y avisos internos por usuario. Incluye seguimientos, vencimientos de acuerdos según saldo y recordatorios privados sin proyecto, con reprogramación y recurrencia (038, 048 y 049). | Verificación autenticada de punta a punta y evaluación del proveedor de notificaciones externas. |
 | CORE-05 | Parcial: shell responsive, formularios, foco/reduced-motion; E2E móvil | E2E de formularios autenticados y accesibilidad ampliada |
 
@@ -47,6 +47,6 @@
 - F: minuta independiente de 1 página y reporte de visita de 3 páginas generados, reabiertos y revisados visualmente con PNG real; persistencia/versiones/Storage verificadas en PostgreSQL de pruebas. Falta E2E remoto/aceptación.
 
 ## Secuencia para retomar
-1. El usuario confirmó que no tiene Supabase y autorizó continuar preparación. Conexión/migraciones/E2E remoto quedan pendientes, sin bloquear código y pruebas independientes; no tocar navegador original.
-2. Completar Comercial (presets documentales y archivos) y Documentos (plantillas reutilizables, tablas/imágenes, membretes múltiples). Conceptos, estimación de honorarios y estados/revisiones ya preparados y probados localmente.
-3. Producción completa; después Administración completa. Continuar Recursos/Marketing, Inicio/analítica y migración/hardening final conforme al roadmap. No dejar estos módulos fuera del alcance.
+1. Contrastar el historial mediante `npm run db:plan` y repetir la restauración en una copia aislada actualizada, incluidos los objetos de Storage.
+2. Ejecutar los recorridos autenticados del anticipo y del lector con `npm run test:e2e:auth`. Completar la verificación de portal, expedientes, cotizaciones y obras con identidades separadas.
+3. Continuar las funcionalidades abiertas en la matriz, incluida la migración del catálogo y de las propuestas, y contrastar importes y PDFs antes de preparar la publicación.
