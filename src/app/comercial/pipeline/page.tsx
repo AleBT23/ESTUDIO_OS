@@ -1,3 +1,4 @@
+import { Interactions } from "@/modules/crm/interactions";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
@@ -8,7 +9,12 @@ import { stages, type Opportunity } from "@/modules/crm/pipeline-schema";
 export default async function PipelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ selected?: string; new?: string; line?: string }>;
+  searchParams: Promise<{
+    selected?: string;
+    new?: string;
+    line?: string;
+    historyPage?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   if (!canManageCommercial(ctx.membership.role))
@@ -84,11 +90,22 @@ export default async function PipelinePage({
       </div>
       <CommercialTabs active="/comercial/pipeline" />
       {selected || filter.new === "1" ? (
-        <OpportunityForm
-          opportunity={filter.new === "1" ? undefined : selected}
-          clients={choices}
-          lines={ctx.lines}
-        />
+        <>
+          <OpportunityForm
+            opportunity={filter.new === "1" ? undefined : selected}
+            clients={choices}
+            lines={ctx.lines}
+          />
+          {selected && filter.new !== "1" && (
+            <Interactions
+              id={selected.id}
+              page={Math.max(
+                1,
+                Math.min(10000, parseInt(filter.historyPage || "1") || 1),
+              )}
+            />
+          )}
+        </>
       ) : (
         <>
           <div className="toolbar">

@@ -517,3 +517,6 @@ Reportes descarga cobros, pagos, anticipos y reversos bajo los filtros activos. 
 
 ### Diseño documental reutilizable en presets
 El preset puede guardar el orden de secciones, los márgenes y la revisión del membrete. Al aplicarlo se guarda una copia en el borrador. La prueba de integración verifica que editar el preset o guardar el borrador desde un cliente anterior conserve el diseño copiado. Un diseño inválido revierte también el cambio de versión. Pasaron 207 pruebas, TypeScript, lint, build, nueve recorridos Playwright y restauración sintética con 71 migraciones.
+
+### Historial de interacciones por oportunidad
+Pipeline conserva llamadas, reuniones, correos y notas con fecha y autor en Supabase. El historial está paginado y se conserva al archivar la oportunidad. Se verificaron los permisos del administrador, lector y miembro de otro estudio, la protección del autor y el rechazo de escrituras sobre oportunidades archivadas. Pasaron 208 pruebas y la restauración sintética de 72 migraciones.

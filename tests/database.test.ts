@@ -2756,3 +2756,22 @@ it("conserva el diseño copiado aunque cambie el preset y revierte escrituras in
   expect((await read()).rows).toEqual([]);
   await asUser(owner);
 });
+it("conserva el historial comercial con autor real y restringe lecturas y escrituras", async () => {
+  await asUser(owner);
+  const {line} = await commercialFixture();
+  const opportunity = (await db.query<{id:string}>("insert into opportunities(organization_id,client_id,business_line_id,name) values($1,$2,$3,'Seguimiento') returning id",[org,client,line])).rows[0].id;
+  const add = () => db.query("insert into opportunity_interactions(organization_id,opportunity_id,kind,body) values($1,$2,'call','Acordamos visita')",[org,opportunity]);
+  const read = () => db.query("select actor_id,kind,body from opportunity_interactions where opportunity_id=$1",[opportunity]);
+  await add();
+  expect((await read()).rows).toEqual([{actor_id:owner,kind:"call",body:"Acordamos visita"}]);
+  await expect(db.query("update opportunity_interactions set body='Cambio' where opportunity_id=$1",[opportunity])).rejects.toThrow();
+  for (const user of [reader,other]){
+    await asUser(user);
+    expect((await read()).rows).toEqual([]);
+    await expect(add()).rejects.toThrow();
+  }
+  await asUser(owner);
+  await db.query("update opportunities set deleted_at=now() where id=$1",[opportunity]);
+  await expect(add()).rejects.toThrow();
+  expect((await read()).rows).toHaveLength(1);
+});
