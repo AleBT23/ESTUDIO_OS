@@ -1,3 +1,4 @@
+import { studioToday, weekThrough } from "./agenda-window";
 import Link from "next/link";
 import { requireContext, getContext } from "@/shared/auth/context";
 import { canWriteProject } from "@/shared/permissions";
@@ -36,14 +37,7 @@ export async function DashboardTasks({
     .eq("organization_id", ctx.organization.id)
     .eq("kind", "task")
     .is("deleted_at", null);
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: ctx.organization.timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  const weekEnd = new Date(today + "T12:00:00Z");
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  const today = studioToday(ctx.organization.timezone);
   query =
     view === "completed"
       ? query.not("completed_at", "is", null)
@@ -53,10 +47,9 @@ export async function DashboardTasks({
   if (view === "today") query = query.eq("due_on", today);
   if (view === "date" && date) query = query.eq("due_on", date);
   if (view === "week")
-    query = query
-      .gte("due_on", today)
-      .lte("due_on", weekEnd.toISOString().slice(0, 10));
-  if (view === "overdue") query = query.lt("due_on", today);
+    query = query.gte("due_on", today).lte("due_on", weekThrough(today));
+  if (view === "overdue" || view === "lateTasks")
+    query = query.lt("due_on", today);
   const pager = view
     ? "/agenda?view=" + view + (date ? "&date=" + date : "") + "&page="
     : "/?pendingPage=";

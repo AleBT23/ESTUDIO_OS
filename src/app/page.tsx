@@ -1,3 +1,4 @@
+import { studioToday, weekThrough } from "@/modules/projects/agenda-window";
 import { PeriodFlow } from "@/modules/dashboard/period-flow";
 import { QuickActions } from "@/modules/dashboard/quick-actions";
 import { RecentActivity } from "@/modules/dashboard/recent-activity";
@@ -31,37 +32,49 @@ export default async function HomePage({
   if (ctx?.organization && ctx.membership) {
     const org = ctx.organization.id;
     const commercial = canManageCommercial(ctx.membership.role);
-    const [projects, quotes, balances, notifications] = await Promise.all([
+    const today = studioToday(ctx.organization.timezone);
+    const countEvents = (kind: string) =>
       ctx.db
-        .from("projects")
+        .from("agenda_events")
         .select("id", { head: true, count: "exact" })
         .eq("organization_id", org)
-        .eq("state", "active")
-        .is("deleted_at", null),
-      commercial
-        ? ctx.db
-            .from("quotes")
-            .select("id", { head: true, count: "exact" })
-            .eq("organization_id", org)
-            .eq("status", "sent")
-            .is("deleted_at", null)
-        : null,
-      canReadFinance(ctx.membership.role)
-        ? ctx.db
-            .from("project_financial_summary")
-            .select("project_id,collected_cents,balance_cents")
-            .eq("organization_id", org)
-            .gt("balance_cents", 0)
-            .order("balance_cents", { ascending: false })
-            .order("project_id")
-            .limit(5)
-        : null,
-      ctx.db
-        .from("agenda_notifications")
-        .select("id", { head: true, count: "exact" })
-        .eq("organization_id", org)
-        .is("read_at", null),
-    ]);
+        .eq("kind", kind);
+    const [projects, quotes, balances, notifications, lateTasks, deliveries] =
+      await Promise.all([
+        ctx.db
+          .from("projects")
+          .select("id", { head: true, count: "exact" })
+          .eq("organization_id", org)
+          .eq("state", "active")
+          .is("deleted_at", null),
+        commercial
+          ? ctx.db
+              .from("quotes")
+              .select("id", { head: true, count: "exact" })
+              .eq("organization_id", org)
+              .eq("status", "sent")
+              .is("deleted_at", null)
+          : null,
+        canReadFinance(ctx.membership.role)
+          ? ctx.db
+              .from("project_financial_summary")
+              .select("project_id,collected_cents,balance_cents")
+              .eq("organization_id", org)
+              .gt("balance_cents", 0)
+              .order("balance_cents", { ascending: false })
+              .order("project_id")
+              .limit(5)
+          : null,
+        ctx.db
+          .from("agenda_notifications")
+          .select("id", { head: true, count: "exact" })
+          .eq("organization_id", org)
+          .is("read_at", null),
+        countEvents("task").lt("due_on", today),
+        countEvents("delivery")
+          .gte("due_on", today)
+          .lte("due_on", weekThrough(today)),
+      ]);
     const ids = balances?.data?.map((row) => row.project_id) ?? [];
     const names = ids.length
       ? await ctx.db
@@ -82,6 +95,18 @@ export default async function HomePage({
             <h2>Proyectos activos</h2>
             <strong>
               {projects.error ? "Consulta no disponible" : projects.count}
+            </strong>
+          </Link>
+          <Link href="/agenda?view=lateTasks" className="panel overview-card">
+            <h2>Tareas vencidas</h2>
+            <strong>
+              {lateTasks.error ? "Consulta no disponible" : lateTasks.count}
+            </strong>
+          </Link>
+          <Link href="/agenda?view=deliveries" className="panel overview-card">
+            <h2>Entregas en los próximos siete días</h2>
+            <strong>
+              {deliveries.error ? "Consulta no disponible" : deliveries.count}
             </strong>
           </Link>
           {quotes && (

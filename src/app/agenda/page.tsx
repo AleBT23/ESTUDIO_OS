@@ -1,3 +1,4 @@
+import { studioToday } from "@/modules/projects/agenda-window";
 import { AgendaDeadlines, StudioCalendar } from "@/modules/projects/calendar";
 import Link from "next/link";
 import { z } from "zod";
@@ -8,6 +9,8 @@ const views = {
   today: "Hoy",
   week: "Próximos siete días",
   mine: "Asignados a mí",
+  lateTasks: "Tareas vencidas",
+  deliveries: "Próximas entregas",
   high: "Prioridad alta",
   overdue: "Vencidos",
   all: "Lista",
@@ -27,12 +30,7 @@ export default async function Agenda({
   const ctx = await requireContext();
   const q = await searchParams;
   const view = q.view && Object.hasOwn(views, q.view) ? q.view : "today";
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: ctx.organization.timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  const today = studioToday(ctx.organization.timezone);
   const date = z.iso.date().safeParse(q.date).success ? q.date : today;
   return (
     <>
@@ -67,7 +65,9 @@ export default async function Agenda({
           <button className="button button-outline">Ver fecha</button>
         </form>
       )}
-      {["today", "week", "date", "overdue", "all"].includes(view) && (
+      {["today", "week", "date", "overdue", "all", "deliveries"].includes(
+        view,
+      ) && (
         <AgendaDeadlines
           view={view}
           date={view === "date" ? (date ?? today) : today}
@@ -80,11 +80,13 @@ export default async function Agenda({
           page={Math.max(1, Math.min(10000, parseInt(q.page ?? "1") || 1))}
         />
       ) : (
-        <DashboardTasks
-          page={Math.max(1, Math.min(10000, parseInt(q.page ?? "1") || 1))}
-          view={view}
-          date={view === "date" ? date : undefined}
-        />
+        view !== "deliveries" && (
+          <DashboardTasks
+            page={Math.max(1, Math.min(10000, parseInt(q.page ?? "1") || 1))}
+            view={view}
+            date={view === "date" ? date : undefined}
+          />
+        )
       )}
     </>
   );

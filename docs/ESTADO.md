@@ -360,3 +360,6 @@ Los indicadores muestran la cartera completa del despacho, costos pendientes y f
 
 ### Flujo de Inicio por periodo y línea
 Inicio consulta la misma función financiera que Administración → Reportes. La tabla del periodo reúne los cobros y pagos efectivos por titular de fondos, con sumas en centavos. Permite guardar fechas y línea por usuario y estudio en el navegador por 90 días y abrir el detalle con los mismos filtros. La cartera acumulada se presenta aparte. Pasaron 153 pruebas, TypeScript, lint y build. Bloque sin migraciones nuevas. Falta validación autenticada de la persistencia en navegador.
+
+### Pendientes vencidos y entregas próximas en Inicio
+Dos indicadores con conteo exacto abren vistas específicas de Agenda. Los pendientes completados y las entregas aprobadas se excluyen. Los siete días incluyen hoy y los seis siguientes según la zona horaria del estudio. Se verificaron límites de calendario, cambio de año y año bisiesto. Pasaron 154 pruebas, TypeScript, lint y compilación. Sin migración nueva. Falta contrastar conteos y listados con una sesión autenticada en preview.

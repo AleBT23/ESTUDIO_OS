@@ -1,3 +1,4 @@
+import { weekThrough } from "./agenda-window";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 const weekday = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -105,18 +106,15 @@ export async function AgendaDeadlines({
   date: string;
   page: number;
 }) {
-  const ctx = await requireContext(),
-    end = new Date(date + "T12:00:00Z");
-  end.setUTCDate(end.getUTCDate() + 6);
+  const ctx = await requireContext();
   let query = ctx.db
     .from("agenda_events")
     .select("id,kind,label,project_id,due_on", { count: "exact" })
     .eq("organization_id", ctx.organization.id)
     .neq("kind", "task");
-  if (view === "week")
-    query = query
-      .gte("due_on", date)
-      .lte("due_on", end.toISOString().slice(0, 10));
+  if (view === "deliveries") query = query.eq("kind", "delivery");
+  if (view === "week" || view === "deliveries")
+    query = query.gte("due_on", date).lte("due_on", weekThrough(date));
   else if (view === "overdue") query = query.lt("due_on", date);
   else if (view !== "all") query = query.eq("due_on", date);
   const result = await query
@@ -130,7 +128,11 @@ export async function AgendaDeadlines({
     "?" + new URLSearchParams({ view, date, events: String(n) });
   return (
     <section className="panel padded">
-      <h2>Vencimientos y seguimientos</h2>
+      <h2>
+        {view === "deliveries"
+          ? "Entregas de los próximos siete días"
+          : "Vencimientos y seguimientos"}
+      </h2>
       {!result.data.length && <p>Sin eventos en esta selección.</p>}
       {result.data.map((e) => (
         <article className="activity-row" key={e.kind + e.id}>
