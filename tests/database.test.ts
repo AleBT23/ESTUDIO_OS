@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(29);
+  expect(rows).toHaveLength(30);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2688,4 +2688,19 @@ it("la cartera clasifica vencimientos y saldo real por dirección y custodia",as
  }
  await pay("out",800);expect((await list()).rows).toHaveLength(2);
  await asUser(reader);expect((await list()).rows).toHaveLength(0);await asUser(other);expect((await list()).rows).toHaveLength(0);await asUser(owner);
+});
+it("importa clientes solo a staging habilitado, evita duplicados y revierte el lote ante conflictos",async()=>{
+ await asUser(owner);
+ const a={id:"cl-a",name:"Cliente legado A",email:"legado_a@example.test"},b={id:"cl-b",name:"Cliente legado B"};
+ const apply=(rows:unknown[])=>db.query<{result:{inserted:number;unchanged:number}}>("select stage_legacy_clients($1,$2::jsonb,'company') result",[org,JSON.stringify(rows)]);
+ await expect(apply([a,b])).rejects.toThrow("no habilitado");
+ await db.exec("reset role");await db.query("insert into private.legacy_staging_targets values($1)",[org]);await asUser(reader);
+ await expect(apply([a,b])).rejects.toThrow("no habilitado");await expect(db.query("insert into private.legacy_staging_targets values($1)",[otherOrg])).rejects.toThrow();
+ await asUser(owner);expect((await apply([a,b])).rows[0].result).toEqual({inserted:2,unchanged:0});
+ expect((await apply([a,b])).rows[0].result).toEqual({inserted:0,unchanged:2});
+ await expect(apply([a,{...b,id:a.id}])).rejects.toThrow("repetido");
+ await expect(apply([{id:"rollback",name:"Copia descartada"},{...a,name:"Nombre diferente"}])).rejects.toThrow("datos distintos");
+ expect((await db.query("select id from clients where legacy_id='rollback'")).rows).toEqual([]);
+ await expect(apply([{id:"cl-c",name:"Cliente independiente",email:a.email}])).rejects.toThrow("Posible duplicado");
+ await asUser(other);await expect(apply([a])).rejects.toThrow("no habilitado");await asUser(owner);
 });

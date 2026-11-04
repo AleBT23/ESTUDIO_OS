@@ -21,3 +21,6 @@ El RAR contiene **código**, no necesariamente los datos actuales del LocalStora
 
 ## Pruebas de regresión
 Comparar folios, impuestos, descuentos, unidades, subtotales, totales, presets, caracteres especiales y composición de páginas. No afirmar equivalencia hasta verificarla.
+
+## Ensayo del directorio de clientes
+En una base aislada con la migración 068, el administrador de PostgreSQL habilita únicamente la organización de ensayo en private.legacy_staging_targets. La tabla se crea vacía y carece de permisos de escritura para los usuarios de la aplicación. La interfaz de Configuración requiere APP_ENV=staging y una cuenta propietaria. Primero revisa la huella y el informe local. Después selecciona el tipo de clientes del lote y envía el archivo al entorno de pruebas. Los clientes ya coincidentes por ID se cuentan sin modificación. Ante diferencias o coincidencias ambiguas se revierte el lote completo. Los campos anteriores sin tipo de persona o empresa requieren clasificar el lote antes del ensayo.

@@ -1,3 +1,4 @@
+import { StageLegacyPanel } from "@/modules/crm/stage-legacy-panel";
 import { LegacyReviewPanel } from "@/modules/crm/legacy-review-panel";
 import { Check, Circle, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
@@ -100,6 +101,8 @@ export default async function SettingsPage() {
         </section>
       </div>
       {ctx?.membership?.role === "owner" && <LegacyReviewPanel />}
+      {process.env.APP_ENV === "staging" &&
+        ctx?.membership?.role === "owner" && <StageLegacyPanel />}
     </>
   );
 }

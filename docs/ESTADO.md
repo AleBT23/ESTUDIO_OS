@@ -501,3 +501,6 @@ Documentos, plantillas y cotizaciones admiten un membrete alternativo desde Bibl
 
 ### Revisión local del respaldo del tabulador
 El propietario puede seleccionar la exportación JSON en Configuración. El navegador verifica su SHA-256, los conteos, IDs y referencias de presets y clientes. Compara importes de propuestas con la aritmética actual usando el IVA guardado, identifica porcentajes históricos y señala homónimos y folios repetidos. Se probó una propuesta conciliada y otra con diferencias. Pasaron 202 pruebas, TypeScript, lint, build y nueve recorridos Playwright. La revisión se hizo con datos sintéticos.
+
+### Importación de clientes a staging
+Configuración incorpora clientes por ID legado, reutiliza coincidencias exactas y rechaza registros archivados, diferencias y coincidencias ambiguas. Requiere entorno staging, rol propietario y habilitación expresa del estudio en la base aislada. Se probó que un conflicto al final revierte todo el lote. Pasaron 203 pruebas, TypeScript, lint, build, nueve recorridos Playwright y restauración sintética con 68 migraciones. Sin carga de datos reales. Restan catálogo, presets, propuestas y verificación del respaldo en staging.
