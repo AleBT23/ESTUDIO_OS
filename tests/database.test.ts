@@ -2473,3 +2473,20 @@ it("el recibo separa el origen, resuelve la obra y refleja el reverso sin expone
  expect((await rows()).rows).toEqual([{source:"acuerdo",amount:"350",direction:"out",managed:true,reversed:true,project_name:"Proyecto de recibo"},{source:"proyecto",amount:"725",direction:"in",managed:false,reversed:false,project_name:"Proyecto de recibo"}]);
  await asUser(reader);expect((await rows()).rows).toHaveLength(0);await asUser(other);expect((await rows()).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("concilia costo, pagos y reversos por proveedor separando fondos administrados y propios",async()=>{
+ await asUser(owner);
+ const supplier=crypto.randomUUID();await db.query("insert into suppliers(id,organization_id,name,kind) values($1,$2,'Topografía del sur','subcontractor')",[supplier,org]);
+ for(const managed of [true,false]){
+ const agreement=crypto.randomUUID(),entry=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,managed,revenue_cents,cost_cents,supplier_id) values($1,$2,'Topografía','construction',$3,0,840,$4)",[agreement,org,managed,supplier]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,paid_on,direction,amount_cents) values($1,$2,$3,current_date-1,'out',40)",[entry,org,agreement]);
+ if(managed)await db.query("update finance_entries set reversal_reason='Pago duplicado' where id=$1",[entry]);
+ }
+ const find=()=>db.query("select label,favorite from personal_search_results where source='suppliers' and id=$1",[supplier]);
+ await db.query("insert into studio_favorites(organization_id,source,record_id) values($1,'suppliers',$2)",[org,supplier]);
+ expect((await find()).rows).toEqual([{label:"Topografía del sur",favorite:true}]);
+ const report=()=>db.query("select managed,cost,paid,payable from supplier_totals where supplier_id=$1 order by managed",[supplier]);
+ expect((await report()).rows).toEqual([{managed:false,cost:"840",paid:"40",payable:"800"},{managed:true,cost:"840",paid:"0",payable:"840"}]);
+ await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(other);expect((await report()).rows).toHaveLength(0);await asUser(owner);
+});

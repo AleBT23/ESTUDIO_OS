@@ -53,7 +53,11 @@ export default async function Suppliers({
               <tbody>
                 {result.data.map((v) => (
                   <tr key={v.id}>
-                    <td>{v.name}</td>
+                    <td>
+                      <Link href={"/administracion/proveedores/" + v.id}>
+                        {v.name}
+                      </Link>
+                    </td>
                     <td>
                       {v.kind === "supplier" ? "Proveedor" : "Subcontratista"}
                     </td>

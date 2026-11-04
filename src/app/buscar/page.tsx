@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { changeFavorite } from "./favorite-action";
-import { canManageCommercial, canReadFinance } from "@/shared/permissions";
+import {
+  canManageCommercial,
+  canReadFinance,
+  canWriteProject,
+} from "@/shared/permissions";
 export default async function Search({
   searchParams,
 }: {
@@ -16,6 +20,15 @@ export default async function Search({
     ["projects", "Proyectos", "/proyectos/"],
     ["clients", "Clientes", "/comercial/clientes/"],
     ["library", "Biblioteca técnica", "/recursos/biblioteca?resource="],
+    ...(canWriteProject(ctx.membership.role)
+      ? [
+          [
+            "personal_reminders",
+            "Mis recordatorios",
+            "/agenda/recordatorios?id=",
+          ],
+        ]
+      : []),
     ...(canManageCommercial(ctx.membership.role)
       ? [
           ["quotes", "Cotizaciones", "/comercial/cotizaciones/"],
@@ -34,6 +47,11 @@ export default async function Search({
       : []),
     ...(canReadFinance(ctx.membership.role)
       ? [
+          [
+            "suppliers",
+            "Proveedores y subcontratistas",
+            "/administracion/proveedores/",
+          ],
           ["works", "Obras", "/obras?obra="],
           [
             "finance_cases",

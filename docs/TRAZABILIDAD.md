@@ -22,7 +22,7 @@
 | DEL-01 | Pendiente | Entregables, archivos, revisiones y aprobaciones |
 | CHG-01 | Pendiente | Impacto, aprobación, extra y alcance trazable |
 | FIN-01 | Planes, saldos, pagos efectivos, reversos y reprogramación total o por parcialidades. Recibos PDF por movimiento de proyecto o acuerdo. Pruebas SQL de conservación y concurrencia, permisos y lectura del PDF. | Cancelaciones de obligaciones y E2E autenticado en preview. |
-| FIN-02 | Pendiente | Gastos/categorías/proveedores/comprobantes y atribución |
+| FIN-02 | Acuerdos y movimientos por área y origen de fondos, comprobantes privados, padrón de proveedores y estado de cuenta vinculado con pagos, reversos y saldo pendiente. | Revisar cobertura de categorías de gasto y verificar el flujo completo con sesión aislada. |
 | FIN-03 | Pendiente | Colaboradores/reglas/repartos y pagos |
 | TIME-01 | Implementado localmente | Captura y corrección versionada por usuario, proyecto, paquete y tarea. Historial paginado en expediente. Pendiente recorrido autenticado en preview. |
 | PROF-01 | Pendiente | Estimación y rentabilidad real con fórmulas/costo horas separado |
