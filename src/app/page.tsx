@@ -91,7 +91,7 @@ export default async function HomePage({
           <h1>Centro de operaciones</h1>
         </header>
         <div className="overview-grid">
-          <Link href="/proyectos" className="panel overview-card">
+          <Link href="/proyectos?state=active" className="panel overview-card">
             <h2>Proyectos activos</h2>
             <strong>
               {projects.error ? "Consulta no disponible" : projects.count}

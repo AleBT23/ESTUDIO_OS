@@ -390,3 +390,6 @@ Ejecutar scripts/sql/audit-finance-associations.sql sobre una copia restaurada c
 
 ### Acceso sin sesión en los módulos recientes
 Playwright comprobó en Chromium que Agenda Kanban, notificaciones, marketing, biblioteca, procedimientos, plantillas e historial de tiempo redirigen a acceso sin sesión. Las descargas de biblioteca y reporte de obra devolvieron 403. Compilación y verificación PDF aprobadas. Siete recorridos pasaron y se omitió el de instalación sin credenciales porque Supabase está configurado. Aún falta la prueba autenticada en preview.
+
+### Directorio de proyectos paginado
+El directorio consulta 30 expedientes por página con total exacto y orden estable. Conserva el nombre buscado, el estado y el destino de captura de pendientes o visitas al cambiar de página. Inicio → Proyectos activos abre la selección correspondiente al indicador. La prueba del componente verificó el rango 211–240 y la navegación conservando filtros con datos simulados. Pasaron 163 pruebas, TypeScript y ESLint. Pendiente recorrido autenticado.
