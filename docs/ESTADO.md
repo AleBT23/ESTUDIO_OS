@@ -372,3 +372,6 @@ Desde el expediente se puede elegir, sustituir o quitar una tarea previa del mis
 
 ### Tablero de tareas
 Agenda → Tablero Kanban presenta pendientes, tareas en curso y completadas con paginación independiente. Los cambios de columna actualizan la misma tarea, sujetos a versión, permisos, subtareas, dependencias y reglas de recurrencia. Se probó el estado inicial, avance, cierre desde otra vista, escritura obsoleta y aislamiento. Pasaron 157 pruebas, TypeScript, lint, build y 43 migraciones locales. Pendientes la preview autenticada y la migración de producción.
+
+### Historial de correcciones de tiempo
+El expediente expone las versiones previas del registro de horas con fecha, minutos, actividad, tarea y paquete, además de quién corrigió y cuándo. El formulario conserva una asociación anterior aunque ya no aparezca en su selector. Los permisos proceden de las políticas de tiempo existentes. Pasaron 158 pruebas, TypeScript, lint y compilación. Sin migración nueva. Pendiente validación autenticada en preview.

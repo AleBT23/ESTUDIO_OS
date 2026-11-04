@@ -89,6 +89,12 @@ export async function TimePanel({
         Paquete de servicios
         <select name="package_id" defaultValue={entry?.package_id ?? ""}>
           <option value="">Sin asignar</option>
+          {entry?.package_id &&
+            !packs.data.some((p) => p.id === entry.package_id) && (
+              <option value={entry.package_id}>
+                Paquete vinculado · revisa su disponibilidad
+              </option>
+            )}
           {packs.data.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -100,6 +106,12 @@ export async function TimePanel({
         Tarea
         <select name="task_id" defaultValue={entry?.task_id ?? ""}>
           <option value="">Sin asignar</option>
+          {entry?.task_id &&
+            !tasks.data.some((t) => t.id === entry.task_id) && (
+              <option value={entry.task_id}>
+                Tarea vinculada · revisa su disponibilidad
+              </option>
+            )}
           {tasks.data.map((t) => (
             <option key={t.id} value={t.id}>
               {t.body.slice(0, 100)}
@@ -137,9 +149,15 @@ export async function TimePanel({
             <p>{r.description}</p>
             <small>
               {packs.data.find((p) => p.id === r.package_id)?.name ??
-                "Sin paquete"}{" "}
+                (r.package_id ? "Paquete vinculado" : "Sin paquete")}{" "}
+              ·{" "}
+              {tasks.data.find((t) => t.id === r.task_id)?.body.slice(0, 100) ??
+                (r.task_id ? "Tarea vinculada" : "Sin tarea")}{" "}
               · Versión {r.version}
             </small>
+            <Link href={"/proyectos/" + project + "/tiempo/" + r.id}>
+              Historial de correcciones
+            </Link>
             <details>
               <summary>Corregir registro</summary>
               {form(r)}

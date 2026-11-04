@@ -24,7 +24,7 @@
 | FIN-01 | Parcial: obligaciones, pago efectivo, saldo, idempotencia, no sobrepago, reverso auditado; SQL y UI | Editor de planes/parcialidades/cancelaciones, recibos y E2E |
 | FIN-02 | Pendiente | Gastos/categorías/proveedores/comprobantes y atribución |
 | FIN-03 | Pendiente | Colaboradores/reglas/repartos y pagos |
-| TIME-01 | Pendiente | Tiempo por usuario/paquete/tarea y corrección |
+| TIME-01 | Implementado localmente | Captura y corrección versionada por usuario, proyecto, paquete y tarea. Historial paginado en expediente. Pendiente recorrido autenticado en preview. |
 | PROF-01 | Pendiente | Estimación y rentabilidad real con fórmulas/costo horas separado |
 | REP-01 | Pendiente | Reportes filtrables y CSV |
 | DOC-01 | Parcial: motor de variables con lista blanca, sintaxis/missing-data y sustitución no recursiva probados; documentos con párrafos/subtítulos/listas/saltos | Plantillas reutilizables versionadas, tablas/imágenes y contexto de cotización integrado en editor |
