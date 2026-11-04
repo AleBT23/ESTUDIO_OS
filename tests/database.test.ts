@@ -1972,3 +1972,11 @@ it("facturar deja intactos caja y cartera, y el folio identifica duplicados dent
  await asUser(other);expect((await total()).rows).toHaveLength(0);await expect(add("B-25")).rejects.toThrow();
  await asUser(owner);
 });
+
+it("vincula subcontratistas del propio estudio y conserva el nombre en el acuerdo",async()=>{
+ await asUser(owner);const supplier=crypto.randomUUID();
+ await db.query("insert into suppliers(id,organization_id,name,kind) values($1,$2,'Topografía Norte','subcontractor')",[supplier,org]);
+ const add=(organization:string)=>db.query("insert into finance_cases(id,organization_id,name,area,cost_cents,revenue_cents,supplier_id) values($1,$2,'Levantamiento','service',12300,0,$3) returning provider",[crypto.randomUUID(),organization,supplier]);
+ expect((await add(org)).rows).toEqual([{provider:"Topografía Norte"}]);
+ await asUser(other);await expect(add(otherOrg)).rejects.toThrow();expect((await db.query('select id from suppliers where id=$1',[supplier])).rows).toHaveLength(0);await asUser(owner);
+});

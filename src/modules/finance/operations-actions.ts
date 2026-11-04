@@ -18,10 +18,17 @@ const base = z.object({
   client_id: optionalId,
   project_id: optionalId,
 });
+const supplierInput = z.object({
+  id: z.uuid(),
+  name: z.string().trim().min(2).max(160),
+  kind: z.enum(["supplier", "subcontractor"]),
+  contact: z.string().trim().max(300),
+});
 const caseInput = base
   .extend({
     area: z.enum(["architecture", "construction", "service"]),
     work_id: optionalId,
+    supplier_id: optionalId.optional(),
     provider: z
       .string()
       .trim()
@@ -50,7 +57,7 @@ export type OperationState = {
   nextId?: string;
 };
 export async function saveOperation(
-  kind: "work" | "case" | "entry",
+  kind: "work" | "case" | "entry" | "supplier",
   _prev: OperationState,
   form: FormData,
 ): Promise<OperationState> {
@@ -58,18 +65,26 @@ export async function saveOperation(
   if (!canReadFinance(ctx.membership.role))
     return { error: "Permisos insuficientes." };
   const schema =
-    kind === "work" ? base : kind === "case" ? caseInput : entryInput;
+    kind === "supplier"
+      ? supplierInput
+      : kind === "work"
+        ? base
+        : kind === "case"
+          ? caseInput
+          : entryInput;
   const input = schema.safeParse(Object.fromEntries(form));
   if (!input.success)
     return {
       error: "Revisa los importes, los vínculos y el origen de los fondos.",
     };
   const table =
-    kind === "work"
-      ? "works"
-      : kind === "case"
-        ? "finance_cases"
-        : "finance_entries";
+    kind === "supplier"
+      ? "suppliers"
+      : kind === "work"
+        ? "works"
+        : kind === "case"
+          ? "finance_cases"
+          : "finance_entries";
   const { error } = await ctx.db
     .from(table)
     .insert({ ...input.data, organization_id: ctx.organization.id });
@@ -80,6 +95,7 @@ export async function saveOperation(
           ? "No se registró el movimiento. Verifica el saldo, la fecha y si ya aparece en el historial."
           : "No se pudo guardar. Revisa los datos y si el registro ya existe.",
     };
+  revalidatePath("/administracion/proveedores");
   revalidatePath("/obras");
   revalidatePath("/");
   revalidatePath("/administracion/operaciones", "layout");
@@ -112,6 +128,7 @@ export async function reverseEntry(
         "No se pudo revertir. Actualiza el historial y verifica el estado.",
     };
   revalidatePath("/");
+  revalidatePath("/administracion/proveedores");
   revalidatePath("/obras");
   revalidatePath("/administracion/operaciones", "layout");
   return { success: "Movimiento revertido." };

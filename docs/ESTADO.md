@@ -275,3 +275,6 @@ Verificación final sobre el build con presupuesto de obra: Playwright Chromium,
 
 ### Registro de facturas emitidas
 Migración 017. Desde el detalle de un acuerdo se registran folio, fecha e importe de las facturas emitidas y se consulta el total facturado. El cobro y la cartera se mantienen independientes. El folio se protege contra duplicados por organización. Validado con PostgreSQL aislado, 125 pruebas, TypeScript y ESLint. Pendiente preview autenticada.
+
+### Padrón comercial de proveedores
+Migración 018. Administración → Operaciones permite abrir el padrón, buscar proveedores y subcontratistas y asociarlos a nuevos acuerdos. Se conserva el nombre histórico del proveedor del acuerdo. La prueba PostgreSQL comprueba la asociación y el rechazo de una referencia cruzada entre estudios. TypeScript, ESLint y 126 pruebas correctos.

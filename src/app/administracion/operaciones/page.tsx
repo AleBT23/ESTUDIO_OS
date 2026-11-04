@@ -52,7 +52,7 @@ export default async function Operations({
     .range((index - 1) * 30, index * 30 - 1);
   const selected = Object.hasOwn(areas, area ?? "") ? area : undefined;
   if (selected) query = query.eq("area", selected);
-  const [cases, clients, projects, works] = await Promise.all([
+  const [cases, clients, projects, works, suppliers] = await Promise.all([
     query,
     ctx.db
       .from("clients")
@@ -68,6 +68,11 @@ export default async function Operations({
       .order("name"),
     ctx.db
       .from("works")
+      .select("id,name")
+      .eq("organization_id", org)
+      .order("name"),
+    ctx.db
+      .from("suppliers")
       .select("id,name")
       .eq("organization_id", org)
       .order("name"),
@@ -99,6 +104,9 @@ export default async function Operations({
           contratados se cobran en{" "}
           <Link href="/administracion">Planes y cobros</Link>.
         </p>
+        <Link href="/administracion/proveedores">
+          Padrón de proveedores y subcontratistas
+        </Link>
       </header>
       <nav className="tabs" aria-label="Área financiera">
         {Object.entries({ all: "Todas", ...areas }).map(([id, label]) => (
@@ -188,9 +196,16 @@ export default async function Operations({
             </select>
           </label>
           {associations}
+          {suppliers.data && (
+            <Association
+              name="supplier_id"
+              label="Proveedor del padrón"
+              items={suppliers.data}
+            />
+          )}
           <Association name="work_id" label="Obra" items={works.data} />
           <label>
-            Proveedor
+            Nombre libre de proveedor
             <input name="provider" maxLength={160} />
           </label>
           <label>

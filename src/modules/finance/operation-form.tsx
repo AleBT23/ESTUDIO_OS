@@ -12,7 +12,7 @@ export function OperationForm({
   id,
   children,
 }: {
-  kind: "work" | "case" | "entry" | "budget" | "invoice";
+  kind: "work" | "case" | "entry" | "budget" | "invoice" | "supplier";
   id: string;
   children: React.ReactNode;
 }) {
