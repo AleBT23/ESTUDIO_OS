@@ -1,7 +1,12 @@
 import { requireContext } from "@/shared/auth/context";
 import { canManageCommercial, canWriteProject } from "@/shared/permissions";
 import { RecordForm } from "@/shared/ui/record-form";
-import { savePhaseTemplate, applyPhasePlan, movePhase } from "./phase-actions";
+import {
+  savePhaseTemplate,
+  applyPhasePlan,
+  movePhase,
+  setQuotePhaseDefault,
+} from "./phase-actions";
 export async function PhasePanel({ project }: { project: string }) {
   const ctx = await requireContext(),
     org = ctx.organization.id,
@@ -10,7 +15,9 @@ export async function PhasePanel({ project }: { project: string }) {
   const [templates, plans, services] = await Promise.all([
     ctx.db
       .from("phase_templates")
-      .select("id,name,business_line_id,service_id,phases,version")
+      .select(
+        "id,name,business_line_id,service_id,phases,version,on_quote_acceptance",
+      )
       .eq("organization_id", org)
       .order("name"),
     ctx.db
@@ -90,6 +97,35 @@ export async function PhasePanel({ project }: { project: string }) {
                   <li key={i}>{s}</li>
                 ))}
               </ol>
+              {manage && !t.service_id && (
+                <details>
+                  <summary>
+                    Conversión de cotizaciones ·{" "}
+                    {t.on_quote_acceptance ? "automática" : "manual"}
+                  </summary>
+                  <p>
+                    Al aceptar una cotización con esta línea, el proyecto recibe
+                    una copia de sus fases. Los proyectos existentes conservan
+                    su plan.
+                  </p>
+                  <RecordForm
+                    save={setQuotePhaseDefault}
+                    id={t.id}
+                    submitLabel={
+                      t.on_quote_acceptance
+                        ? "Desactivar aplicación automática"
+                        : "Aplicar al aceptar cotizaciones"
+                    }
+                  >
+                    <input type="hidden" name="version" value={t.version} />
+                    <input
+                      type="hidden"
+                      name="enabled"
+                      value={String(!t.on_quote_acceptance)}
+                    />
+                  </RecordForm>
+                </details>
+              )}
               {!assigned.has(t.id) && (
                 <RecordForm id={crypto.randomUUID()} save={applyPhasePlan}>
                   <input name="project_id" type="hidden" value={project} />

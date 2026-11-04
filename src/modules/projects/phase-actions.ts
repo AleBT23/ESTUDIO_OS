@@ -116,3 +116,36 @@ export async function movePhase(
   revalidatePath("/proyectos/" + project_id);
   return { success: "Avance actualizado." };
 }
+export async function setQuotePhaseDefault(
+  _: RecordState,
+  form: FormData,
+): Promise<RecordState> {
+  const ctx = await requireContext();
+  const value = z
+    .object({
+      id: z.uuid(),
+      version: z.coerce.number().int().positive(),
+      enabled: z.enum(["true", "false"]),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!value.success || !canManageCommercial(ctx.membership.role))
+    return { error: "Referencia o permisos inválidos." };
+  const { id, version, enabled } = value.data;
+  const r = await ctx.db
+    .from("phase_templates")
+    .update({ on_quote_acceptance: enabled === "true" })
+    .eq("organization_id", ctx.organization.id)
+    .eq("id", id)
+    .eq("version", version)
+    .is("service_id", null)
+    .select("id")
+    .maybeSingle();
+  if (r.error?.code === "23505")
+    return {
+      error: "Desactiva primero la plantilla automática de esta línea.",
+    };
+  if (r.error || !r.data)
+    return { error: "No se pudo actualizar la plantilla. Revisa su versión." };
+  revalidatePath("/proyectos/[id]", "page");
+  return { success: "Preferencia de conversión guardada." };
+}
