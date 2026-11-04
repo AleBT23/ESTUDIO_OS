@@ -2664,3 +2664,13 @@ it("la aceptación mixta copia solo la plantilla automática y conserva su revis
  await db.query("update phase_templates set on_quote_acceptance=false,phases=array['Nueva fase'] where id=$1",[t.id]);
  expect((await plans()).rows).toEqual([{template_id:t.id,template_version:enabled,phases:t.phases,completed:0}]);
 });
+it("el expediente vincula proyectos y obras indirectas y restringe documentos comerciales por rol",async()=>{
+ await asUser(owner);
+ const {id:quote,version}=await issuedFixture();
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Ficha relacionada',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID();await db.query("insert into works(id,organization_id,project_id,name) values($1,$2,$3,'Obra sin cliente directo')",[work,org,project]);
+ const list=()=>db.query("select id,kind from client_related_records where client_id=$1 and id in ($2,$3,$4) order by kind",[client,project,quote,work]);
+ expect((await list()).rows).toEqual([{id:project,kind:"project"},{id:quote,kind:"quote"},{id:work,kind:"work"}]);
+ await asUser(reader);expect((await list()).rows).toEqual([{id:project,kind:"project"}]);await asUser(other);expect((await list()).rows).toEqual([]);
+ await asUser(owner);await db.query("select archive_quote($1,$2,$3)",[org,quote,version]);expect((await list()).rows).toHaveLength(2);
+});

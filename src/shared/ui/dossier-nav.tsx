@@ -19,7 +19,10 @@ export function DossierNav({
   const manager = canManageCommercial(role);
   const links: [string, string][] = [["ficha", "Ficha"]];
   if (scope === "client") {
-    links.push(["contactos", "Contactos"]);
+    links.push(
+      ["contactos", "Contactos"],
+      ["vinculos", "Expedientes vinculados"],
+    );
     if (manager) {
       links.push(
         ["acuerdos", "Acuerdos"],

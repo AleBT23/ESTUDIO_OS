@@ -489,3 +489,6 @@ npm run test:e2e:auth inicia una aplicación local exclusiva en el puerto 3419 c
 
 ### Fases automáticas al aceptar cotizaciones
 Administración puede activar una plantilla general por línea desde Fases del proyecto. Al aceptar una cotización o un extra, se copia la revisión vigente para cada línea configurada. La misma plantilla se incorpora una vez por proyecto. Se verificaron la aceptación de una cotización mixta, el aislamiento de la otra línea, el permiso del lector y la conservación del plan al editar su plantilla. Pasaron 197 pruebas, lint, TypeScript, build, nueve recorridos Playwright y restauración con 65 migraciones.
+
+### Expedientes asociados al cliente
+Desde el cliente se consultan proyectos, cotizaciones y obras con paginación y filtro por tipo. Una obra vinculada solo al proyecto se muestra en el cliente correspondiente. El lector accede a proyectos; las cotizaciones y obras están reservadas a administración. Las pruebas verificaron esta diferencia, el aislamiento y la exclusión de propuestas archivadas. Pasaron 198 pruebas, TypeScript, ESLint, build, nueve recorridos Playwright y restauración con 66 migraciones.

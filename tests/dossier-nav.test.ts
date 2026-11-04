@@ -19,7 +19,7 @@ it("muestra las secciones del proyecto según el rol y los paquetes disponibles"
   expect(view("admin")).toContain('href="#paquetes"');
   expect(view("admin")).toContain('href="#cobros"');
 });
-it("el expediente archivado oculta el acceso al portal y el lector solo ve ficha y contactos", () => {
+it("el expediente archivado oculta el acceso al portal y el lector puede consultar proyectos vinculados", () => {
   const archived = renderToStaticMarkup(
     createElement(DossierNav, {
       scope: "client",
@@ -32,5 +32,5 @@ it("el expediente archivado oculta el acceso al portal y el lector solo ve ficha
   const reader = renderToStaticMarkup(
     createElement(DossierNav, { scope: "client", role: "reader" }),
   );
-  expect(reader.match(/href=/g)).toHaveLength(2);
+  expect(reader.match(/href=/g)).toHaveLength(3);
 });

@@ -6,13 +6,13 @@
 | --- | --- | --- |
 | DASH-01, DASH-02 | Inicio muestra cartera, flujo por periodo y línea, pendientes vencidos y entregas próximas | Filtro global persistente y conciliación autenticada |
 | DASH-03 | Implementado localmente | Búsqueda global, favoritos personales (039), actividad reciente (040) y captura desde el menú por rol. Pendiente preview autenticada. |
-| CRM-01 | Parcial: clientes/contactos/notas/origen, búsqueda/paginación, archivo y auditoría; src/modules/crm, database.test | Adjuntos y enlaces en 060. Pendiente recorrido autenticado del expediente |
+| CRM-01 | Parcial: clientes/contactos/notas/origen, búsqueda/paginación, archivo y auditoría; src/modules/crm, database.test | Adjuntos y enlaces (060), proyectos, propuestas y obras relacionados (066). Pendiente recorrido autenticado del expediente |
 | CRM-02 | Parcial: pipeline seis etapas, notas y fecha de seguimiento, señales vencidas; pipeline-schema y database.test | Historial detallado de interacciones y notificaciones persistentes |
 | QUO-01 | Parcial: catálogo editable, línea, costo/precio, vigencia, archivo, clave única | Categorías como catálogo normalizado; E2E |
 | QUO-02 | Parcial: presets con servicios/cantidades/notas, copia editable en propuesta | Condiciones reutilizables y retrocompatibilidad verificadas en 061. Pendientes documentos/secciones configurables por preset |
 | QUO-03 | Parcial: partidas, cantidades, descuentos, IVA, anticipo, vigencia, condiciones; cálculo servidor y SQL coinciden | Multimoneda solo tras reglas explícitas; UI principal contra Supabase |
 | QUO-04 | Parcial: borrador, emisión/snapshot/PDF, envío manual, aceptación, rechazo/vencimiento y revisión con motivo e historial; snapshots anteriores inmutables | E2E remoto y aceptación del usuario |
-| QUO-05 | Parcial: aceptación crea proyecto/paquetes/plan atómicamente; prueba 25,000/50%/cobrado cero | Fases/tareas desde plantillas al convertir; E2E remoto |
+| QUO-05 | Parcial: aceptación crea proyecto/paquetes/plan atómicamente; prueba 25,000/50%/cobrado cero | Fases por línea aplicadas al convertir (065). Pendientes tareas desde plantilla y recorrido remoto |
 | QUO-06 | Parcial: seis unidades, porcentaje corregido, horas/costos externos previstos, resultado/margen e ingreso por hora exactos y fórmulas visibles | Atribución completa de costos por partida, tarifas para costo imputado de horas y E2E |
 | MKT-01 | Implementado localmente | Comercial → Marketing. Ideas, agenda por mes, canal, publicación, enlace, resultados y portafolio asociado a proyecto y oportunidad. Pendiente el recorrido autenticado en preview. |
 | PRJ-01 | Parcial: expediente con cliente, ubicación, responsable, inicio, cierre en Agenda y vínculo a versión. Adjuntos privados y enlaces (059 y 060) | Recorrido autenticado de ficha y adjuntos |
