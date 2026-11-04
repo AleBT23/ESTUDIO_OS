@@ -1,4 +1,7 @@
-import { TimeCostSummary, type TimeCost } from "@/modules/finance/time-cost-summary";
+import {
+  TimeCostSummary,
+  type TimeCost,
+} from "@/modules/finance/time-cost-summary";
 import {
   expenseCategories,
   financeAreas,
@@ -9,6 +12,7 @@ import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
 import {
   receivedPerHour,
+  cashMargin,
   reportFilters,
   type ProductivityRow,
 } from "@/modules/finance/productivity-report";
@@ -49,7 +53,9 @@ export default async function Reports({
       ? ctx.db.rpc("expense_breakdown", { org, ...filters.data })
       : null,
     filters.success
-      ? ctx.db.rpc("time_cost_report", { org, ...filters.data }).maybeSingle<TimeCost>()
+      ? ctx.db
+          .rpc("time_cost_report", { org, ...filters.data })
+          .maybeSingle<TimeCost>()
       : null,
   ]);
   const rows: ProductivityRow[] = result?.data ?? [];
@@ -103,6 +109,10 @@ export default async function Reports({
       ) : (
         <section className="panel padded">
           <h2>Resultados por línea</h2>
+          <p>
+            Margen sobre cobros = (cobrado menos pagado) ÷ cobrado × 100. Se
+            calcula para fondos propios antes del costo imputado de horas.
+          </p>
           {rows.length ? (
             <div className="table-scroll">
               <table>
@@ -117,6 +127,7 @@ export default async function Reports({
                       "Tiempo",
                       "Flujo por hora",
                       "Cobrado por hora",
+                      "Margen sobre cobros",
                     ].map((k) => (
                       <th key={k}>{k}</th>
                     ))}
@@ -124,7 +135,8 @@ export default async function Reports({
                 </thead>
                 <tbody>
                   {rows.map((r) => {
-                    const hourly = receivedPerHour(r);
+                    const hourly = receivedPerHour(r),
+                      margin = cashMargin(r);
                     return (
                       <tr key={r.line_name + String(r.managed)}>
                         <th>{r.line_name}</th>
@@ -139,6 +151,7 @@ export default async function Reports({
                             : formatMoney(BigInt(r.net_hourly))}
                         </td>
                         <td>{hourly === null ? "—" : formatMoney(hourly)}</td>
+                        <td>{margin === null ? "—" : margin + " %"}</td>
                       </tr>
                     );
                   })}

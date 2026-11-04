@@ -1,3 +1,4 @@
+import { marginOnRevenue } from "@/shared/money";
 import { z } from "zod";
 const id = z
   .union([z.uuid(), z.literal("")])
@@ -27,6 +28,11 @@ export type ProductivityRow = {
   minutes: string;
   net_hourly: string | null;
 };
+export function cashMargin(row: ProductivityRow): string | null {
+  return row.managed
+    ? null
+    : marginOnRevenue(BigInt(row.net), BigInt(row.received));
+}
 export function receivedPerHour(row: ProductivityRow): bigint | null {
   const minutes = BigInt(row.minutes);
   if (row.managed || minutes === 0n) return null;
@@ -57,6 +63,7 @@ export function reportCsv(rows: ProductivityRow[]) {
         "Minutos",
         "Flujo por hora MXN",
         "Cobrado por hora MXN",
+        "Margen sobre cobros (%)",
       ].join(","),
       ...rows.map((r) => {
         const hourly = receivedPerHour(r);
@@ -69,6 +76,7 @@ export function reportCsv(rows: ProductivityRow[]) {
           r.minutes,
           r.net_hourly === null ? "" : decimal(r.net_hourly),
           hourly === null ? "" : decimal(hourly),
+          cashMargin(r) ?? "",
         ].join(",");
       }),
     ].join("\r\n") +

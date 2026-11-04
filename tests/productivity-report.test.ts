@@ -2,6 +2,7 @@ import { it, expect } from "vitest";
 import {
   reportFilters,
   reportCsv,
+  cashMargin,
   receivedPerHour,
 } from "@/modules/finance/productivity-report";
 it("valida el periodo y exporta centavos con etiquetas seguras para Excel", () => {
@@ -39,6 +40,12 @@ it("compara cobrado y flujo por hora y omite tasas sin horas o con fondos admini
     net_hourly: "400",
   };
   expect(receivedPerHour(row)).toBe(501n);
+  expect(cashMargin(row)).toBe("79.92");
+  expect(cashMargin({ ...row, managed: true })).toBeNull();
+  expect(cashMargin({ ...row, received: "0", net: "-201" })).toBeNull();
+  expect(cashMargin({ ...row, received: "3", paid: "4", net: "-1" })).toBe(
+    "-33.33",
+  );
   expect(reportCsv([row])).toContain("10.01,2.01,8.00,120,4.00,5.01");
   expect(receivedPerHour({ ...row, minutes: "0" })).toBeNull();
   expect(receivedPerHour({ ...row, managed: true })).toBeNull();

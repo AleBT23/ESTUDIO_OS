@@ -101,6 +101,10 @@ export function fromCents(value: number) {
   if (!Number.isSafeInteger(value)) throw new Error("Importe fuera de rango");
   return new D(value).div(100).toFixed(2);
 }
+export function marginOnRevenue(net: bigint, revenue: bigint): string | null {
+  if (revenue === 0n) return null;
+  return new D(net.toString()).div(revenue.toString()).mul(100).toFixed(2);
+}
 export function estimateFees(
   netRevenueCents: number,
   externalCost: string,
@@ -111,10 +115,10 @@ export function estimateFees(
   const externalCostCents = toCents(externalCost);
   const hours = positive(estimatedHours);
   const profitCents = netRevenueCents - externalCostCents;
-  const marginPercent =
-    netRevenueCents === 0
-      ? null
-      : new D(profitCents).div(netRevenueCents).mul(100).toFixed(2);
+  const marginPercent = marginOnRevenue(
+    BigInt(profitCents),
+    BigInt(netRevenueCents),
+  );
   const hourly = hours.isZero()
     ? null
     : new D(netRevenueCents).div(hours).toDecimalPlaces(0);

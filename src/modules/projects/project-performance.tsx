@@ -1,8 +1,11 @@
-import { TimeCostSummary, type TimeCost } from "@/modules/finance/time-cost-summary";
+import {
+  TimeCostSummary,
+  type TimeCost,
+} from "@/modules/finance/time-cost-summary";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
-import { formatMoney } from "@/shared/money";
+import { formatMoney, marginOnRevenue } from "@/shared/money";
 import type { ProductivityRow } from "@/modules/finance/productivity-report";
 export async function ProjectPerformance({ project }: { project: string }) {
   const ctx = await requireContext();
@@ -33,6 +36,7 @@ export async function ProjectPerformance({ project }: { project: string }) {
     paid += BigInt(r.paid);
     minutes += BigInt(r.minutes);
   }
+  const margin = marginOnRevenue(received - paid, received);
   const money = (v: string) => formatMoney(BigInt(v));
   return (
     <section className="panel padded">
@@ -74,6 +78,8 @@ export async function ProjectPerformance({ project }: { project: string }) {
         <dd>{formatMoney(paid)}</dd>
         <dt>Flujo acumulado (cobros menos pagos)</dt>
         <dd>{formatMoney(received - paid)}</dd>
+        <dt>Margen sobre cobros (flujo ÷ cobros × 100)</dt>
+        <dd>{margin === null ? "Sin cobros" : margin + " %"}</dd>
         <dt>Tiempo trabajado</dt>
         <dd>{minutes.toString()} min</dd>
       </dl>
