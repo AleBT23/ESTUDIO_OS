@@ -2366,3 +2366,26 @@ it("las asociaciones opcionales respetan el cliente y el proyecto realmente vinc
  await expect(agreement(null,first,byClient)).rejects.toThrow(/obra/);
  await agreement(null,second,byClient);await agreement(null,null,byProject);await agreement(null,null,null);
 });
+
+it("los vencimientos del acuerdo siguen el saldo parcial, la liquidación y el reverso", async () => {
+  await asUser(owner);
+  const account = crypto.randomUUID();
+  await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents,collect_on,pay_on) values($1,$2,'Estudio de suelos','service',100,60,current_date-1,current_date-1)", [account,org]);
+  const notices = async () => (await db.query<{kind:string}>("select kind from agenda_notifications where id=$1 order by kind",[account])).rows.map(r=>r.kind);
+  const movement = async (amount:number) => {
+    const id=crypto.randomUUID();
+    await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',$4,current_date-1)",[id,org,account,amount]);
+    return id;
+  };
+  await movement(40);
+  expect(await notices()).toEqual(["agreement_collection","agreement_payment"]);
+  const finalPayment=await movement(60);
+  expect(await notices()).toEqual(["agreement_payment"]);
+  await db.query("update finance_entries set reversal_reason='Captura duplicada' where id=$1",[finalPayment]);
+  expect(await notices()).toEqual(["agreement_collection","agreement_payment"]);
+  await db.query("update finance_cases set pay_on=null where id=$1",[account]);
+  expect(await notices()).toEqual(["agreement_collection"]);
+  await asUser(reader);expect(await notices()).toEqual([]);
+  await asUser(other);expect(await notices()).toEqual([]);
+  await asUser(owner);
+});

@@ -295,6 +295,14 @@ export default async function Operations({
             />
           </label>
           <label>
+            Fecha prevista de cobro (opcional)
+            <input type="date" name="collect_on" />
+          </label>
+          <label>
+            Fecha prevista de pago (opcional)
+            <input type="date" name="pay_on" />
+          </label>
+          <label>
             <input type="checkbox" name="managed" /> Recursos del cliente
             administrados para obra
           </label>

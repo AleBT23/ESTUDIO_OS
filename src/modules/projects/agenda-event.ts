@@ -1,4 +1,6 @@
 export const kinds: Record<string, string> = {
+  agreement_collection: "Cobro de acuerdo",
+  agreement_payment: "Pago de acuerdo",
   task: "Pendiente",
   collection: "Cobro pendiente",
   delivery: "Entrega",
@@ -10,6 +12,11 @@ export function eventHref(event: {
   id: string;
   project_id: string | null;
 }) {
+  if (
+    event.kind === "agreement_collection" ||
+    event.kind === "agreement_payment"
+  )
+    return "/administracion/operaciones/" + event.id;
   if (event.kind === "follow_up")
     return "/comercial/pipeline?selected=" + event.id;
   if (event.kind === "publication")

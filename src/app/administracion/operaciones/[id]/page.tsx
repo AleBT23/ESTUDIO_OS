@@ -1,3 +1,5 @@
+import { RecordForm } from "@/shared/ui/record-form";
+import { saveAgreementDates } from "@/modules/finance/agreement-dates";
 import { CaseInvoices } from "@/modules/finance/case-invoices";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -25,10 +27,16 @@ export default async function Operation({
     1,
     Math.min(10000, parseInt((await searchParams).page ?? "1") || 1),
   );
-  const [account, history] = await Promise.all([
+  const [account, dates, history] = await Promise.all([
     ctx.db
       .from("finance_case_balances")
       .select("*")
+      .eq("organization_id", ctx.organization.id)
+      .eq("id", id)
+      .maybeSingle(),
+    ctx.db
+      .from("finance_cases")
+      .select("collect_on,pay_on")
       .eq("organization_id", ctx.organization.id)
       .eq("id", id)
       .maybeSingle(),
@@ -42,7 +50,7 @@ export default async function Operation({
       .order("id")
       .range((page - 1) * 30, page * 30 - 1),
   ]);
-  if (account.error || history.error)
+  if (account.error || dates.error || history.error)
     throw new Error("No se pudo cargar el acuerdo.");
   const r = account.data;
   if (!r) notFound();
@@ -84,6 +92,42 @@ export default async function Operation({
           ))}
         </dl>
       </section>
+      {dates.data && (
+        <details>
+          <summary>Vencimientos de cobro y pago</summary>
+          <p>
+            Las fechas generan avisos en Agenda mientras quede saldo pendiente.
+          </p>
+          <RecordForm
+            key={[id, dates.data.collect_on, dates.data.pay_on].join("/")}
+            id={id}
+            save={saveAgreementDates}
+          >
+            {(["collect_on", "pay_on"] as const).map((key) => (
+              <div key={key}>
+                <input
+                  type="hidden"
+                  name={"original_" + key}
+                  value={dates.data?.[key] ?? ""}
+                />
+                <label>
+                  {key === "collect_on"
+                    ? "Fecha prevista de cobro"
+                    : "Fecha prevista de pago"}
+                  <input
+                    name={key}
+                    type="date"
+                    defaultValue={dates.data?.[key] ?? ""}
+                    disabled={
+                      !(key === "collect_on" ? r.revenue_cents : r.cost_cents)
+                    }
+                  />
+                </label>
+              </div>
+            ))}
+          </RecordForm>
+        </details>
+      )}
       {(r.receivable_cents > 0 || r.payable_cents > 0) && (
         <>
           <h2>Registrar movimiento efectivo</h2>

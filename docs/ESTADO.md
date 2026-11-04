@@ -414,3 +414,6 @@ La bandeja admite filtros por cobro pendiente, entrega, tarea, seguimiento y pub
 
 ### Consulta de acuerdos con saldo
 Operaciones permite combinar área, origen de fondos y saldo por cobrar o pagar. Los filtros se aplican sobre la vista de saldos y permanecen al paginar. Pasaron 168 pruebas, TypeScript, ESLint, compilación y siete recorridos Playwright sin sesión. Falta el recorrido autenticado en preview.
+
+### Vencimientos financieros en Agenda
+Los acuerdos admiten fechas opcionales e independientes de cobro y pago. El expediente permite reprogramarlas o retirarlas, comprobando los valores anteriores para detectar ediciones concurrentes. Agenda, calendario y notificaciones consultan los saldos efectivos y enlazan al acuerdo, incluso sin proyecto. Prueba SQL de abono parcial, liquidación, reverso, retiro de fecha y aislamiento por rol y organización. Pasaron 169 pruebas, TypeScript, ESLint, build, verificación de PDF y concurrencia con 48 migraciones en PostgreSQL local. Playwright pasó siete recorridos y omitió el de instalación sin credenciales. Migraciones 047 y 048 pendientes en producción. Siguiente validación de integración: recorrer con sesión aislada la creación de un acuerdo, reprogramación, pago, reverso y descarga de avance de obra; respaldar y verificar restauración antes de publicar.

@@ -24,6 +24,10 @@ const supplierInput = z.object({
   kind: z.enum(["supplier", "subcontractor"]),
   contact: z.string().trim().max(300),
 });
+const optionalDate = z
+  .union([z.iso.date(), z.literal("")])
+  .optional()
+  .transform((v) => v || null);
 const caseInput = base
   .extend({
     area: z.enum(["architecture", "construction", "service"]),
@@ -35,12 +39,16 @@ const caseInput = base
       .trim()
       .max(160)
       .transform((v) => v || null),
+    collect_on: optionalDate,
+    pay_on: optionalDate,
     revenue_cents: money,
     cost_cents: money,
     managed: z.literal("on").optional().transform(Boolean),
   })
   .refine(
     (v) =>
+      (!v.collect_on || v.revenue_cents > 0) &&
+      (!v.pay_on || v.cost_cents > 0) &&
       (!v.managed || v.area === "construction") &&
       (v.revenue_cents > 0 || v.cost_cents > 0),
   );
@@ -107,6 +115,7 @@ export async function saveOperation(
           : "No se pudo guardar. Revisa los datos y si el registro ya existe.",
     };
   revalidatePath("/administracion/proveedores");
+  revalidatePath("/agenda", "layout");
   revalidatePath("/obras");
   revalidatePath("/");
   revalidatePath("/administracion/operaciones", "layout");
@@ -140,6 +149,7 @@ export async function reverseEntry(
     };
   revalidatePath("/");
   revalidatePath("/administracion/proveedores");
+  revalidatePath("/agenda", "layout");
   revalidatePath("/obras");
   revalidatePath("/administracion/operaciones", "layout");
   return { success: "Movimiento revertido." };
