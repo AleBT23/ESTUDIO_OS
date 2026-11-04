@@ -2090,3 +2090,17 @@ it("el cliente solo consulta entregas aprobadas y publicadas hasta que se revoca
  await asUser(owner);await db.query("update portal_deliveries set visible=false where deliverable_id=$1",[delivery]);await asUser(external);expect((await list()).rows).toHaveLength(0);
  await asUser(owner);await db.query("update portal_deliveries set visible=true where deliverable_id=$1",[delivery]);await db.query("update client_portal_access set enabled=false where user_id=$1",[external]);await asUser(external);expect((await list()).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el colaborador registra tiempo propio por tarea, con corrección versionada y aislamiento",async()=>{
+ const worker=crypto.randomUUID();await db.exec("reset role");await db.query("insert into auth.users(id) values($1)",[worker]);await db.query("insert into memberships(organization_id,user_id,role) values($1,$2,'collaborator')",[org,worker]);await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Control de tiempo',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const task=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,body) values($1,$2,'Revisión') returning id",[org,project])).rows[0].id;
+ const add=(id:string)=>db.query("insert into project_time(id,organization_id,project_id,task_id,worked_on,minutes,description) values($1,$2,$3,$4,current_date,45,'Revisión de planos')",[id,org,project,task]);
+ const managerEntry=crypto.randomUUID(),entry=crypto.randomUUID();await add(managerEntry);await asUser(worker);await add(entry);
+ expect((await db.query("select id from project_time where project_id=$1",[project])).rows).toEqual([{id:entry}]);
+ await db.query("update project_time set minutes=60 where id=$1 and version=1",[entry]);
+ expect((await db.query("update project_time set minutes=70 where id=$1 and version=1 returning id",[entry])).rows).toHaveLength(0);
+ expect((await db.query("select (previous_values->>'minutes')::int minutes,actor_id from time_corrections where time_id=$1",[entry])).rows).toEqual([{minutes:45,actor_id:worker}]);
+ await asUser(owner);expect((await db.query("select sum(minutes)::int minutes from project_time where project_id=$1",[project])).rows).toEqual([{minutes:105}]);
+ await asUser(reader);await expect(add(crypto.randomUUID())).rejects.toThrow();expect((await db.query("select * from time_corrections where time_id=$1",[entry])).rows).toHaveLength(0);await asUser(owner);
+});

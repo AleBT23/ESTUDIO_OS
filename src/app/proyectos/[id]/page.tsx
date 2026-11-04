@@ -1,5 +1,6 @@
 import { DeliveryPanel } from "@/modules/projects/delivery-panel";
 import { canManageCommercial } from "@/shared/permissions";
+import { TimePanel } from "@/modules/projects/time-panel";
 import Link from "next/link";
 import { z } from "zod";
 import { notFound } from "next/navigation";
@@ -23,6 +24,7 @@ export default async function ProjectPage({
     notes?: string;
     visits?: string;
     payments?: string;
+    tiempo?: string;
     entregas?: string;
     entrega?: string;
     revisiones?: string;
@@ -122,6 +124,7 @@ export default async function ProjectPage({
         notesPage={page(filter.notes)}
         visitsPage={page(filter.visits)}
       />
+      <TimePanel project={id} page={page(filter.tiempo)} />
       <ProjectFinance
         project={id}
         name={project.name}
