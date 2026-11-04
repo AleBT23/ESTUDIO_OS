@@ -408,3 +408,6 @@ Obras permite descargar por separado el balance financiero y el avance por parti
 
 ### Consulta del avance en el presupuesto
 El presupuesto y el detalle de partida muestran el valor acumulado estimado y el importe pendiente con el mismo cálculo del CSV. El máximo del formulario proviene de la cantidad pendiente en SQL. Pasaron 166 pruebas, lint, compilación con verificación PDF y TypeScript. Playwright pasó siete recorridos y omitió el de instalación sin credenciales. Pendiente probar la captura autenticada.
+
+### Notificaciones por tipo
+La bandeja admite filtros por cobro pendiente, entrega, tarea, seguimiento y publicación. Aplica el filtro en Supabase antes de paginar y conserva el tipo entre leídos y sin leer. 167 pruebas, TypeScript y ESLint correctos. Pendiente recorrido autenticado.
