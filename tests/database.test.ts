@@ -2025,3 +2025,15 @@ it("estima el avance parcial con redondeo acumulado y protege la partida de rein
  expect((await db.query("select * from work_balances where work_id=$1",[work])).rows).toHaveLength(0);
  await asUser(other);expect((await db.query("select * from work_estimates where item_id=$1",[item])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("asocia recursos a la partida y rechaza consumos de otra obra u organización",async()=>{
+ await asUser(owner);
+ const work=crypto.randomUUID(),second=crypto.randomUUID(),item=crypto.randomUUID();
+ for(const id of [work,second])await db.query("insert into works(id,organization_id,name) values($1,$2,'Control de consumos')",[id,org]);
+ await db.query("insert into work_budget_items(id,organization_id,work_id,chapter,description,unit,quantity,unit_price_cents) values($1,$2,$3,'Campo','Levantamiento','jornada',1,100)",[item,org,work]);
+ const add=(w:string,category:string)=>db.query("insert into work_resource_usage(id,organization_id,work_id,item_id,category,description,used_on,quantity,unit) values($1,$2,$3,$4,$5,'Equipo en campo',current_date,2.5,'horas')",[crypto.randomUUID(),org,w,item,category]);
+ for(const t of ["labor","equipment","material"])await add(work,t);
+ await expect(add(second,"labor")).rejects.toThrow();await expect(add(work,"financial")).rejects.toThrow();
+ expect((await db.query("select estimated_quantity::int from work_budget_items where id=$1",[item])).rows).toEqual([{estimated_quantity:0}]);
+ await asUser(other);expect((await db.query("select * from work_resource_usage where item_id=$1",[item])).rows).toHaveLength(0);await asUser(owner);
+});

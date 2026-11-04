@@ -293,3 +293,6 @@ Migración 021. Agenda → Calendario permite navegar meses y consultar pendient
 
 ### Estimaciones parciales por partida
 Migración 022. Cada partida enlaza su historial de mediciones, cantidad ejecutada y pendiente. PostgreSQL limita el acumulado mediante actualización condicional y calcula importes por diferencia entre acumulados redondeados; al terminar se concilia con el presupuesto. La estimación no genera cobros ni pagos. Probados reintento con conflicto, límite de cantidad, centavos fraccionarios y aislamiento. TypeScript, lint, 130 pruebas y build con guard PDF correctos. Pendiente prueba con dos conexiones en PostgreSQL independiente.
+
+### Consumos de materiales, mano de obra y equipo
+Migración 023. Cada partida incluye un registro físico de recursos por fecha, unidad, cantidad y proveedor opcional. El historial se filtra por categoría. Los consumos no incrementan automáticamente la estimación ni registran cargos. Se verificó que PostgreSQL rechaza referencias a partidas de otra obra y excluye otras organizaciones. TypeScript, lint, 131 pruebas y compilación con guard PDF correctos. Siguiente bloque: recurrencias, prioridades y responsables de agenda y comprobantes privados.

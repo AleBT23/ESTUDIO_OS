@@ -1,3 +1,4 @@
+import { ResourceUsage } from "@/modules/finance/resource-usage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -11,17 +12,15 @@ export default async function Item({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; recurso?: string; consumos?: string }>;
 }) {
   const ctx = await requireContext();
   if (!canReadFinance(ctx.membership.role))
     return <p className="notice">Permisos insuficientes.</p>;
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
-  const page = Math.max(
-    1,
-    Math.min(10000, parseInt((await searchParams).page ?? "1") || 1),
-  );
+  const filters = await searchParams;
+  const page = Math.max(1, Math.min(10000, parseInt(filters.page ?? "1") || 1));
   const org = ctx.organization.id;
   const [item, entries] = await Promise.all([
     ctx.db
@@ -111,6 +110,15 @@ export default async function Item({
           <Link href={"?page=" + (page + 1)}>Siguiente</Link>
         )}
       </section>
+      <ResourceUsage
+        item={id}
+        work={r.work_id}
+        category={filters.recurso}
+        page={Math.max(
+          1,
+          Math.min(10000, parseInt(filters.consumos ?? "1") || 1),
+        )}
+      />
     </>
   );
 }
