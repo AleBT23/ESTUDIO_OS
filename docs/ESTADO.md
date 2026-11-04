@@ -354,3 +354,6 @@ La cronología paginada enlaza cambios de estado de cotizaciones, revisiones de 
 
 ### Crear registro desde la navegación
 El menú del estudio abre las acciones rápidas de Inicio según el rol. Administración puede abrir directamente los formularios comerciales, de proyectos, obras y acuerdos. Los colaboradores pueden elegir un proyecto por nombre y abrir la captura de pendientes o visitas. Los lectores no reciben acciones de escritura. Pasaron 151 pruebas, TypeScript, ESLint y compilación con verificación PDF. Bloque sin migración. Falta recorrer los enlaces con sesiones autenticadas en preview.
+
+### Cartera y flujo consolidados en Inicio
+Los indicadores muestran la cartera completa del despacho, costos pendientes y flujo cobrado menos pagado. Incluyen planes de proyecto y acuerdos propios; los fondos recibidos y aplicados por cuenta del cliente aparecen en un saldo independiente. El listado de cinco proyectos es solo un desglose. Prueba de conciliación en centavos con valores superiores al rango entero seguro de JavaScript. Pasaron 152 pruebas, TypeScript, lint y compilación. Este bloque no requiere migración. Falta validación autenticada de la presentación.

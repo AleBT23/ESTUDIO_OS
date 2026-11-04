@@ -1,3 +1,4 @@
+import { studioTotals } from "./studio-totals";
 import Link from "next/link";
 import { getContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
@@ -30,6 +31,7 @@ export async function AreaIndicators() {
     .order("source")
     .order("area")
     .order("managed");
+  const totals = studioTotals(data ?? []);
   return (
     <section className="panel padded">
       <div className="section-heading">
@@ -45,40 +47,76 @@ export async function AreaIndicators() {
       ) : !data.length ? (
         <p>El estudio aún no tiene acuerdos ni planes registrados.</p>
       ) : (
-        <div className="table-scroll">
-          <table>
-            <caption>
-              Saldos acumulados en MXN. Los planes históricos solo aportan
-              cobros y cartera.
-            </caption>
-            <thead>
-              <tr>
-                <th>Área y fondos</th>
-                {columns.map(([k, label]) => (
-                  <th key={k}>{label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row) => (
-                <tr key={[row.source, row.area, row.managed].join("-")}>
-                  <th scope="row">
-                    {row.source === "schedules"
-                      ? "Planes históricos de proyectos"
-                      : labels[row.area] +
-                        " · " +
-                        (row.managed ? "Fondos del cliente" : "Fondos propios")}
-                  </th>
-                  {columns.map(([k]) => (
-                    <td key={k}>
-                      {row[k] === null ? "—" : formatMoney(BigInt(row[k]))}
-                    </td>
+        <>
+          <div className="overview-grid">
+            <article className="panel padded">
+              <h3>Despacho · saldo por cobrar</h3>
+              <strong>{formatMoney(totals.own.receivable)}</strong>
+              <p>Planes de cobro de proyectos y acuerdos propios pendientes.</p>
+            </article>
+            <article className="panel padded">
+              <h3>Despacho · saldo por pagar</h3>
+              <strong>{formatMoney(totals.own.payable)}</strong>
+              <p>Costos propios pendientes de pago.</p>
+            </article>
+            <article className="panel padded">
+              <h3>Despacho · flujo acumulado</h3>
+              <strong>
+                {formatMoney(totals.own.received - totals.own.paid)}
+              </strong>
+              <p>
+                Cobrado {formatMoney(totals.own.received)} · Pagado{" "}
+                {formatMoney(totals.own.paid)}
+              </p>
+            </article>
+            <article className="panel padded">
+              <h3>Obra · saldo de fondos administrados</h3>
+              <strong>
+                {formatMoney(totals.managed.received - totals.managed.paid)}
+              </strong>
+              <p>
+                Recibido del cliente {formatMoney(totals.managed.received)} ·
+                Aplicado a obra {formatMoney(totals.managed.paid)}
+              </p>
+            </article>
+          </div>
+          <div className="table-scroll">
+            <table>
+              <caption>
+                Saldos acumulados en MXN. Los planes históricos solo aportan
+                cobros y cartera.
+              </caption>
+              <thead>
+                <tr>
+                  <th>Área y fondos</th>
+                  {columns.map(([k, label]) => (
+                    <th key={k}>{label}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {data.map((row) => (
+                  <tr key={[row.source, row.area, row.managed].join("-")}>
+                    <th scope="row">
+                      {row.source === "schedules"
+                        ? "Planes históricos de proyectos"
+                        : labels[row.area] +
+                          " · " +
+                          (row.managed
+                            ? "Fondos del cliente"
+                            : "Fondos propios")}
+                    </th>
+                    {columns.map(([k]) => (
+                      <td key={k}>
+                        {row[k] === null ? "—" : formatMoney(BigInt(row[k]))}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );
