@@ -1,4 +1,4 @@
-import { StudioCalendar } from "@/modules/projects/calendar";
+import { AgendaDeadlines, StudioCalendar } from "@/modules/projects/calendar";
 import Link from "next/link";
 import { z } from "zod";
 import { requireContext } from "@/shared/auth/context";
@@ -17,7 +17,12 @@ const views = {
 export default async function Agenda({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; page?: string; date?: string }>;
+  searchParams: Promise<{
+    view?: string;
+    page?: string;
+    date?: string;
+    events?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   const q = await searchParams;
@@ -60,6 +65,13 @@ export default async function Agenda({
           </label>
           <button className="button button-outline">Ver fecha</button>
         </form>
+      )}
+      {["today", "week", "date", "overdue", "all"].includes(view) && (
+        <AgendaDeadlines
+          view={view}
+          date={view === "date" ? (date ?? today) : today}
+          page={Math.max(1, Math.min(10000, parseInt(q.events || "1") || 1))}
+        />
       )}
       {view === "calendar" ? (
         <StudioCalendar

@@ -339,3 +339,6 @@ Recursos → Biblioteca técnica permite publicar revisiones con etiquetas, desc
 
 ### Fases por línea o servicio
 El expediente permite aplicar una plantilla, avanzar y reabrir fases. Administración puede modificar los nombres y etapas para futuros planes. Cada plan conserva una copia al aplicarse. Los estudios reciben recorridos iniciales distintos para arquitectura y visualización. Se verificaron aislamiento, límites y preservación de la versión aplicada, con 146 pruebas, TypeScript, lint y 36 migraciones locales. La migración 036 sigue pendiente de producción.
+
+### Vencimientos comerciales y editoriales en la agenda
+La agenda incorpora seguimientos activos del pipeline y publicaciones programadas. Las vistas Hoy, Semana, Fecha, Vencidos y Lista muestran además los cobros pendientes y entregas desde sus registros originales. Reprogramar, cerrar la oportunidad o publicar el contenido actualiza el calendario y los conteos diarios. Los permisos comerciales se conservan. 147 pruebas, TypeScript, lint, build y 37 migraciones locales verificados. Migración 037 pendiente de producción y recorrido autenticado pendiente.

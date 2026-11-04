@@ -2219,3 +2219,17 @@ it("las fases aplicadas conservan su versión aunque administración revise la p
  await expect(db.query("update project_phase_plans set completed=1000 where id=$1",[id])).rejects.toThrow();
  await asUser(other);expect((await db.query("select id from project_phase_plans where id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("la agenda reprograma el seguimiento comercial y retira publicaciones y oportunidades cerradas",async()=>{
+ await asUser(owner);
+ const opp=(await db.query<{id:string}>("insert into opportunities(organization_id,client_id,business_line_id,name,next_follow_up) select $1,$2,id,'Visita comercial',current_date from business_lines where organization_id=$1 limit 1 returning id",[org,client])).rows[0].id;
+ const pub=crypto.randomUUID();
+ await db.query("insert into editorial_items(id,organization_id,title,channel,status,publication_on) values($1,$2,'Publicación de proyecto','Web','scheduled',current_date)",[pub,org]);
+ const items=()=>db.query("select kind from agenda_events where organization_id=$1 and id in ($2,$3) and due_on=current_date order by kind",[org,opp,pub]);
+ expect((await items()).rows).toEqual([{kind:"follow_up"},{kind:"publication"}]);
+ await asUser(reader);expect((await items()).rows).toHaveLength(0);await asUser(owner);
+ await db.query("update opportunities set next_follow_up=current_date+1 where id=$1",[opp]);
+ await db.query("update editorial_items set status='published' where id=$1",[pub]);expect((await items()).rows).toHaveLength(0);
+ expect((await db.query("select id from agenda_events where id=$1 and due_on=current_date+1",[opp])).rows).toHaveLength(1);
+ await db.query("update opportunities set stage='won' where id=$1",[opp]);expect((await db.query("select id from agenda_events where id=$1",[opp])).rows).toHaveLength(0);
+});

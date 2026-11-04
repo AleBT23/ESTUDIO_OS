@@ -5,7 +5,20 @@ const kinds: Record<string, string> = {
   task: "Pendiente",
   collection: "Cobro pendiente",
   delivery: "Entrega",
+  follow_up: "Seguimiento comercial",
+  publication: "Publicación programada",
 };
+function eventHref(event: {
+  kind: string;
+  id: string;
+  project_id: string | null;
+}) {
+  if (event.kind === "follow_up")
+    return "/comercial/pipeline?selected=" + event.id;
+  if (event.kind === "publication")
+    return "/comercial/marketing?edit=" + event.id;
+  return "/proyectos/" + event.project_id;
+}
 export async function StudioCalendar({
   date,
   page,
@@ -86,7 +99,7 @@ export async function StudioCalendar({
         events.data.map((e) => (
           <article key={e.kind + e.id} className="activity-row">
             <small>{kinds[e.kind]}</small>
-            <Link href={"/proyectos/" + e.project_id}>{e.label}</Link>
+            <Link href={eventHref(e)}>{e.label}</Link>
           </article>
         ))
       ) : (
@@ -95,6 +108,58 @@ export async function StudioCalendar({
       {page > 1 && <Link href={href(date, page - 1)}>Anterior </Link>}
       {page * 30 < (events.count ?? 0) && (
         <Link href={href(date, page + 1)}>Siguiente</Link>
+      )}
+    </section>
+  );
+}
+
+export async function AgendaDeadlines({
+  view,
+  date,
+  page,
+}: {
+  view: string;
+  date: string;
+  page: number;
+}) {
+  const ctx = await requireContext(),
+    end = new Date(date + "T12:00:00Z");
+  end.setUTCDate(end.getUTCDate() + 6);
+  let query = ctx.db
+    .from("agenda_events")
+    .select("id,kind,label,project_id,due_on", { count: "exact" })
+    .eq("organization_id", ctx.organization.id)
+    .neq("kind", "task");
+  if (view === "week")
+    query = query
+      .gte("due_on", date)
+      .lte("due_on", end.toISOString().slice(0, 10));
+  else if (view === "overdue") query = query.lt("due_on", date);
+  else if (view !== "all") query = query.eq("due_on", date);
+  const result = await query
+    .order("due_on")
+    .order("kind")
+    .order("id")
+    .range((page - 1) * 20, page * 20 - 1);
+  if (result.error)
+    return <p className="notice">No se pudieron consultar los vencimientos.</p>;
+  const href = (n: number) =>
+    "?" + new URLSearchParams({ view, date, events: String(n) });
+  return (
+    <section className="panel padded">
+      <h2>Vencimientos y seguimientos</h2>
+      {!result.data.length && <p>Sin eventos en esta selección.</p>}
+      {result.data.map((e) => (
+        <article className="activity-row" key={e.kind + e.id}>
+          <small>
+            {e.due_on} · {kinds[e.kind]}
+          </small>
+          <Link href={eventHref(e)}>{e.label}</Link>
+        </article>
+      ))}
+      {page > 1 && <Link href={href(page - 1)}>Anteriores </Link>}
+      {page * 20 < (result.count || 0) && (
+        <Link href={href(page + 1)}>Más eventos</Link>
       )}
     </section>
   );
