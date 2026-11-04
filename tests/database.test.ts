@@ -2631,3 +2631,19 @@ it("cancelar saldo conserva los cobros y excluye la deuda de agenda y cartera", 
  expect((await db.query("select previous_amount,amount_cents,reason from schedule_cancellation_history where id=$1",[request])).rows).toEqual([{previous_amount:"1000",amount_cents:"650",reason:"Convenio"}]);
  await asUser(other);expect((await db.query("select id from schedule_cancellations where id=$1",[request])).rows).toEqual([]);await asUser(owner);
 });
+it("concilia cobros y pagos por área sin convertir el saldo administrado en ingresos propios",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Reporte por área',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ await db.query("select record_payment($1,id,125,current_date-1,'Abono de proyecto',$3) from payment_schedules where project_id=$2",[org,project,crypto.randomUUID()]);
+ for(const [area,managed] of [["architecture",false],["service",false],["construction",true],["construction",false]] as const){
+  const id=crypto.randomUUID();
+  await db.query("insert into finance_cases(id,organization_id,project_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Prueba por área',$4,$5,1000,600)",[id,org,project,area,managed]);
+  for(const [dir,cents] of [["in",700],["out",200]] as const)await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,$4,$5,current_date-1)",[crypto.randomUUID(),org,id,dir,cents]);
+ }
+ const report=()=>db.query<{area:string,managed:boolean,received:string,paid:string,net:string}>("select * from area_cash_report($1,current_date-1,current_date-1,$2,$3)",[org,client,project]);
+ const rows=(await report()).rows;
+ expect(rows.filter(r=>r.area!=="project_plan").map(r=>[r.area,r.managed,r.net])).toEqual([["architecture",false,"500"],["construction",false,"500"],["construction",true,"500"],["service",false,"500"]]);
+ expect(rows.find(r=>r.area==="project_plan")).toMatchObject({received:"125",paid:"0",managed:false});
+ expect(rows.filter(r=>!r.managed).reduce((sum,r)=>sum+BigInt(r.net),0n)).toBe(1625n);
+ await asUser(reader);expect((await report()).rows).toEqual([]);await asUser(other);expect((await report()).rows).toEqual([]);await asUser(owner);
+});

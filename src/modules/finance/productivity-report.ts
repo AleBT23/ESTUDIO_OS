@@ -28,7 +28,9 @@ export type ProductivityRow = {
   minutes: string;
   net_hourly: string | null;
 };
-export function cashMargin(row: ProductivityRow): string | null {
+export function cashMargin(
+  row: Pick<ProductivityRow, "net" | "received" | "paid" | "managed">,
+): string | null {
   return row.managed
     ? null
     : marginOnRevenue(BigInt(row.net), BigInt(row.received));

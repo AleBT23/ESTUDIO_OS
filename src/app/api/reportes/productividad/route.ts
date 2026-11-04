@@ -1,3 +1,4 @@
+import { areaCashCsv } from "@/modules/finance/area-cash";
 import { expenseCsv } from "@/modules/finance/expense-categories";
 import { getContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
@@ -18,26 +19,36 @@ export async function GET(request: Request) {
     Object.fromEntries(new URL(request.url).searchParams),
   );
   if (!filters.success) return new Response(null, { status: 400, headers });
-  const expenses =
-    new URL(request.url).searchParams.get("detalle") === "egresos";
+  const detail = new URL(request.url).searchParams.get("detalle");
+  const args = { org: ctx.organization.id, ...filters.data };
   const result = await ctx.db.rpc(
-    expenses ? "expense_breakdown" : "cash_productivity",
-    {
-      org: ctx.organization.id,
-      ...filters.data,
-    },
+    detail === "areas"
+      ? "area_cash_report"
+      : detail === "egresos"
+        ? "expense_breakdown"
+        : "cash_productivity",
+    args,
   );
   if (result.error) return new Response(null, { status: 503, headers });
-  return new Response(
-    expenses ? expenseCsv(result.data) : reportCsv(result.data),
-    {
-      headers: {
-        ...headers,
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": expenses
-          ? 'attachment; filename="egresos-por-categoria.csv"'
-          : 'attachment; filename="flujo-y-productividad.csv"',
-      },
+  let csv: string, filename: string;
+  switch (detail) {
+    case "areas":
+      csv = areaCashCsv(result.data);
+      filename = "flujo-por-area.csv";
+      break;
+    case "egresos":
+      csv = expenseCsv(result.data);
+      filename = "egresos-por-categoria.csv";
+      break;
+    default:
+      csv = reportCsv(result.data);
+      filename = "flujo-y-productividad.csv";
+  }
+  return new Response(csv, {
+    headers: {
+      ...headers,
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": 'attachment; filename="' + filename + '"',
     },
-  );
+  });
 }

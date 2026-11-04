@@ -1,3 +1,4 @@
+import { AreaCashTable } from "@/modules/finance/area-cash-table";
 import {
   TimeCostSummary,
   type TimeCost,
@@ -34,7 +35,7 @@ export default async function Reports({
     ["package", "Paquete", "project_service_packages"],
     ["line", "Línea", "business_lines"],
   ];
-  const [groups, result, expenses, timeCost] = await Promise.all([
+  const [groups, result, expenses, timeCost, areaCash] = await Promise.all([
     Promise.all(
       sources.map(async ([name, label, table]) => ({
         name,
@@ -56,6 +57,9 @@ export default async function Reports({
       ? ctx.db
           .rpc("time_cost_report", { org, ...filters.data })
           .maybeSingle<TimeCost>()
+      : null,
+    filters.success
+      ? ctx.db.rpc("area_cash_report", { org, ...filters.data })
       : null,
   ]);
   const rows: ProductivityRow[] = result?.data ?? [];
@@ -172,6 +176,18 @@ export default async function Reports({
           </a>
         </section>
       )}
+      {filters.success &&
+        (areaCash?.error ? (
+          <p>No se pudo calcular el flujo por área.</p>
+        ) : (
+          <AreaCashTable
+            rows={areaCash?.data ?? []}
+            url={
+              "/api/reportes/productividad?" +
+              new URLSearchParams({ ...raw, detalle: "areas" })
+            }
+          />
+        ))}
       {filters.success &&
         (raw.work ? (
           <p>

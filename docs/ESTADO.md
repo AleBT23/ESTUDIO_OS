@@ -477,3 +477,6 @@ Administración permite cancelar exclusivamente lo pendiente, con motivo obligat
 
 ### Inventario de migraciones en modo de solo lectura
 npm run db:plan abre una transacción PostgreSQL de solo lectura y contrasta el historial registrado con los hashes SHA-256 locales. Detecta versiones desconocidas, cambios y huecos de secuencia. El 4 de noviembre la conexión configurada verificó las primeras 10 migraciones, sin diferencias en ese historial. De las 63 entonces existentes, 53 estaban pendientes, comenzando por 011. El inventario no certifica el respaldo, las políticas reales ni la compatibilidad de los registros. Pasaron 192 pruebas, lint, TypeScript y revisión de publicación.
+
+### Flujo por área y custodia en Reportes
+El reporte por periodo, cliente, proyecto, obra, paquete y línea muestra cobros, pagos, flujo y margen de caja propios por área. Los fondos administrados se agrupan aparte y los planes sin área atribuida mantienen su propio renglón. La tabla y el CSV usan la misma consulta con permisos de Supabase. Se conciliaron las tres áreas con pagos parciales y se comprobaron centavos por encima del rango entero seguro de JavaScript. Pasaron 194 pruebas, TypeScript, ESLint, build, nueve recorridos Playwright y restauración sintética con 64 migraciones.
