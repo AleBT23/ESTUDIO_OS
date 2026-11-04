@@ -357,3 +357,6 @@ El menú del estudio abre las acciones rápidas de Inicio según el rol. Adminis
 
 ### Cartera y flujo consolidados en Inicio
 Los indicadores muestran la cartera completa del despacho, costos pendientes y flujo cobrado menos pagado. Incluyen planes de proyecto y acuerdos propios; los fondos recibidos y aplicados por cuenta del cliente aparecen en un saldo independiente. El listado de cinco proyectos es solo un desglose. Prueba de conciliación en centavos con valores superiores al rango entero seguro de JavaScript. Pasaron 152 pruebas, TypeScript, lint y compilación. Este bloque no requiere migración. Falta validación autenticada de la presentación.
+
+### Flujo de Inicio por periodo y línea
+Inicio consulta la misma función financiera que Administración → Reportes. La tabla del periodo reúne los cobros y pagos efectivos por titular de fondos, con sumas en centavos. Permite guardar fechas y línea por usuario y estudio en el navegador por 90 días y abrir el detalle con los mismos filtros. La cartera acumulada se presenta aparte. Pasaron 153 pruebas, TypeScript, lint y build. Bloque sin migraciones nuevas. Falta validación autenticada de la persistencia en navegador.

@@ -1,3 +1,4 @@
+import { PeriodFlow } from "@/modules/dashboard/period-flow";
 import { QuickActions } from "@/modules/dashboard/quick-actions";
 import { RecentActivity } from "@/modules/dashboard/recent-activity";
 import Link from "next/link";
@@ -134,6 +135,7 @@ export default async function HomePage({
           </section>
         )}
         <AreaIndicators />
+        <PeriodFlow />
         <p>
           <Link href="/agenda/notificaciones">
             Notificaciones internas
