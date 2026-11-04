@@ -384,3 +384,6 @@ Si un acuerdo identifica únicamente la obra, el reporte usa el proyecto asociad
 
 ### Integridad de las asociaciones financieras
 Obras y acuerdos nuevos comprueban la relación cliente–proyecto. Un acuerdo con obra rechaza un proyecto distinto incluso si ambos tienen el mismo cliente, y contrasta el cliente explícito o heredado. Se mantienen válidos los registros independientes y los vínculos parciales. Las claves foráneas se añaden NOT VALID para no exigir correcciones históricas al instalar la migración. Antes de producción deben auditarse los vínculos históricos y verificarse los respaldos. 161 pruebas, TypeScript, ESLint y 46 migraciones en PostgreSQL local correctos.
+
+### Auditoría previa a la migración 046
+Ejecutar scripts/sql/audit-finance-associations.sql sobre una copia restaurada con acceso de lectura completo a projects, works y finance_cases. Cada fila identifica una discrepancia, el vínculo seleccionado y el esperado. Un resultado vacío acredita solo estas comprobaciones. La prueba local en transacción de solo lectura detectó cuatro discrepancias simuladas y respetó los vínculos opcionales válidos. Pasaron 162 pruebas, TypeScript y ESLint. Sigue pendiente ejecutar la consulta sobre un respaldo real restaurado.
