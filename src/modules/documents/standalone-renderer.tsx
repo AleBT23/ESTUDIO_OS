@@ -1,3 +1,4 @@
+import { referencedImage } from "./image-references";
 import { documentLines } from "./document-lines";
 import {
   Document,
@@ -39,16 +40,24 @@ Font.register({
 });
 const pt = (mm: number) => (mm * 72) / 25.4;
 export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> {
-  async render(input: StandaloneSnapshot) {
+  async render(
+    input: StandaloneSnapshot,
+    images: ReadonlyMap<string, Buffer> = new Map(),
+  ) {
     const s = standaloneSnapshotSchema.parse(input);
-    const lines = documentLines(s.body).map((block) =>
-      typeof block === "string"
-        ? resolveDocumentBody(s, block)
-        : {
-            ...block,
-            cells: block.cells.map((cell) => resolveDocumentBody(s, cell)),
-          },
-    );
+    const lines = documentLines(s.body).map((block) => {
+      if (typeof block !== "string")
+        return {
+          ...block,
+          cells: block.cells.map((cell) => resolveDocumentBody(s, cell)),
+        };
+      const ref = referencedImage(block);
+      if (!ref) return resolveDocumentBody(s, block);
+      const bytes = images.get(ref);
+      if (!bytes)
+        throw Error("Imagen no disponible en la biblioteca de este estudio.");
+      return { kind: "image" as const, bytes };
+    });
     const letterhead = await readFile(
       path.join(process.cwd(), "branding/membretes/MEMBRETA_CARTA_AT.png"),
     );
@@ -111,7 +120,19 @@ export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> 
             </View>
           )}
           {lines.map((line, index) =>
-            typeof line !== "string" ? (
+            typeof line !== "string" && line.kind === "image" ? (
+              <View key={index} wrap={false} style={{ marginVertical: 8 }}>
+                <PdfImage
+                  src={{ data: line.bytes, format: "jpg" }}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: 290,
+                    objectFit: "contain",
+                    objectPosition: "left",
+                  }}
+                />
+              </View>
+            ) : typeof line !== "string" ? (
               <View
                 key={index}
                 wrap={line.cells.some((c) => c.length > 200)}

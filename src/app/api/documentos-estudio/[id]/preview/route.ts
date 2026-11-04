@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
 import { standalonePreview } from "@/modules/documents/standalone-preview";
-import { StandaloneRenderer } from "@/modules/documents/standalone-renderer";
+import { renderStudioDocument } from "@/modules/documents/render-studio-document";
 export const runtime = "nodejs";
 export async function GET(
   _request: Request,
@@ -19,7 +19,7 @@ export async function GET(
   try {
     const snapshot = await standalonePreview(id);
     stage = "render";
-    const pdf = await new StandaloneRenderer().render(snapshot);
+    const pdf = await renderStudioDocument(snapshot);
     return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",

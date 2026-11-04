@@ -1,3 +1,4 @@
+import { documentImageIds } from "./image-references";
 import { z } from "zod";
 import { defaultDocumentOptions } from "./schema";
 import { formatMoney, splitAdvance } from "@/shared/money";
@@ -62,6 +63,7 @@ export const standaloneInputSchema = z
   .superRefine((input, ctx) => {
     try {
       templateVariables(input.body);
+      documentImageIds(input.body);
     } catch (error) {
       ctx.addIssue({
         code: "custom",

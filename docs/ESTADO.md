@@ -456,3 +456,6 @@ El propietario invita por correo desde Configuración → Equipo. Comparte manua
 
 ### Tablas en documentos y plantillas
 El editor inserta tablas de dos a seis columnas en el texto guardado. El PDF de vista previa y emisión dibuja sus filas y columnas, con variables resueltas en cada celda. Se reabrió un documento de 65 filas para verificar paginación, alineación y conservación de la última fila. Las barras verticales del nombre de un cliente permanecen dentro de su celda. Pasaron 182 pruebas, ESLint y build con verificación del paquete PDF. Sin migración adicional. Pendiente recorrido autenticado y revisión con documentos del estudio.
+
+### Imágenes privadas en documentos
+El editor inserta imágenes desde una revisión concreta de Biblioteca. Las plantillas conservan la referencia; la vista previa y la emisión consultan el adjunto bajo los permisos y la organización activos. El servidor comprueba la firma PNG/JPEG y limita bytes, píxeles y cantidad de imágenes antes de generar el PDF. Se reabrió un PDF con dos imágenes (membrete y adjunto) y texto posterior. Se probaron referencias inválidas, archivo no raster, imagen faltante y límite de imágenes. Pasaron 184 pruebas, TypeScript, ESLint, build y 8 recorridos Playwright (uno omitido). Sin migración adicional. Pendiente emisión autenticada con adjuntos reales de prueba.

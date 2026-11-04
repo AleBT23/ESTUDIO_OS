@@ -10,7 +10,7 @@ import {
   standaloneInputSchema,
   standaloneSnapshotSchema,
 } from "./standalone-schema";
-import { StandaloneRenderer } from "./standalone-renderer";
+import { renderStudioDocument } from "@/modules/documents/render-studio-document";
 export async function saveStudioDocument(
   _previous: FormState,
   form: FormData,
@@ -92,14 +92,15 @@ export async function issueStudioDocument(
     };
   let bytes: Buffer;
   try {
-    bytes = await new StandaloneRenderer().render(prepared.data.snapshot);
+    bytes = await renderStudioDocument(prepared.data.snapshot);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     return {
       error:
         message.startsWith("Faltan datos") ||
         message.startsWith("Variable no permitida") ||
-        message.startsWith("Hay una variable")
+        message.startsWith("Hay una variable") ||
+        message.startsWith("Imagen")
           ? message
           : "No se pudo generar el documento. Revisa el contenido y las variables.",
     };

@@ -11,10 +11,14 @@ export function StudioDocumentForm({
   template,
   clients,
   projects,
+  images = [],
+  imageError = false,
 }: {
   document?: StudioDocument;
   template?: Pick<StudioDocument, "kind" | "margins" | "title" | "body">;
   clients: { id: string; name: string }[];
+  images?: { id: string; title: string; filename: string; version: number }[];
+  imageError?: boolean;
   projects: { id: string; name: string; client_id: string }[];
 }) {
   const [state, action, pending] = useActionState(saveStudioDocument, {});
@@ -147,6 +151,28 @@ export function StudioDocumentForm({
             ))}
           </div>
         </div>
+        <label className="full">
+          Insertar imagen de biblioteca
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value)
+                insert("\n[[imagen:" + e.target.value + "]]\n");
+            }}
+          >
+            <option value="">Seleccionar una versión PNG o JPEG</option>
+            {images.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.title} · v{i.version} · {i.filename}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p>
+          {imageError ? "No se pudo consultar la biblioteca. " : ""}También
+          puedes copiar la referencia de una versión anterior desde la
+          biblioteca.
+        </p>
         <label className="full">
           Contenido *
           <textarea

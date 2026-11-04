@@ -82,6 +82,12 @@ export default async function Library({
                   <a href={r.url}>Abrir vínculo</a>
                 </p>
               )}
+              {/\.(png|jpe?g)$/i.test(r.filename) && (
+                <p>
+                  Referencia para documentos:{" "}
+                  <code>{"[[imagen:" + r.id + "]]"}</code>
+                </p>
+              )}
               {r.filename && (
                 <a href={"/api/biblioteca/" + r.id}>Descargar {r.filename}</a>
               )}
