@@ -1882,3 +1882,34 @@ it("RPC de preparación rechaza lector, estudio ajeno y más de cinco imágenes 
     ).rows,
   ).toHaveLength(0);
 });
+
+it("separa cobros parciales, anticipos, costo y fondos de obra con aislamiento", async () => {
+  await asUser(owner);
+  const service = crypto.randomUUID();
+  const managed = crypto.randomUUID();
+  const create = (id:string, area:string, custody:boolean) => db.query(
+    "insert into finance_cases(id,organization_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,'Estudio de suelos',$3,$4,1200000,960000)",
+    [id,org,area,custody]);
+  await create(service,"service",false);
+  await create(managed,"construction",true);
+  await expect(create(crypto.randomUUID(),"architecture",true)).rejects.toThrow();
+  const enter = (id:string,target:string,direction:string,amount:number,advance=false) => db.query(
+    "insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on,advance) values($1,$2,$3,$4,$5,current_date-1,$6)",
+    [id,org,target,direction,amount,advance]);
+  const first=crypto.randomUUID();
+  await enter(first,service,"in",300000,true);
+  await expect(enter(first,service,"in",300000,true)).rejects.toThrow();
+  await enter(crypto.randomUUID(),service,"in",200000);
+  await enter(crypto.randomUUID(),service,"out",160000);
+  await expect(enter(crypto.randomUUID(),service,"out",800001)).rejects.toThrow(/saldo/);
+  const balance = (id:string) => db.query("select receivable_cents::int,payable_cents::int,expected_margin_cents::int,cash_cents::int from finance_case_balances where id=$1",[id]);
+  expect((await balance(service)).rows[0]).toEqual({receivable_cents:700000,payable_cents:800000,expected_margin_cents:240000,cash_cents:340000});
+  await enter(crypto.randomUUID(),managed,"in",100000,true);
+  expect((await balance(managed)).rows[0]).toMatchObject({expected_margin_cents:null,cash_cents:100000});
+  for (const user of [other,reader]) {
+    await asUser(user);
+    expect((await balance(service)).rows).toHaveLength(0);
+    await expect(enter(crypto.randomUUID(),service,"in",1)).rejects.toThrow();
+  }
+  await asUser(owner);
+});

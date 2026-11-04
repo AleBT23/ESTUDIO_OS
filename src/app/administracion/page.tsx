@@ -98,7 +98,7 @@ export default async function FinancePage({
       {heading}
       <nav className="tabs" aria-label="Administración">
         <span className="selected">Planes y cobros</span>
-        <span className="planned">Gastos · pendiente</span>
+        <Link href="/administracion/operaciones">Operaciones por área</Link>
         <span className="planned">Colaboradores · pendiente</span>
         <span className="planned">Tiempo · pendiente</span>
         <span className="planned">Rentabilidad · pendiente</span>
