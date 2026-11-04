@@ -22,7 +22,11 @@ export function DocumentPanel({
   status,
   versions,
   today,
+  images = [],
+  imageError = false,
 }: {
+  images?: { id: string; title: string; filename: string; version: number }[];
+  imageError?: boolean;
   id: string;
   version: number;
   status: string;
@@ -142,6 +146,29 @@ export function DocumentPanel({
                 </ol>
               </div>
               <div>
+                <label>
+                  Membrete de la cotización
+                  <select
+                    value={options.letterhead_revision ?? ""}
+                    onChange={(e) => {
+                      setOptions({
+                        ...options,
+                        letterhead_revision: e.target.value || undefined,
+                      });
+                      setShowPreview(false);
+                    }}
+                  >
+                    <option value="">Oficial del despacho</option>
+                    {images.map((i) => (
+                      <option value={i.id} key={i.id}>
+                        {i.title} · v{i.version} · {i.filename}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {imageError && (
+                  <p>No se pudo cargar la biblioteca de membretes.</p>
+                )}
                 <h3>Márgenes del membrete · mm</h3>
                 <div className="form-grid">
                   {(
@@ -281,7 +308,10 @@ export function DocumentPanel({
           <input type="hidden" name="version" value={version} />
           <h3>Aceptación y plan de cobro</h3>
           <p className="muted">
-            Confirma que el cliente aceptó la versión enviada. Si es una cotización complementaria, los paquetes y el plan de cobro se incorporan al proyecto vinculado. Para una propuesta inicial se crea un proyecto.
+            Confirma que el cliente aceptó la versión enviada. Si es una
+            cotización complementaria, los paquetes y el plan de cobro se
+            incorporan al proyecto vinculado. Para una propuesta inicial se crea
+            un proyecto.
           </p>
           <div className="form-grid">
             <label>

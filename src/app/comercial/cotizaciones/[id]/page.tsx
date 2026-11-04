@@ -6,6 +6,7 @@ import { QuoteEditor } from "@/modules/quotes/quote-editor";
 import { fromCents, formatMoney } from "@/shared/money";
 import { Button } from "@/shared/ui/button";
 import type { QuoteItem, QuoteHeader } from "@/modules/quotes/schema";
+import { listLibraryImages } from "@/modules/documents/library-images";
 import { DocumentPanel } from "@/modules/documents/document-panel";
 import { QuoteLifecyclePanel } from "@/modules/quotes/lifecycle-panel";
 import { QuoteActions } from "@/modules/quotes/quote-actions";
@@ -79,6 +80,10 @@ export default async function QuotePage({
     .order("version_number", { ascending: false });
   if (versions.error)
     throw new Error("No se pudieron consultar las versiones.");
+  const images =
+    quote.status === "draft" && edit !== "1"
+      ? await listLibraryImages(ctx)
+      : null;
   const header: QuoteHeader = {
     client_id: quote.client_id,
     name: quote.name,
@@ -223,6 +228,8 @@ export default async function QuotePage({
           version={quote.version}
           status={quote.status}
           versions={versions.data || []}
+          images={images?.data ?? []}
+          imageError={!!images?.error}
           today={new Intl.DateTimeFormat("en-CA", {
             year: "numeric",
             month: "2-digit",

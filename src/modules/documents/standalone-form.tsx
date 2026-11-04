@@ -3,6 +3,7 @@ import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/shared/ui/button";
 import { useUnsavedChanges } from "@/shared/ui/use-unsaved-changes";
+import { splitLetterhead } from "./image-references";
 import { defaultDocumentOptions } from "./schema";
 import { documentKinds, type StudioDocument } from "./standalone-schema";
 import { saveStudioDocument, issueStudioDocument } from "./standalone-actions";
@@ -24,10 +25,12 @@ export function StudioDocumentForm({
   const [state, action, pending] = useActionState(saveStudioDocument, {});
   const [version] = useState(document?.version || 0);
   const [dirty, setDirty] = useState(false);
+  const source = splitLetterhead(document?.body || template?.body || "");
+  const [letterhead, setLetterhead] = useState(source.id);
   const [fields, setFields] = useState({
     title: document?.title || template?.title || "",
     kind: document?.kind || template?.kind || "letter",
-    body: document?.body || template?.body || "",
+    body: source.content,
     client_id: document?.client_id || "",
     project_id: document?.project_id || "",
     margins:
@@ -60,7 +63,16 @@ export function StudioDocumentForm({
     <form action={action} className="panel padded">
       <input type="hidden" name="id" value={document?.id || ""} />
       <input type="hidden" name="version" value={version} />
-      <input type="hidden" name="payload" value={JSON.stringify(fields)} />
+      <input
+        type="hidden"
+        name="payload"
+        value={JSON.stringify({
+          ...fields,
+          body: letterhead
+            ? "[[membrete:" + letterhead + "]]\n" + fields.body
+            : fields.body,
+        })}
+      />
       <h2>{document ? "Editar documento" : "Nuevo documento"}</h2>
       <div className="form-grid">
         <label className="full">
@@ -151,6 +163,32 @@ export function StudioDocumentForm({
             ))}
           </div>
         </div>
+        <label className="full">
+          Membrete de todas las páginas
+          <select
+            value={letterhead}
+            onChange={(e) => {
+              setLetterhead(e.target.value);
+              setDirty(true);
+            }}
+          >
+            <option value="">Oficial del despacho</option>
+            {letterhead && !images.some((i) => i.id === letterhead) && (
+              <option value={letterhead}>
+                Revisión del documento · {letterhead.slice(0, 8)}
+              </option>
+            )}
+            {images.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.title} · v{i.version} · {i.filename}
+              </option>
+            ))}
+          </select>
+          <small>
+            Se ajusta a tamaño carta conservando su proporción. Comprueba los
+            márgenes en la vista previa.
+          </small>
+        </label>
         <label className="full">
           Insertar imagen de biblioteca
           <select

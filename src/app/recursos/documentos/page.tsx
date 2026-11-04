@@ -1,3 +1,4 @@
+import { listLibraryImages } from "@/modules/documents/library-images";
 import { RecordForm } from "@/shared/ui/record-form";
 import { changeDocumentArchive } from "@/modules/documents/standalone-actions";
 import { TemplatePanel } from "@/modules/documents/template-panel";
@@ -97,14 +98,7 @@ export default async function StudioDocumentsPage({
           .is("deleted_at", null)
           .order("name")
           .limit(500),
-        ctx.db
-          .from("current_library_resources")
-          .select("id,title,filename,version")
-          .eq("organization_id", ctx.organization.id)
-          .or("filename.ilike.%.png,filename.ilike.%.jpg,filename.ilike.%.jpeg")
-          .order("title")
-          .order("id")
-          .limit(100),
+        listLibraryImages(ctx),
       ])
     : [
         { data: [], error: null },

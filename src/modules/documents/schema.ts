@@ -16,6 +16,7 @@ export const sectionSchema = z.enum([
   "acceptance",
 ]);
 export const documentOptionsSchema = z.object({
+  letterhead_revision: z.uuid().optional(),
   sections: z
     .array(sectionSchema)
     .min(1)

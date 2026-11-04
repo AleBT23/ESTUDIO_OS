@@ -376,7 +376,10 @@ function PageFrame({
       <PdfImage
         fixed
         style={styles.background}
-        src={{ data: letterhead, format: "png" }}
+        src={{
+          data: letterhead,
+          format: snapshot.options.letterhead_revision ? "jpg" : "png",
+        }}
       />
       {children}
     </Page>
@@ -745,7 +748,7 @@ function QuoteDocument({
   );
 }
 export class ReactPdfRenderer implements DocumentRenderer {
-  async render(input: QuoteSnapshot) {
+  async render(input: QuoteSnapshot, customLetterhead?: Buffer) {
     const parsed = quoteSnapshotSchema.parse(input);
     const snapshot = {
       ...parsed,
@@ -776,9 +779,13 @@ export class ReactPdfRenderer implements DocumentRenderer {
       throw new Error(
         "Los totales del documento no coinciden con sus partidas.",
       );
-    const letterhead = await readFile(
-      path.join(process.cwd(), "branding/membretes/MEMBRETA_CARTA_AT.png"),
-    );
+    if (snapshot.options.letterhead_revision && !customLetterhead)
+      throw Error("Imagen de membrete no disponible.");
+    const letterhead =
+      customLetterhead ??
+      (await readFile(
+        path.join(process.cwd(), "branding/membretes/MEMBRETA_CARTA_AT.png"),
+      ));
     const rendered = await renderToBuffer(
       <QuoteDocument snapshot={snapshot} letterhead={letterhead} />,
     );

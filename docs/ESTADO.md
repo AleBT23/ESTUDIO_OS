@@ -495,3 +495,6 @@ Desde el cliente se consultan proyectos, cotizaciones y obras con paginación y 
 
 ### Cartera por vencimiento
 Administración → Cartera reúne las obligaciones vigentes de planes y acuerdos con enlace a su origen. Filtra por área, fondos, sentido y antigüedad en la zona horaria del estudio. Los cobros parciales reducen el saldo y los liquidados salen de la lista. Se verificaron los límites de 30 y 60 días, obligaciones sin fecha, aislamiento por estudio y rol. Pasaron 199 pruebas, TypeScript, ESLint, build, nueve recorridos Playwright y restauración con 67 migraciones.
+
+### Membretes privados por revisión
+Documentos, plantillas y cotizaciones admiten un membrete alternativo desde Biblioteca. La selección conserva el ID de la revisión y se usa en vista previa y emisión. El membrete oficial sigue disponible. Se reabrieron un PDF independiente de dos páginas y una cotización para comprobar que incorporan el recurso elegido. Se verificaron dimensiones carta y rechazo de revisiones faltantes. Pasaron 201 pruebas, TypeScript, lint, build con verificación del paquete PDF y nueve recorridos Playwright. Pendiente inspección visual con membretes de prueba en sesión autenticada.

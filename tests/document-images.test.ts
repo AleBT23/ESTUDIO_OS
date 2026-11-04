@@ -65,3 +65,40 @@ it("rechaza referencias ajenas al formato, archivos no raster y revisiones ausen
     /Imagen no disponible/,
   );
 });
+it("usa una sola revisión de membrete en cada página carta y conserva el recurso seleccionado", async () => {
+  const { PDFDocument, PDFName, PDFRawStream } = await import("pdf-lib");
+  const body = "[[membrete:" + id + "]]\nPrimera hoja\n[[salto]]\nSegunda hoja";
+  const original = await sharp({
+    create: { width: 306, height: 396, channels: 3, background: "#e2ede9" },
+  })
+    .png()
+    .toBuffer();
+  const bytes = await new StandaloneRenderer().render(
+    { ...snapshot, body },
+    new Map([[id, await normalizeDocumentImage(original)]]),
+  );
+  const pdf = await PDFDocument.load(bytes);
+  expect(pdf.getPageCount()).toBe(2);
+  for (const page of pdf.getPages()) {
+    expect(page.getSize()).toEqual({ width: 612, height: 792 });
+    const objects = page.node.normalizedEntries().XObject;
+    const rasters = objects
+      .values()
+      .map((ref) => pdf.context.lookup(ref))
+      .filter(
+        (x) =>
+          x instanceof PDFRawStream &&
+          x.dict.get(PDFName.of("Subtype")) === PDFName.of("Image"),
+      );
+    expect(rasters).toHaveLength(1);
+    const raster = rasters[0];
+    if (!(raster instanceof PDFRawStream)) throw Error('Membrete ausente');
+    expect(raster.dict.get(PDFName.of("Width"))?.toString()).toBe("306");
+  }
+  expect(documentImageIds(body)).toEqual([id]);
+  expect(() => documentImageIds(body + "\n[[membrete:" + id + "]]")).toThrow();
+  expect(() => documentImageIds("[[membrete:" + id + "]]")).toThrow();
+  await expect(
+    new StandaloneRenderer().render({ ...snapshot, body }),
+  ).rejects.toThrow(/membrete no disponible/);
+});

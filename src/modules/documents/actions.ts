@@ -7,6 +7,7 @@ import { requireContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
 import type { FormState } from "@/shared/auth/actions";
 import { documentOptionsSchema, quoteSnapshotSchema } from "./schema";
+import { loadLibraryImage } from "./library-images";
 import { ReactPdfRenderer } from "./pdf-renderer";
 const identity = z.object({
   id: z.uuid(),
@@ -29,6 +30,20 @@ export async function issueQuote(
   const settings = documentOptionsSchema.safeParse(options);
   if (!ids.success || !settings.success)
     return { error: "Revisa las secciones y los márgenes del documento." };
+  let letterhead: Buffer | undefined;
+  if (settings.data.letterhead_revision) {
+    try {
+      letterhead = await loadLibraryImage(
+        ctx,
+        settings.data.letterhead_revision,
+      );
+    } catch {
+      return {
+        error:
+          "No se pudo cargar el membrete elegido. Revisa la imagen antes de emitir.",
+      };
+    }
+  }
   const { data, error } = await ctx.db.rpc("prepare_quote_version", {
     org: ctx.organization.id,
     quote: ids.data.id,
@@ -60,7 +75,12 @@ export async function issueQuote(
   const document = prepared.data;
   let bytes: Buffer;
   try {
-    bytes = await new ReactPdfRenderer().render(document.snapshot);
+    if (
+      document.snapshot.options.letterhead_revision !==
+      settings.data.letterhead_revision
+    )
+      throw Error("Cambió el membrete seleccionado.");
+    bytes = await new ReactPdfRenderer().render(document.snapshot, letterhead);
   } catch {
     return {
       error:

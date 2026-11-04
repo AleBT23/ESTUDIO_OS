@@ -1,4 +1,4 @@
-import { referencedImage } from "./image-references";
+import { referencedImage, splitLetterhead } from "./image-references";
 import { documentLines } from "./document-lines";
 import {
   Document,
@@ -45,7 +45,8 @@ export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> 
     images: ReadonlyMap<string, Buffer> = new Map(),
   ) {
     const s = standaloneSnapshotSchema.parse(input);
-    const lines = documentLines(s.body).map((block) => {
+    const { id: letterheadId, content: body } = splitLetterhead(s.body);
+    const lines = documentLines(body).map((block) => {
       if (typeof block !== "string")
         return {
           ...block,
@@ -58,9 +59,15 @@ export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> 
         throw Error("Imagen no disponible en la biblioteca de este estudio.");
       return { kind: "image" as const, bytes };
     });
-    const letterhead = await readFile(
-      path.join(process.cwd(), "branding/membretes/MEMBRETA_CARTA_AT.png"),
-    );
+    const letterhead = letterheadId
+      ? images.get(letterheadId)
+      : await readFile(
+          path.join(process.cwd(), "branding/membretes/MEMBRETA_CARTA_AT.png"),
+        );
+    if (!letterhead)
+      throw Error(
+        "Imagen de membrete no disponible en la biblioteca del estudio.",
+      );
     const content = (
       <Document title={s.title} author={s.organization.name} language="es-MX">
         <Page
@@ -79,7 +86,7 @@ export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> 
         >
           <PdfImage
             fixed
-            src={{ data: letterhead, format: "png" }}
+            src={{ data: letterhead, format: letterheadId ? "jpg" : "png" }}
             style={{
               position: "absolute",
               top: 0,
