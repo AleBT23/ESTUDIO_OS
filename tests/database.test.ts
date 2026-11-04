@@ -2287,3 +2287,18 @@ it("el cierre exige subtareas completas y la siguiente recurrencia comienza con 
  await expect(db.query("update task_subtasks set done=false where id=$1",[step])).rejects.toThrow(/Reabre/);
  await asUser(other);expect((await db.query("select id from task_subtasks where id=$1",[step])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("una dependencia no puede cerrar en desorden, formar ciclos ni cruzar proyectos",async()=>{
+ await asUser(owner);
+ const project=async()=> (await db.query<{id:string}>("select create_project_record($1,$2,'Tareas enlazadas',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const task=async(p:string)=>(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body) values($1,$2,'task','Revisión') returning id",[org,p])).rows[0].id;
+ const p=await project(),a=await task(p),b=await task(p),c=await task(p),otherTask=await task(await project());
+ const link=(id:string,prev:string)=>db.query("update project_notes set predecessor_id=$2 where id=$1",[id,prev]);
+ const close=(id:string)=>db.query("update project_notes set completed_at=now() where id=$1",[id]);
+ await link(b,a);await link(c,b);
+ await expect(link(a,c)).rejects.toThrow(/ciclo/);await expect(link(a,otherTask)).rejects.toThrow(/mismo proyecto/);
+ await expect(close(b)).rejects.toThrow(/tarea previa/);await close(a);await close(b);
+ await expect(db.query("update project_notes set completed_at=null where id=$1",[a])).rejects.toThrow(/dependientes/);
+ await db.query("update project_notes set completed_at=null where id=$1",[b]);await db.query("update project_notes set predecessor_id=null where id=$1",[b]);
+ await db.query("update project_notes set completed_at=null where id=$1",[a]);
+});

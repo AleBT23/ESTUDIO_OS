@@ -366,3 +366,6 @@ Dos indicadores con conteo exacto abren vistas específicas de Agenda. Los pendi
 
 ### Subtareas de proyecto
 Cada pendiente del expediente admite pasos individuales con avance visible. El cierre desde Agenda, Inicio y el expediente exige que todos estén completos. Las recurrencias comienzan con una copia abierta de los pasos. Se verificaron cierre, reapertura protegida, recurrencia y aislamiento entre estudios. Pasaron 155 pruebas, TypeScript, ESLint, build y 41 migraciones en PostgreSQL local. Pendientes las dependencias entre tareas, la preview autenticada y la migración de producción.
+
+### Dependencias simples entre tareas
+Desde el expediente se puede elegir, sustituir o quitar una tarea previa del mismo proyecto. PostgreSQL rechaza ciclos y cierres fuera de orden, incluso al completar desde Agenda o Inicio. Para reabrir un requisito finalizado primero se reabren las tareas terminadas que dependan de él. Se verificaron cadenas, ciclos, cruce de proyectos y liberación del vínculo. Pasaron 156 pruebas, TypeScript, lint, build y 42 migraciones locales. Pendientes el tablero Kanban y la validación autenticada en preview.

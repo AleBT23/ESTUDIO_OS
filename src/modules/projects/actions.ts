@@ -98,7 +98,11 @@ export async function toggleProjectNote(
     return {
       error: error?.message.includes("Completa las subtareas")
         ? "Completa las subtareas pendientes desde el expediente antes de cerrar la tarea."
-        : "El pendiente cambió. Recarga para ver su estado actual.",
+        : error?.message.includes("Completa primero la tarea previa")
+          ? "Completa primero la tarea previa indicada en el expediente."
+          : error?.message.includes("Reabre primero las tareas dependientes")
+            ? "Reabre primero las tareas dependientes."
+            : "El pendiente cambió. Recarga para ver su estado actual.",
     };
   refresh(input.data.project);
   return {

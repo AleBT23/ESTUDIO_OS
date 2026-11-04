@@ -1,3 +1,5 @@
+import { saveDependency } from "./dependency-action";
+import { RecordForm } from "@/shared/ui/record-form";
 import { Subtasks } from "./subtasks";
 import { studioToday, weekThrough } from "./agenda-window";
 import Link from "next/link";
@@ -130,7 +132,7 @@ export async function ProjectWorkspace({
     ctx.db
       .from("project_notes")
       .select(
-        "id,project_id,kind,body,due_on,priority,repeat_days,assignee,completed_at,version,created_at,task_subtasks(id,label,done)",
+        "id,project_id,kind,body,due_on,priority,repeat_days,assignee,completed_at,version,created_at,predecessor_id,task_subtasks(id,label,done)",
         { count: "exact" },
       )
       .eq("organization_id", ctx.organization.id)
@@ -155,6 +157,24 @@ export async function ProjectWorkspace({
   ]);
   if (notes.error || visits.error)
     throw new Error("No se pudo cargar la bitácora del proyecto.");
+  const taskOptions: { id: string; body: string }[] = [];
+  if (notes.data?.some((n) => n.kind === "task")) {
+    const batch = 200;
+    for (let offset = 0; ; offset += batch) {
+      const r = await ctx.db
+        .from("project_notes")
+        .select("id,body")
+        .eq("organization_id", ctx.organization.id)
+        .eq("project_id", project)
+        .eq("kind", "task")
+        .is("deleted_at", null)
+        .order("id")
+        .range(offset, offset + batch - 1);
+      if (r.error) throw Error("No se pudieron cargar las tareas previas.");
+      taskOptions.push(...r.data);
+      if (r.data.length < batch) break;
+    }
+  }
   const photos = visits.data?.length
     ? await ctx.db
         .from("project_photos")
@@ -190,6 +210,46 @@ export async function ProjectWorkspace({
                 note={note as ProjectNote}
                 writable={writable}
               />
+              {note.kind === "task" && (
+                <>
+                  {note.predecessor_id && (
+                    <p>
+                      Tarea previa ·{" "}
+                      {taskOptions.find((t) => t.id === note.predecessor_id)
+                        ?.body || "No disponible"}
+                    </p>
+                  )}
+                  {writable && !note.completed_at && taskOptions.length > 1 && (
+                    <details>
+                      <summary>Cambiar dependencia</summary>
+                      <RecordForm id={note.id} save={saveDependency}>
+                        <input type="hidden" name="project" value={project} />
+                        <input
+                          type="hidden"
+                          name="version"
+                          value={note.version}
+                        />
+                        <label>
+                          Tarea que debe completarse antes
+                          <select
+                            name="previous"
+                            defaultValue={note.predecessor_id || ""}
+                          >
+                            <option value="">Sin dependencia</option>
+                            {taskOptions
+                              .filter((t) => t.id !== note.id)
+                              .map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.body.slice(0, 160)}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                      </RecordForm>
+                    </details>
+                  )}
+                </>
+              )}
               {note.kind === "task" && (
                 <Subtasks
                   task={note.id}
