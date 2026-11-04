@@ -1,3 +1,4 @@
+import { DossierPanel } from "@/modules/documents/dossier-panel";
 import {ProjectDetails} from "@/modules/projects/project-details";
 import {ProjectPerformance} from "@/modules/projects/project-performance";
 import { PhasePanel } from "@/modules/projects/phase-panel";
@@ -26,6 +27,7 @@ export default async function ProjectPage({
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
+    archivos?: string; archivados?: string;
     notes?: string;
     visits?: string;
     payments?: string;
@@ -82,6 +84,7 @@ export default async function ProjectPage({
         </p>
       </div>
       <ProjectDetails project={project}/>
+      <DossierPanel scope="project" parent={id} inactive={project.state==="archived"} archived={filter.archivados==="1"} page={page(filter.archivos)}/>
       {packagesResult.data?.length ? (
         <>
           <div className="section-heading">

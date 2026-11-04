@@ -462,3 +462,6 @@ El editor inserta imágenes desde una revisión concreta de Biblioteca. Las plan
 
 ### Ficha operativa del proyecto
 Ubicación, responsable, fechas y estado se editan con control de versión. La agenda incorpora el cierre previsto de proyectos activos y pausados. Se verificaron permisos, fechas inválidas, ediciones simultáneas y conservación del acuerdo de cobro. Pasaron 185 pruebas y la restauración local con 59 migraciones.
+
+### Archivos de clientes y proyectos
+Cada expediente admite enlaces y archivos privados de hasta 2 MiB. Los permisos separan documentación comercial y técnica. Se probaron aislamiento entre estudios, escritura por rol, recuperación del archivo con sus bytes originales y rechazo de descargas sin sesión. Pasaron 186 pruebas, TypeScript, ESLint, build, 9 recorridos Playwright (uno omitido) y restauración con 60 migraciones. Pendiente recorrido con dos cuentas de prueba en preview.

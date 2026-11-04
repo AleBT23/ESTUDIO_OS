@@ -198,3 +198,8 @@ test("la invitación ofrece acceso y registro de cuenta sin crear membresías al
       page.getByText("Las invitaciones requieren conexión con el estudio."),
     ).toBeVisible();
 });
+test("los adjuntos del expediente requieren sesión", async ({ request }) => {
+  const response = await request.get("/api/expedientes/11111111-1111-4111-8111-111111111111");
+  expect(response.status()).toBe(403);
+  expect(response.headers()["cache-control"]).toContain("no-store");
+});

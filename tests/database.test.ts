@@ -2573,3 +2573,22 @@ it("edita la ficha y sincroniza el cierre con agenda sin modificar acuerdos de c
  await asUser(owner);await edit(2,"2026-02-02","2026-05-01",owner,"closed");expect((await notice()).rows).toHaveLength(0);
  expect((await db.query("select amount_cents::int,due_date::text from payment_schedules where project_id=$1",[project])).rows).toEqual([{amount_cents:10000,due_date:"2026-02-01"}]);
 });
+it("protege adjuntos comerciales y restaura los bytes originales con control de versión", async () => {
+  await asUser(owner);
+  const project = (await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto con archivos','2026-03-01',100,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+  const commercial = crypto.randomUUID(), technical = crypto.randomUUID();
+  await db.query("insert into dossier_files(id,organization_id,client_id,title,url) values($1,$2,$3,'Referencia','https://example.test/')",[commercial,org,client]);
+  const insert = (id:string, tenant:string) => db.query("insert into dossier_files(id,organization_id,project_id,title,filename,attachment) values($1,$2,$3,'Plano','plano.pdf',decode('25504446','hex'))",[id,tenant,project]);
+  await asUser(other); await expect(insert(crypto.randomUUID(),otherOrg)).rejects.toThrow();
+  await asUser(reader); await expect(insert(technical,org)).rejects.toThrow();
+  await asUser(owner); await db.query("select change_studio_member_role($1,$2,'reader','collaborator')",[org,reader]);
+  await asUser(reader); await insert(technical,org);
+  expect((await db.query("select id from dossier_files order by id")).rows).toEqual([{id:technical}]);
+  await asUser(owner); await db.query("select change_studio_member_role($1,$2,'collaborator','reader')",[org,reader]);
+  await db.query("update dossier_files set deleted_at=now() where id=$1 and version=1",[technical]);
+  expect((await db.query("update dossier_files set deleted_at=null where id=$1 and version=1 returning id",[technical])).rows).toEqual([]);
+  await db.query("update dossier_files set deleted_at=null where id=$1 and version=2",[technical]);
+  await asUser(reader);
+  expect((await db.query("select encode(attachment,'hex') bytes from dossier_files where deleted_at is null")).rows).toEqual([{bytes:"25504446"}]);
+  await asUser(owner);
+});

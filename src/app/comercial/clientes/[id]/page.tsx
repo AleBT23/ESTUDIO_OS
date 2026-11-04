@@ -1,3 +1,4 @@
+import { DossierPanel } from "@/modules/documents/dossier-panel";
 import { ClientAgreements } from "@/modules/crm/client-agreements";
 import { Journal } from "@/modules/journal/panel";
 import { PortalAccess } from "@/modules/portal/manage";
@@ -16,6 +17,7 @@ export default async function ClientPage({
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
+    archivos?: string; archivados?: string;
     edit?: string;
     historial?: string;
     acuerdos?: string;
@@ -23,7 +25,7 @@ export default async function ClientPage({
 }) {
   const ctx = await requireContext();
   const { id } = await params;
-  const { edit, historial, acuerdos } = await searchParams;
+  const { edit, historial, acuerdos, archivos, archivados } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const { data, error } = await ctx.db
     .from("clients")
@@ -161,6 +163,7 @@ export default async function ClientPage({
           page={Math.max(1, Math.min(10000, parseInt(historial ?? "1") || 1))}
         />
       )}
+      {edit !== "1" && <DossierPanel scope="client" parent={id} inactive={!!client.deleted_at} archived={archivados==="1"} page={Math.max(1, Math.min(10000,parseInt(archivos||"1")||1))}/>}
       {canWrite && !client.deleted_at && edit !== "1" && (
         <PortalAccess client={id} />
       )}
