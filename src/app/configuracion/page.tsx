@@ -102,7 +102,9 @@ export default async function SettingsPage() {
       </div>
       {ctx?.membership?.role === "owner" && <LegacyReviewPanel />}
       {process.env.APP_ENV === "staging" &&
-        ctx?.membership?.role === "owner" && <StageLegacyPanel />}
+        ctx?.membership?.role === "owner" && (
+          <StageLegacyPanel lines={ctx.lines} />
+        )}
     </>
   );
 }

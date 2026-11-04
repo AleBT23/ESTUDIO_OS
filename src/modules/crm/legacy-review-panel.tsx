@@ -71,6 +71,18 @@ export function LegacyReviewPanel() {
           <p>
             La comparación usa las partidas y el IVA guardado en cada propuesta.
           </p>
+          {!!result.services.length && (
+            <details>
+              <summary>Identificadores de servicios para staging</summary>
+              <ul>
+                {result.services.map((s, i) => (
+                  <li key={i}>
+                    {s.name} · <code>{s.id}</code>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           <h3>Incidencias ({result.issueCount})</h3>
           {result.issueCount ? (
             <>

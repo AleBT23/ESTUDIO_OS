@@ -532,3 +532,6 @@ Las plantillas de fases pueden contener tareas. Al incorporarlas manualmente o a
 
 ### Paginación del catálogo
 El directorio presenta páginas de 30 servicios con conteo total y un orden estable. La búsqueda, categoría y selección de archivados se conservan al avanzar. Se verificó la recuperación de la segunda página y el enlace a la tercera. El inventario remoto de solo lectura confirmó 10 migraciones aplicadas y 64 pendientes hasta la 074.
+
+### Importación selectiva de servicios en staging
+Configuración admite un servicio por identificador verificado y exige elegir la línea de destino y una exportación con moneda MXN. PostgreSQL conserva el precio en centavos, la tarifa porcentual y el estado archivado. El propietario solo puede escribir en un estudio de ensayo habilitado. Repetir una importación coincidente conserva el registro y una discrepancia detiene la operación. Se probaron duplicados, fracciones de centavo y porcentajes fuera de rango. Pasaron 213 pruebas y la restauración sintética con 75 migraciones. En el destino configurado hay 10 aplicadas y 65 pendientes. Falta validar un respaldo real y recuperar los presets y propuestas.

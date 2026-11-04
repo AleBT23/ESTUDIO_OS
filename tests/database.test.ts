@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(32);
+  expect(rows).toHaveLength(33);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2790,4 +2790,20 @@ it("agrupa categorías por estudio y respeta el texto original de cada servicio"
   expect((await db.query("select category_key from services where id=$1",[first])).rows).toEqual([{category_key:null}]);
   await asUser(other);expect((await categories()).rows).toEqual([]);
   await asUser(reader);expect((await categories()).rows).toEqual([]);await asUser(owner);
+});
+it("importa servicios a un destino aislado conservando precio, porcentaje, archivo e identidad",async()=>{
+ const {line}=await commercialFixture();
+ const item={id:"leg-service-1",name:"Supervisión histórica",price:8.25,unit:"pct",active:false,description:"Porcentaje de obra"};
+ const apply=(row:object)=>db.query<{result:string}>("select stage_legacy_service($1,$2,$3::jsonb) result",[org,line,JSON.stringify(row)]);
+ await db.exec("reset role");await db.query("delete from private.legacy_staging_targets where organization_id=$1",[org]);await asUser(owner);
+ await expect(apply(item)).rejects.toThrow("no habilitado");
+ await db.exec("reset role");await db.query("insert into private.legacy_staging_targets values($1)",[org]);await asUser(reader);
+ await expect(apply(item)).rejects.toThrow("no habilitado");await asUser(owner);
+ expect((await apply(item)).rows[0].result).toBe("inserted");
+ expect((await apply(item)).rows[0].result).toBe("unchanged");
+ expect((await db.query("select price_cents::int price,deleted_at is not null archived from services where organization_id=$1 and legacy_id=$2",[org,item.id])).rows).toEqual([{price:825,archived:true}]);
+ await expect(apply({...item,id:"otro"})).rejects.toThrow("ambiguo");
+ await expect(apply({...item,price:8.5})).rejects.toThrow("distintos");
+ await expect(apply({...item,price:0.123})).rejects.toThrow("Precio");
+ await expect(apply({...item,price:125})).rejects.toThrow("Precio");
 });

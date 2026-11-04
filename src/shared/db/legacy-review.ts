@@ -157,6 +157,10 @@ export async function reviewLegacyBackup(value: unknown) {
     }
   }
   return {
+    services: (data.get("services") ?? []).map((row) => ({
+      id: text(row.id),
+      name: text(row.name),
+    })),
     counts,
     issues,
     issueCount,
