@@ -1,4 +1,5 @@
 export const kinds: Record<string, string> = {
+  project_end: "Cierre previsto de proyecto",
   agreement_collection: "Cobro de acuerdo",
   agreement_payment: "Pago de acuerdo",
   personal: "Recordatorio personal",

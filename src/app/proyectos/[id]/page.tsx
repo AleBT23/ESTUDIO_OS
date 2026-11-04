@@ -1,3 +1,4 @@
+import {ProjectDetails} from "@/modules/projects/project-details";
 import {ProjectPerformance} from "@/modules/projects/project-performance";
 import { PhasePanel } from "@/modules/projects/phase-panel";
 import { DeliveryPanel } from "@/modules/projects/delivery-panel";
@@ -45,7 +46,7 @@ export default async function ProjectPage({
   const [projectResult, packagesResult] = await Promise.all([
     ctx.db
       .from("projects")
-      .select("id,name,client_id,state,start_date,quote_version_id,version")
+      .select("id,name,client_id,state,start_date,quote_version_id,version,location,target_end,lead_id")
       .eq("organization_id", ctx.organization.id)
       .eq("id", id)
       .is("deleted_at", null)
@@ -77,10 +78,10 @@ export default async function ProjectPage({
         <p className="eyebrow">EXPEDIENTE DEL PROYECTO</p>
         <h1>{project.name}</h1>
         <p>
-          {client.data.name} · Inicio {project.start_date} ·{" "}
-          {project.state === "active" ? "Activo" : project.state}
+          {client.data.name}
         </p>
       </div>
+      <ProjectDetails project={project}/>
       {packagesResult.data?.length ? (
         <>
           <div className="section-heading">

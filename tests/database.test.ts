@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(25);
+  expect(rows).toHaveLength(26);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2558,4 +2558,18 @@ it("solo una cuenta con el correo confirmado acepta la invitación y no puede el
  await db.query("update studio_invitations set expires_at=now()-interval '1 minute' where id=$1",[expired]);
  await asUser(guest);await expect(accept(expired)).rejects.toThrow(/no disponible/);expect((await inbox()).rows).toEqual([]);
  await asUser(owner);await db.query("select revoke_studio_invitation($1,$2)",[org,expired]);const second=await issue();await asUser(guest);await expect(accept(second)).rejects.toThrow(/perteneces/);await asUser(owner);
+});
+
+it("edita la ficha y sincroniza el cierre con agenda sin modificar acuerdos de cobro",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Casa original','2026-02-01',10000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const edit=(v:number,start:string,end:string|null,lead:string|null,state:string)=>db.query("select edit_project_details($1,$2,$3,'Casa del valle','Valle norte',$4,$5,$6,$7)",[org,project,v,start,end,lead,state]);
+ await expect(edit(1,"2026-03-01","2026-02-28",owner,"active")).rejects.toThrow();
+ await expect(edit(1,"2026-02-01",null,crypto.randomUUID(),"active")).rejects.toThrow();
+ await edit(1,"2026-02-02","2026-05-01",owner,"active");
+ const notice=()=>db.query("select label,due_on::text from agenda_events where kind='project_end' and id=$1",[project]);
+ expect((await notice()).rows).toEqual([{label:"Casa del valle",due_on:"2026-05-01"}]);
+ await expect(edit(1,"2026-02-01",null,null,"closed")).rejects.toThrow();
+ await asUser(reader);expect((await notice()).rows).toHaveLength(1);await expect(edit(2,"2026-02-02",null,null,"closed")).rejects.toThrow();
+ await asUser(owner);await edit(2,"2026-02-02","2026-05-01",owner,"closed");expect((await notice()).rows).toHaveLength(0);
+ expect((await db.query("select amount_cents::int,due_date::text from payment_schedules where project_id=$1",[project])).rows).toEqual([{amount_cents:10000,due_date:"2026-02-01"}]);
 });

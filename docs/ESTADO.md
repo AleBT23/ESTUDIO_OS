@@ -459,3 +459,6 @@ El editor inserta tablas de dos a seis columnas en el texto guardado. El PDF de 
 
 ### Imágenes privadas en documentos
 El editor inserta imágenes desde una revisión concreta de Biblioteca. Las plantillas conservan la referencia; la vista previa y la emisión consultan el adjunto bajo los permisos y la organización activos. El servidor comprueba la firma PNG/JPEG y limita bytes, píxeles y cantidad de imágenes antes de generar el PDF. Se reabrió un PDF con dos imágenes (membrete y adjunto) y texto posterior. Se probaron referencias inválidas, archivo no raster, imagen faltante y límite de imágenes. Pasaron 184 pruebas, TypeScript, ESLint, build y 8 recorridos Playwright (uno omitido). Sin migración adicional. Pendiente emisión autenticada con adjuntos reales de prueba.
+
+### Ficha operativa del proyecto
+Ubicación, responsable, fechas y estado se editan con control de versión. La agenda incorpora el cierre previsto de proyectos activos y pausados. Se verificaron permisos, fechas inválidas, ediciones simultáneas y conservación del acuerdo de cobro. Pasaron 185 pruebas y la restauración local con 59 migraciones.
