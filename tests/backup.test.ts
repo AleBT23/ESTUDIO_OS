@@ -92,4 +92,5 @@ it("concilia por partida y detecta porcentajes históricos, duplicados y enlaces
   expect(report.issues.join(" ")).toMatch(/Folios repetidos/);
   expect(report.issues.join(" ")).toMatch(/referencias de servicios/);
   expect(report.issues.join(" ")).toMatch(/base histórica/);
+  expect(report.issues.join(" ")).toMatch(/Falta la moneda/);
 });

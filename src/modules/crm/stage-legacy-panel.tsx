@@ -1,4 +1,4 @@
-import { stageLegacyService } from "./stage-legacy-service";
+import { stageLegacyService, stageLegacyPreset } from "./stage-legacy-service";
 import { RecordForm } from "@/shared/ui/record-form";
 import { stageLegacyClients } from "./stage-legacy-clients";
 export function StageLegacyPanel({
@@ -67,6 +67,27 @@ export function StageLegacyPanel({
                 </option>
               ))}
             </select>
+          </label>
+        </RecordForm>
+      </details>
+      <details className="panel padded">
+        <summary>Importar un preset de servicios a staging</summary>
+        <p>
+          Importa primero los servicios del preset. Se conserva su orden y se
+          asigna una unidad por partida.
+        </p>
+        <RecordForm
+          id="stage-preset"
+          save={stageLegacyPreset}
+          submitLabel="Importar preset a staging"
+        >
+          <label>
+            Exportación JSON
+            <input type="file" accept=".json" name="file" required />
+          </label>
+          <label>
+            Identificador original del preset
+            <input name="legacy_id" required maxLength={160} />
           </label>
         </RecordForm>
       </details>

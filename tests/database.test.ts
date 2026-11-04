@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(33);
+  expect(rows).toHaveLength(34);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2806,4 +2806,17 @@ it("importa servicios a un destino aislado conservando precio, porcentaje, archi
  await expect(apply({...item,price:8.5})).rejects.toThrow("distintos");
  await expect(apply({...item,price:0.123})).rejects.toThrow("Precio");
  await expect(apply({...item,price:125})).rejects.toThrow("Precio");
+});
+it("el ensayo de presets conserva el orden, exige referencias activas y evita reescrituras",async()=>{
+ const {line}=await commercialFixture(),preset={id:"p-hist",name:"Preset histórico",serviceIds:["srv-B","srv-A"]};
+ const apply=(p:object)=>db.query<{result:string}>("select stage_legacy_preset($1,$2::jsonb) result",[org,JSON.stringify(p)]);
+ await db.exec("reset role"); await db.query("insert into private.legacy_staging_targets values($1) on conflict do nothing",[org]);await asUser(owner);
+ await expect(apply(preset)).rejects.toThrow("Faltan servicios");
+ expect((await db.query("select id from service_presets where legacy_id=$1",[preset.id])).rows).toEqual([]);
+ for(const id of preset.serviceIds) await db.query("select stage_legacy_service($1,$2,$3::jsonb)",[org,line,JSON.stringify({id,name:"Servicio "+id,active:true,unit:"m2",price:40})]);
+ await asUser(reader);await expect(apply(preset)).rejects.toThrow("no habilitado");await asUser(owner);
+ expect((await apply(preset)).rows[0].result).toBe("inserted");
+ expect((await apply(preset)).rows[0].result).toBe("unchanged");
+ expect((await db.query("select s.legacy_id,i.quantity::int qty from service_presets p join preset_items i on i.preset_id=p.id join services s on i.service_id=s.id where p.legacy_id=$1 order by i.position",[preset.id])).rows).toEqual([{legacy_id:"srv-B",qty:1},{legacy_id:"srv-A",qty:1}]);
+ await expect(apply({...preset,serviceIds:["srv-A","srv-B"]})).rejects.toThrow("distintos");
 });

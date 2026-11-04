@@ -105,6 +105,8 @@ export async function reviewLegacyBackup(value: unknown) {
     counts[group] = parsed.length;
   }
   const settingsRaw = payload.entries.archiquote_settings;
+  if (settingsRaw === null && (counts.services || counts.proposals))
+    note("Falta la moneda de origen del catálogo o las propuestas.");
   if (settingsRaw !== null) {
     let settings: unknown;
     try {
@@ -157,6 +159,10 @@ export async function reviewLegacyBackup(value: unknown) {
     }
   }
   return {
+    presets: (data.get("presets") ?? []).map((row) => ({
+      id: text(row.id),
+      name: text(row.name),
+    })),
     services: (data.get("services") ?? []).map((row) => ({
       id: text(row.id),
       name: text(row.name),

@@ -49,4 +49,4 @@
 ## Secuencia para retomar
 1. Contrastar el historial mediante `npm run db:plan` y repetir la restauración en una copia aislada actualizada, incluidos los objetos de Storage.
 2. Ejecutar los recorridos autenticados del anticipo y del lector con `npm run test:e2e:auth`. Completar la verificación de portal, expedientes, cotizaciones y obras con identidades separadas.
-3. Continuar las funcionalidades abiertas en la matriz, incluida la importación de presets y propuestas tras conciliar los servicios importados en staging (075), y contrastar importes y PDFs antes de preparar la publicación.
+3. Continuar las funcionalidades abiertas en la matriz, incluida la recuperación de propuestas tras conciliar los servicios y presets importados en staging (075 y 076), y contrastar importes y PDFs antes de preparar la publicación.

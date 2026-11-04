@@ -83,6 +83,18 @@ export function LegacyReviewPanel() {
               </ul>
             </details>
           )}
+          {!!result.presets.length && (
+            <details>
+              <summary>Identificadores de presets para staging</summary>
+              <ul>
+                {result.presets.map((p, i) => (
+                  <li key={i}>
+                    {p.name} · <code>{p.id}</code>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           <h3>Incidencias ({result.issueCount})</h3>
           {result.issueCount ? (
             <>
