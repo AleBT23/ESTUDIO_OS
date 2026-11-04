@@ -1918,3 +1918,18 @@ it("separa cobros parciales, anticipos, costo y fondos de obra con aislamiento",
   }
   await asUser(owner);
 });
+
+it("calcula por obra y custodia, sin mezclar obras ni organizaciones", async () => {
+ await asUser(owner);
+ const work=crypto.randomUUID(),otherWork=crypto.randomUUID();
+ for(const id of [work,otherWork]) await db.query("insert into works(id,organization_id,name) values($1,$2,'Obra de prueba')",[id,org]);
+ for(const [target,managed,amount] of [[work,true,7000],[work,false,3000],[otherWork,true,1000]] as const){
+ const id=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,managed,work_id,revenue_cents,cost_cents) values($1,$2,'Acuerdo','construction',$3,$4,$5,100)",[id,org,managed,target,amount]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,paid_on,amount_cents) values($1,$2,$3,'in',current_date-1,$4)",[crypto.randomUUID(),org,id,amount]);
+ }
+ const balances=()=>db.query("select managed,cash_cents,expected_margin_cents from work_balances where work_id=$1 order by managed",[work]);
+ expect((await balances()).rows).toEqual([{managed:false,cash_cents:"3000",expected_margin_cents:"2900"},{managed:true,cash_cents:"7000",expected_margin_cents:null}]);
+ await asUser(other); expect((await balances()).rows).toHaveLength(0);
+ await asUser(owner);
+});

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  HardHat,
   CalendarDays,
   Home,
   BriefcaseBusiness,
@@ -137,6 +138,18 @@ export function Shell({
             </Link>
             {finance && (
               <Link
+                href="/obras"
+                aria-label="Obras"
+                title="Obras"
+                className="nav-link"
+                onClick={() => setOpen(false)}
+              >
+                <HardHat size={18} />
+                <span>Obras</span>
+              </Link>
+            )}
+            {finance && (
+              <Link
                 href="/administracion/operaciones"
                 title="Operaciones financieras"
                 aria-label="Operaciones financieras"
@@ -218,11 +231,13 @@ export function Shell({
             <span>/</span>
             <strong>
               {current?.label ||
-                (pathname === "/agenda"
-                  ? "Agenda"
-                  : pathname === "/acceso"
-                    ? "Acceso"
-                    : "Configuración")}
+                (pathname === "/obras"
+                  ? "Obras"
+                  : pathname === "/agenda"
+                    ? "Agenda"
+                    : pathname === "/acceso"
+                      ? "Acceso"
+                      : "Configuración")}
             </strong>
           </div>
           <Link className="topbar-link" href="/comercial">

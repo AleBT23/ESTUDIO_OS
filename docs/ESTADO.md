@@ -261,3 +261,6 @@ La agenda consulta los pendientes existentes por organización y zona horaria, c
 
 ### Indicadores financieros
 Migración 013 y resumen en Inicio: cobrado, pagado, cartera, cuentas por pagar, flujo y margen previsto por área y custodia. Los planes históricos aparecen por separado con su alcance original. Totales agregados en SQL y transferidos como texto entero para preservar precisión. Comprobados los totales y la exclusión del margen en fondos del cliente; 120 pruebas, typecheck, lint y compilación correctos.
+
+### Expedientes de obra y exportación
+La ruta Obras lista expedientes y presenta saldos por origen del dinero, con exportación CSV privada por obra. La migración 014 agrega exclusivamente un índice y una vista con permisos del invocador. Pruebas con dos obras, dos custodias y otro usuario verifican la separación. Se prueba exportación de números mayores que el rango entero seguro de JavaScript. Typecheck, lint, 122 pruebas y build correctos. Los capítulos, partidas, estimaciones y comprobantes de obra siguen pendientes.
