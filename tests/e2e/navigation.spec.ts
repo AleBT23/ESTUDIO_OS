@@ -199,7 +199,28 @@ test("la invitación ofrece acceso y registro de cuenta sin crear membresías al
     ).toBeVisible();
 });
 test("los adjuntos del expediente requieren sesión", async ({ request }) => {
-  const response = await request.get("/api/expedientes/11111111-1111-4111-8111-111111111111");
+  const response = await request.get(
+    "/api/expedientes/11111111-1111-4111-8111-111111111111",
+  );
   expect(response.status()).toBe(403);
   expect(response.headers()["cache-control"]).toContain("no-store");
+});
+
+test("el menú móvil libera el foco y el desplazamiento al pasar a escritorio", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const toggle = page.getByRole("button", { name: "Abrir menú" });
+  await toggle.click();
+  await page.keyboard.press("Escape");
+  await expect(toggle).toBeFocused();
+  await toggle.click();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.locator(".mobile-overlay")).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe(
+    "hidden",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });

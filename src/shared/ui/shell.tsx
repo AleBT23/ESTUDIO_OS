@@ -83,12 +83,18 @@ export function Shell({
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open) return;
+    const desktop = window.matchMedia("(min-width: 1025px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
     const previous = document.body.style.overflow;
     const button = menuButton.current;
+    const menu = sidebar.current;
     document.body.style.overflow = "hidden";
     const links = () =>
       Array.from(
-        sidebar.current?.querySelectorAll<HTMLElement>(
+        menu?.querySelectorAll<HTMLElement>(
           "a,button:not(:disabled)",
         ) || [],
       );
@@ -112,7 +118,10 @@ export function Shell({
     return () => {
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", keydown);
-      button?.focus();
+      desktop.removeEventListener("change", closeOnDesktop);
+      if (desktop.matches)
+        menu?.querySelector<HTMLElement>("a")?.focus();
+      else button?.focus();
     };
   }, [open]);
   if (pathname === "/portal")
