@@ -89,6 +89,16 @@ export async function saveOperation(
   const { error } = await ctx.db
     .from(table)
     .insert({ ...input.data, organization_id: ctx.organization.id });
+  if (
+    error &&
+    (error.message.includes("work_project_client") ||
+      error.message.includes("agreement_project_client") ||
+      error.message.includes("La obra no corresponde"))
+  )
+    return {
+      error:
+        "Revisa las asociaciones. El proyecto debe corresponder al cliente y la obra debe ser compatible con ambos.",
+    };
   if (error)
     return {
       error:

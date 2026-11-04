@@ -2347,3 +2347,19 @@ it("el reporte atribuye acuerdos de una obra al proyecto y cliente sin mezclar s
  expect((await report(client,crypto.randomUUID())).rows).toHaveLength(0);
  await asUser(reader);expect((await report(client,project)).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("las asociaciones opcionales respetan el cliente y el proyecto realmente vinculados a la obra",async()=>{
+ await asUser(owner);
+ const customer=(await db.query<{id:string}>("insert into clients(organization_id,name) values($1,'Segundo cliente de obra') returning id",[org])).rows[0].id;
+ const project=async(c:string)=>(await db.query<{id:string}>("select create_project_record($1,$2,'Encargo asociado',current_date,0,$3) id",[org,c,crypto.randomUUID()])).rows[0].id;
+ const first=await project(client),sameClient=await project(client),second=await project(customer);
+ const work=async(c:string|null,p:string|null)=>(await db.query<{id:string}>("insert into works(id,organization_id,name,client_id,project_id) values($1,$2,'Obra asociada',$3,$4) returning id",[crypto.randomUUID(),org,c,p])).rows[0].id;
+ const agreement=(c:string|null,p:string|null,w:string|null)=>db.query("insert into finance_cases(id,organization_id,name,area,client_id,project_id,work_id,revenue_cents,cost_cents) values($1,$2,'Acuerdo de control','construction',$3,$4,$5,1000,0)",[crypto.randomUUID(),org,c,p,w]);
+ await expect(work(customer,first)).rejects.toThrow(/work_project_client/);
+ const byProject=await work(null,first),byClient=await work(customer,null);
+ await expect(agreement(customer,first,null)).rejects.toThrow(/agreement_project_client/);
+ await expect(agreement(null,sameClient,byProject)).rejects.toThrow(/obra/);
+ await expect(agreement(customer,null,byProject)).rejects.toThrow(/obra/);
+ await expect(agreement(null,first,byClient)).rejects.toThrow(/obra/);
+ await agreement(null,second,byClient);await agreement(null,null,byProject);await agreement(null,null,null);
+});

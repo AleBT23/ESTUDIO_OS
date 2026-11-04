@@ -381,3 +381,6 @@ El proyecto reúne las cotizaciones aceptadas y extras aprobados una sola vez, c
 
 ### Atribución del flujo por obra
 Si un acuerdo identifica únicamente la obra, el reporte usa el proyecto asociado a ella y resuelve el cliente desde los vínculos existentes. Las asociaciones explícitas conservan prioridad. La corrección beneficia al expediente, al reporte y al CSV, sin reescribir acuerdos. Se probó la conciliación por obra frente a obra + proyecto + cliente con fondos propios y administrados separados. Pasaron 160 pruebas, TypeScript, lint y 45 migraciones en PostgreSQL local. La migración 045 queda pendiente de producción.
+
+### Integridad de las asociaciones financieras
+Obras y acuerdos nuevos comprueban la relación cliente–proyecto. Un acuerdo con obra rechaza un proyecto distinto incluso si ambos tienen el mismo cliente, y contrasta el cliente explícito o heredado. Se mantienen válidos los registros independientes y los vínculos parciales. Las claves foráneas se añaden NOT VALID para no exigir correcciones históricas al instalar la migración. Antes de producción deben auditarse los vínculos históricos y verificarse los respaldos. 161 pruebas, TypeScript, ESLint y 46 migraciones en PostgreSQL local correctos.
