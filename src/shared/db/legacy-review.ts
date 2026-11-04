@@ -49,11 +49,24 @@ function reconcile(row: Row) {
     return new Decimal(v).mul(100).toDecimalPlaces(0, Decimal.ROUND_HALF_UP);
   };
   // El legado guardó el importe de IVA de cada propuesta, no su tasa histórica.
+  const historical = cents(row.grandTotal),
+    tax = cents(row.vat),
+    calculated = tax.plus(sum.total);
   const differences =
     !cents(row.subtotal).eq(sum.subtotal) ||
     !cents(row.discount).eq(sum.discount) ||
-    !cents(row.grandTotal).eq(cents(row.vat).plus(sum.total));
-  return { differences, percentage: items.some((i) => i.unit === "pct") };
+    !historical.eq(calculated);
+  const amount = (v: Decimal) => v.div(100).toFixed(2);
+  return {
+    differences,
+    percentage: items.some((i) => i.unit === "pct"),
+    historical: amount(historical),
+    calculated: amount(calculated),
+    delta: amount(calculated.minus(historical)),
+    subtotalDelta: amount(new Decimal(sum.subtotal).minus(cents(row.subtotal))),
+    discountDelta: amount(new Decimal(sum.discount).minus(cents(row.discount))),
+    tax: amount(tax),
+  };
 }
 export async function reviewLegacyBackup(value: unknown) {
   const { payload, issues: integrity } = await verifyLegacyBackup(value);
@@ -135,6 +148,11 @@ export async function reviewLegacyBackup(value: unknown) {
     )
       note("Preset " + (i + 1) + ": revisar referencias de servicios.");
   }
+  const proposals: {
+    id: string;
+    folio: string;
+    comparison: ReturnType<typeof reconcile> | null;
+  }[] = [];
   let matched = 0,
     different = 0,
     unreadable = 0;
@@ -143,6 +161,11 @@ export async function reviewLegacyBackup(value: unknown) {
       note("Propuesta " + (i + 1) + ": sin cliente identificado por ID.");
     try {
       const result = reconcile(row);
+      proposals.push({
+        id: text(row.id),
+        folio: text(row.proposalNumber),
+        comparison: result,
+      });
       if (result.differences) {
         different++;
         note("Propuesta " + (i + 1) + ": hay diferencias de importes.");
@@ -154,6 +177,11 @@ export async function reviewLegacyBackup(value: unknown) {
             ": revisar la base histórica de las partidas porcentuales.",
         );
     } catch {
+      proposals.push({
+        id: text(row.id),
+        folio: text(row.proposalNumber),
+        comparison: null,
+      });
       unreadable++;
       note("Propuesta " + (i + 1) + ": partidas o importes no conciliables.");
     }
@@ -173,6 +201,7 @@ export async function reviewLegacyBackup(value: unknown) {
     matched,
     different,
     unreadable,
+    proposals,
     exportedAt: payload.exportedAt,
   };
 }

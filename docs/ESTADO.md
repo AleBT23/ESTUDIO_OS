@@ -538,3 +538,6 @@ Configuración admite un servicio por identificador verificado y exige elegir la
 
 ### Presets del tabulador en staging
 El propietario puede recuperar un preset por identificador después de importar sus servicios. Se comprueba la totalidad de las referencias antes de crear el registro, con el mismo orden y cantidades del legado. Los reintentos y los conflictos sobre registros editados tienen cobertura en PostgreSQL. Pasaron 214 pruebas, lint, TypeScript, build, nueve recorridos Playwright y restauración de 76 migraciones. El inventario de solo lectura confirmó 10 migraciones aplicadas y 66 pendientes. El siguiente bloque de migración es la conciliación individual y recuperación de las propuestas históricas.
+
+### Conciliación individual de propuestas
+El informe local permite revisar por folio e identificador el total histórico, el recalculado y la diferencia de subtotal y descuentos. Usa el IVA registrado en cada propuesta. Una prueba reproduce una diferencia de 178,20 al comparar una partida porcentual histórica con el cálculo actual. La revisión conserva intactos el archivo y la base de datos.

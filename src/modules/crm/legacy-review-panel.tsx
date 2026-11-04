@@ -7,7 +7,9 @@ export function LegacyReviewPanel() {
   const [result, setResult] = useState<Review | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
   async function review(file?: File) {
+    setPage(1);
     setError("");
     setResult(null);
     if (!file) return;
@@ -71,6 +73,90 @@ export function LegacyReviewPanel() {
           <p>
             La comparación usa las partidas y el IVA guardado en cada propuesta.
           </p>
+          {!!result.proposals.length && (
+            <details>
+              <summary>Conciliación por folio</summary>
+              <p>
+                Los importes se muestran en la moneda de origen. La diferencia
+                es el cálculo actual menos el valor histórico. El IVA usado es
+                el guardado en la propuesta.
+              </p>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      {[
+                        "Folio e ID",
+                        "Total histórico",
+                        "Total recalculado",
+                        "Diferencia total",
+                        "Diferencia subtotal",
+                        "Diferencia descuento",
+                        "IVA histórico",
+                        "Revisión",
+                      ].map((h) => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.proposals
+                      .slice((page - 1) * 25, page * 25)
+                      .map((r, i) => (
+                        <tr key={i}>
+                          <th>
+                            {r.folio || "Sin folio"} · {r.id || "Sin ID"}
+                          </th>
+                          {r.comparison ? (
+                            <>
+                              {[
+                                r.comparison.historical,
+                                r.comparison.calculated,
+                                r.comparison.delta,
+                                r.comparison.subtotalDelta,
+                                r.comparison.discountDelta,
+                                r.comparison.tax,
+                              ].map((v, j) => (
+                                <td key={j}>{v}</td>
+                              ))}
+                              <td>
+                                {r.comparison.differences
+                                  ? "Con diferencias"
+                                  : "Coincidente"}
+                                {r.comparison.percentage
+                                  ? " · Revisar porcentaje"
+                                  : ""}
+                              </td>
+                            </>
+                          ) : (
+                            <td colSpan={7}>
+                              Partidas o importes no verificables
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              <nav aria-label="Páginas de conciliación">
+                <button
+                  type="button"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Anterior
+                </button>{" "}
+                Página {page} de {Math.ceil(result.proposals.length / 25)}{" "}
+                <button
+                  type="button"
+                  disabled={page * 25 >= result.proposals.length}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Siguiente
+                </button>
+              </nav>
+            </details>
+          )}
           {!!result.services.length && (
             <details>
               <summary>Identificadores de servicios para staging</summary>

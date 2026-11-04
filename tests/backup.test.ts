@@ -91,6 +91,26 @@ it("concilia por partida y detecta porcentajes históricos, duplicados y enlaces
   expect(report.issues.join(" ")).toMatch(/nombre repetido/);
   expect(report.issues.join(" ")).toMatch(/Folios repetidos/);
   expect(report.issues.join(" ")).toMatch(/referencias de servicios/);
+  expect(report.proposals[0]).toMatchObject({
+    id: "prop1",
+    comparison: {
+      historical: "208.80",
+      calculated: "208.80",
+      delta: "0.00",
+      tax: "28.80",
+    },
+  });
+  expect(report.proposals[1]).toMatchObject({
+    id: "prop2",
+    comparison: {
+      historical: "208.80",
+      calculated: "30.60",
+      delta: "-178.20",
+      subtotalDelta: "-198.00",
+      discountDelta: "-19.80",
+      percentage: true,
+    },
+  });
   expect(report.issues.join(" ")).toMatch(/base histórica/);
   expect(report.issues.join(" ")).toMatch(/Falta la moneda/);
 });
