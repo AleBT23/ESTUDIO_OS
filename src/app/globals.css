@@ -1524,6 +1524,7 @@ dialog {
   .button,
   .icon-button,
   .segmented button,
+  .document-tools .button,
   .quote-actions-menu summary,
   .document-sections button {
     min-height: 44px;

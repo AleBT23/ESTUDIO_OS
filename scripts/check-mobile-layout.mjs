@@ -26,7 +26,7 @@ for (const [engineName, engine] of [
         isMobile: width <= 1024,
       });
       const page = await context.newPage();
-      for (const name of ["quote", "project", "dialog"]) {
+      for (const name of ["quote", "project", "dialog", "template"]) {
         await page.setContent(
           await readFile(`.local/layout-fixtures/${name}.html`, "utf8"),
           { waitUntil: "domcontentloaded" },
