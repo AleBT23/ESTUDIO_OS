@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 import { getContext } from "@/shared/auth/context";
 import { isConfigured } from "@/shared/db/server";
-import { canManageCommercial } from "@/shared/permissions";
+import { formatMoney } from "@/shared/money";
+import { canReadFinance, canManageCommercial } from "@/shared/permissions";
 import { DashboardTasks } from "@/modules/projects/workspace";
 export default async function HomePage({
   searchParams,
@@ -26,7 +27,7 @@ export default async function HomePage({
   if (ctx?.organization && ctx.membership) {
     const org = ctx.organization.id;
     const commercial = canManageCommercial(ctx.membership.role);
-    const [projects, quotes] = await Promise.all([
+    const [projects, quotes, balances] = await Promise.all([
       ctx.db
         .from("projects")
         .select("id", { head: true, count: "exact" })
@@ -41,7 +42,26 @@ export default async function HomePage({
             .eq("status", "sent")
             .is("deleted_at", null)
         : null,
+      canReadFinance(ctx.membership.role)
+        ? ctx.db
+            .from("project_financial_summary")
+            .select("project_id,collected_cents,balance_cents")
+            .eq("organization_id", org)
+            .gt("balance_cents", 0)
+            .order("balance_cents", { ascending: false })
+            .order("project_id")
+            .limit(5)
+        : null,
     ]);
+    const ids = balances?.data?.map((row) => row.project_id) ?? [];
+    const names = ids.length
+      ? await ctx.db
+          .from("projects")
+          .select("id,name")
+          .eq("organization_id", org)
+          .in("id", ids)
+      : null;
+    const projectNames = new Map(names?.data?.map((row) => [row.id, row.name]));
     return (
       <>
         <header className="page-heading">
@@ -82,6 +102,43 @@ export default async function HomePage({
               Consultar cobros
             </Link>
           </nav>
+        )}
+        {balances && (
+          <section className="panel padded">
+            <h2>Proyectos con mayor saldo por cobrar</h2>
+            {balances.error || names?.error ? (
+              <p role="status">No se pudieron consultar los saldos.</p>
+            ) : balances.data?.length ? (
+              <div className="table-scroll">
+                <table>
+                  <caption>Los cinco mayores saldos pendientes en MXN</caption>
+                  <thead>
+                    <tr>
+                      <th>Proyecto</th>
+                      <th>Cobrado</th>
+                      <th>Pendiente</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {balances.data.map((row) => (
+                      <tr key={row.project_id}>
+                        <td>
+                          <Link href={"/proyectos/" + row.project_id}>
+                            {projectNames.get(row.project_id) ??
+                              "Abrir expediente"}
+                          </Link>
+                        </td>
+                        <td>{formatMoney(row.collected_cents)}</td>
+                        <td>{formatMoney(row.balance_cents)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p>No hay proyectos con saldo pendiente.</p>
+            )}
+          </section>
         )}
         <DashboardTasks page={pendingPage} />
       </>
