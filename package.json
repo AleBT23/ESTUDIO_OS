@@ -10,6 +10,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e:auth": "playwright test --config playwright.auth.config.ts",
     "test:e2e": "playwright test",
     "db:restore-test": "node scripts/check-postgres-concurrency.mjs --restore",
     "db:concurrency": "node scripts/check-postgres-concurrency.mjs",
