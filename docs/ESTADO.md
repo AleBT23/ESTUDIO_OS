@@ -411,3 +411,6 @@ El presupuesto y el detalle de partida muestran el valor acumulado estimado y el
 
 ### Notificaciones por tipo
 La bandeja admite filtros por cobro pendiente, entrega, tarea, seguimiento y publicación. Aplica el filtro en Supabase antes de paginar y conserva el tipo entre leídos y sin leer. 167 pruebas, TypeScript y ESLint correctos. Pendiente recorrido autenticado.
+
+### Consulta de acuerdos con saldo
+Operaciones permite combinar área, origen de fondos y saldo por cobrar o pagar. Los filtros se aplican sobre la vista de saldos y permanecen al paginar. Pasaron 168 pruebas, TypeScript, ESLint, compilación y siete recorridos Playwright sin sesión. Falta el recorrido autenticado en preview.

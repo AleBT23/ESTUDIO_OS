@@ -35,12 +35,20 @@ function Association({
 export default async function Operations({
   searchParams,
 }: {
-  searchParams: Promise<{ area?: string; page?: string; crear?: string }>;
+  searchParams: Promise<{
+    area?: string;
+    page?: string;
+    crear?: string;
+    fondos?: string;
+    saldo?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   if (!canReadFinance(ctx.membership.role))
     return <p className="notice">Tu rol no permite consultar finanzas.</p>;
-  const { area, page, crear } = await searchParams;
+  const { area, page, crear, fondos, saldo } = await searchParams;
+  const fund = fondos === "propios" || fondos === "administrados" ? fondos : "";
+  const balance = saldo === "cobrar" || saldo === "pagar" ? saldo : "";
   const org = ctx.organization.id,
     index = Math.max(1, Math.min(10000, parseInt(page ?? "1") || 1));
   let query = ctx.db
@@ -52,6 +60,20 @@ export default async function Operations({
     .range((index - 1) * 30, index * 30 - 1);
   const selected = Object.hasOwn(areas, area ?? "") ? area : undefined;
   if (selected) query = query.eq("area", selected);
+  if (fund) query = query.eq("managed", fund === "administrados");
+  if (balance)
+    query = query.gt(
+      balance === "cobrar" ? "receivable_cents" : "payable_cents",
+      0,
+    );
+  const href = (pageNumber: number, areaId = selected) =>
+    "?" +
+    new URLSearchParams({
+      ...(areaId ? { area: areaId } : {}),
+      ...(fund ? { fondos: fund } : {}),
+      ...(balance ? { saldo: balance } : {}),
+      page: String(pageNumber),
+    });
   const [cases, clients, projects, works, suppliers, packages] =
     await Promise.all([
       query,
@@ -84,13 +106,20 @@ export default async function Operations({
         .is("deleted_at", null)
         .order("name"),
     ]);
-  if (cases.error || clients.error || projects.error || works.error)
+  if (
+    cases.error ||
+    clients.error ||
+    projects.error ||
+    works.error ||
+    suppliers.error ||
+    packages.error
+  )
     return (
       <section className="panel padded">
         <h1>Operaciones financieras</h1>
         <p>
           No se pudieron cargar las operaciones. Verifica la conexión y la
-          disponibilidad de la migración 012.
+          disponibilidad de las migraciones financieras.
         </p>
         <Link href="/administracion">Abrir planes y cobros de proyectos</Link>
       </section>
@@ -120,7 +149,7 @@ export default async function Operations({
           <Link
             key={id}
             className={(selected ?? "all") === id ? "selected" : ""}
-            href={id === "all" ? "?page=1" : "?area=" + id}
+            href={href(1, id === "all" ? "" : id)}
           >
             {label}
           </Link>
@@ -128,6 +157,26 @@ export default async function Operations({
       </nav>
       <section className="panel padded">
         <h2>Acuerdos y saldos</h2>
+        <form className="search-form">
+          {selected && <input type="hidden" name="area" value={selected} />}
+          <label>
+            Fondos
+            <select name="fondos" defaultValue={fund}>
+              <option value="">Todos</option>
+              <option value="propios">Propios del despacho</option>
+              <option value="administrados">Administrados del cliente</option>
+            </select>
+          </label>
+          <label>
+            Saldo pendiente
+            <select name="saldo" defaultValue={balance}>
+              <option value="">Todos</option>
+              <option value="cobrar">Por cobrar</option>
+              <option value="pagar">Por pagar</option>
+            </select>
+          </label>
+          <button className="button button-outline">Filtrar acuerdos</button>
+        </form>
         {cases.data.length ? (
           <div className="table-scroll">
             <table>
@@ -173,15 +222,9 @@ export default async function Operations({
           <p>No hay acuerdos en esta página.</p>
         )}
         <div className="form-actions">
-          {index > 1 && (
-            <Link href={"?area=" + (selected ?? "") + "&page=" + (index - 1)}>
-              Anterior
-            </Link>
-          )}
+          {index > 1 && <Link href={href(index - 1)}>Anterior</Link>}
           {index * 30 < (cases.count ?? 0) && (
-            <Link href={"?area=" + (selected ?? "") + "&page=" + (index + 1)}>
-              Siguiente
-            </Link>
+            <Link href={href(index + 1)}>Siguiente</Link>
           )}
         </div>
       </section>
