@@ -1,3 +1,4 @@
+import { documentOptionsSchema } from "@/modules/documents/schema";
 import { z } from "zod";
 export const units = {
   m2: "Por m²",
@@ -72,6 +73,7 @@ export const quoteItemSchema = z
     "El porcentaje de obra no puede superar 100.",
   );
 export const quoteHeaderSchema = z.object({
+  document_layout: documentOptionsSchema.nullable().optional(),
   client_id: z.uuid("Selecciona un cliente."),
   name: z.string().trim().min(2, "Escribe el nombre del proyecto.").max(160),
   vat_rate: percentage,

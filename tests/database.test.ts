@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(30);
+  expect(rows).toHaveLength(32);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2732,4 +2732,27 @@ it("exporta el detalle con reversos sin modificar el flujo y excluye movimientos
  expect(list).toHaveLength(2);expect(list.find(r=>r.id===entry)).toMatchObject({area:"project_plan",amount:"300",managed:false,reversed:false,reference:"Referencia de proyecto"});
  expect(list.find(r=>r.id===out)).toMatchObject({area:"construction",amount:"100",managed:true,reversed:true,expense_category:"labor",reversal_reason:"Duplicado"});
  await asUser(reader);await expect(ledger()).rejects.toThrow("Permisos");await asUser(other);await expect(ledger()).rejects.toThrow("Permisos");await asUser(owner);
+});
+it("conserva el diseño copiado aunque cambie el preset y revierte escrituras inválidas", async () => {
+  await asUser(owner);
+  const {line, service} = await commercialFixture();
+  const layout = {sections:["cover","budget"],margins:{top:32,bottom:30,left:20,right:30}};
+  const parts = JSON.stringify([{service_id:service,quantity:"1"}]);
+  const savePreset = (id:string|null, version:number, options:unknown) =>
+    db.query<{id:string}>("select save_preset_with_layout($1,$2,$3,'Diseño','',$4::jsonb,'',$5::jsonb) id",[org,id,version,parts,JSON.stringify(options)]);
+  const preset = (await savePreset(null,0,layout)).rows[0].id;
+  const copy = (await db.query<{document_layout:unknown}>("select document_layout from preset_specs where id=$1",[preset])).rows[0].document_layout;
+  const items = [{business_line_id:line,name:"Plano",quantity:"1",unit:"unit",unit_price_cents:100,discount_rate:"0"}];
+  const quote = (await db.query<{id:string}>("select save_quote_with_layout($1,null,0,$2::jsonb,$3::jsonb) id",[org,JSON.stringify({...quoteHeader(),document_layout:copy}),JSON.stringify(items)])).rows[0].id;
+  await savePreset(preset,1,{...layout,sections:["budget"]});
+  await expect(savePreset(preset,2,{...layout,sections:["scope"]})).rejects.toThrow("PDF");
+  await expect(savePreset(preset,2,{...layout,letterhead_revision:crypto.randomUUID()})).rejects.toThrow("Membrete");
+  expect((await db.query("select version from preset_specs where id=$1",[preset])).rows).toEqual([{version:2}]);
+  const version = (await db.query<{version:number}>("select version from quotes where id=$1",[quote])).rows[0].version;
+  await draft(items,quote,version);
+  const read = () => db.query("select options from sales_document_layouts where quote_id=$1",[quote]);
+  expect((await read()).rows).toEqual([{options:layout}]);
+  await asUser(reader);
+  expect((await read()).rows).toEqual([]);
+  await asUser(owner);
 });

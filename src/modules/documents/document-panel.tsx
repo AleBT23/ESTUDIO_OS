@@ -1,13 +1,10 @@
 "use client";
 import { useActionState, useState } from "react";
-import { ArrowUp, ArrowDown, FileDown } from "lucide-react";
+import { FileDown } from "lucide-react";
+import { LayoutEditor } from "./layout-editor";
 import { Button } from "@/shared/ui/button";
 import { issueQuote, markSent, acceptQuote } from "./actions";
-import {
-  defaultDocumentOptions,
-  sectionLabels,
-  type DocumentOptions,
-} from "./schema";
+import { defaultDocumentOptions, type DocumentOptions } from "./schema";
 type Version = {
   id: string;
   folio: string;
@@ -22,9 +19,11 @@ export function DocumentPanel({
   status,
   versions,
   today,
+  initialLayout,
   images = [],
   imageError = false,
 }: {
+  initialLayout?: DocumentOptions | null;
   images?: { id: string; title: string; filename: string; version: number }[];
   imageError?: boolean;
   id: string;
@@ -34,7 +33,7 @@ export function DocumentPanel({
   today: string;
 }) {
   const [options, setOptions] = useState<DocumentOptions>(
-    structuredClone(defaultDocumentOptions),
+    structuredClone(initialLayout ?? defaultDocumentOptions),
   );
   const [showPreview, setShowPreview] = useState(false);
   const [issueState, issueAction, issuing] = useActionState(issueQuote, {});
@@ -46,12 +45,6 @@ export function DocumentPanel({
   const latest = versions.find(
     (v) => v.state === "issued" && v.draft_version === version,
   );
-  function move(index: number, delta: number) {
-    const list = [...options.sections];
-    [list[index], list[index + delta]] = [list[index + delta], list[index]];
-    setOptions({ ...options, sections: list });
-    setShowPreview(false);
-  }
   const previewURL = `/api/cotizaciones/${id}/preview?${new URLSearchParams({ options: JSON.stringify(options) })}`;
   return (
     <section className="panel padded" style={{ marginTop: 24 }}>
@@ -72,142 +65,15 @@ export function DocumentPanel({
               name="options"
               value={JSON.stringify(options)}
             />
-            <div className="settings-grid">
-              <div>
-                <h3>Secciones y orden</h3>
-                {Object.entries(sectionLabels)
-                  .filter(
-                    ([key]) =>
-                      !options.sections.includes(
-                        key as DocumentOptions["sections"][number],
-                      ),
-                  )
-                  .map(([key, label]) => (
-                    <Button
-                      key={key}
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        setOptions({
-                          ...options,
-                          sections: [
-                            ...options.sections,
-                            key as DocumentOptions["sections"][number],
-                          ],
-                        });
-                        setShowPreview(false);
-                      }}
-                    >
-                      + {label}
-                    </Button>
-                  ))}
-                <ol className="document-sections">
-                  {options.sections.map((section, index) => (
-                    <li key={section}>
-                      <span>{sectionLabels[section]}</span>
-                      <button
-                        type="button"
-                        className="icon-button"
-                        aria-label={`Subir ${sectionLabels[section]}`}
-                        disabled={index === 0}
-                        onClick={() => move(index, -1)}
-                      >
-                        <ArrowUp size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-button"
-                        aria-label={`Bajar ${sectionLabels[section]}`}
-                        disabled={index === options.sections.length - 1}
-                        onClick={() => move(index, 1)}
-                      >
-                        <ArrowDown size={14} />
-                      </button>
-                      {section !== "budget" && (
-                        <button
-                          type="button"
-                          className="icon-button"
-                          onClick={() => {
-                            setOptions({
-                              ...options,
-                              sections: options.sections.filter(
-                                (s) => s !== section,
-                              ),
-                            });
-                            setShowPreview(false);
-                          }}
-                          aria-label={`Quitar ${sectionLabels[section]}`}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-              <div>
-                <label>
-                  Membrete de la cotización
-                  <select
-                    value={options.letterhead_revision ?? ""}
-                    onChange={(e) => {
-                      setOptions({
-                        ...options,
-                        letterhead_revision: e.target.value || undefined,
-                      });
-                      setShowPreview(false);
-                    }}
-                  >
-                    <option value="">Oficial del despacho</option>
-                    {images.map((i) => (
-                      <option value={i.id} key={i.id}>
-                        {i.title} · v{i.version} · {i.filename}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {imageError && (
-                  <p>No se pudo cargar la biblioteca de membretes.</p>
-                )}
-                <h3>Márgenes del membrete · mm</h3>
-                <div className="form-grid">
-                  {(
-                    [
-                      ["top", "Superior", 32, 60],
-                      ["bottom", "Inferior", 26, 60],
-                      ["left", "Izquierdo", 12, 45],
-                      ["right", "Derecho", 24, 50],
-                    ] as const
-                  ).map(([key, label, min, max]) => (
-                    <label key={key}>
-                      {label}
-                      <input
-                        type="number"
-                        min={min}
-                        max={max}
-                        required
-                        step="0.5"
-                        value={options.margins[key]}
-                        onChange={(e) => {
-                          setOptions({
-                            ...options,
-                            margins: {
-                              ...options.margins,
-                              [key]: Number(e.target.value),
-                            },
-                          });
-                          setShowPreview(false);
-                        }}
-                      />
-                    </label>
-                  ))}
-                </div>
-                <p className="caption" style={{ marginTop: 14 }}>
-                  Carta 215.9 × 279.4 mm. Los mínimos reservan logotipo,
-                  ornamento lateral y datos inferiores del PNG oficial.
-                </p>
-              </div>
-            </div>
+            <LayoutEditor
+              options={options}
+              setOptions={(v) => {
+                setOptions(v);
+                setShowPreview(false);
+              }}
+              images={images}
+              imageError={imageError}
+            />
             <div className="form-actions">
               <Button
                 variant="outline"

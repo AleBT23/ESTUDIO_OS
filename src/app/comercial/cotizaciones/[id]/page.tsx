@@ -84,7 +84,16 @@ export default async function QuotePage({
     quote.status === "draft" && edit !== "1"
       ? await listLibraryImages(ctx)
       : null;
+  const savedLayout = await ctx.db
+    .from("sales_document_layouts")
+    .select("options")
+    .eq("organization_id", ctx.organization.id)
+    .eq("quote_id", id)
+    .maybeSingle();
+  if (savedLayout.error)
+    throw Error("No se pudo cargar el diseño de la propuesta.");
   const header: QuoteHeader = {
+    document_layout: savedLayout.data?.options,
     client_id: quote.client_id,
     name: quote.name,
     vat_rate: String(quote.vat_rate),
@@ -228,6 +237,7 @@ export default async function QuotePage({
           version={quote.version}
           status={quote.status}
           versions={versions.data || []}
+          initialLayout={header.document_layout}
           images={images?.data ?? []}
           imageError={!!images?.error}
           today={new Intl.DateTimeFormat("en-CA", {

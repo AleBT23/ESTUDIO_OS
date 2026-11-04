@@ -25,6 +25,7 @@ type Preset = {
   name: string;
   notes: string;
   conditions: string;
+  document_layout?: QuoteHeader["document_layout"];
   items: { service_id: string; quantity: string }[];
 };
 export function QuoteEditor({
@@ -127,7 +128,13 @@ export function QuoteEditor({
       ...items,
       ...resolved.map((i) => itemFromService(i.service!, i.quantity)),
     ]);
-    setHeader({ ...header, ...merged });
+    setHeader({
+      ...header,
+      ...merged,
+      ...(preset.document_layout && {
+        document_layout: structuredClone(preset.document_layout),
+      }),
+    });
     if (preset.conditions) setFull(true);
     setDirty(true);
     setNotice("Preset aplicado. Los textos y precios son copias editables.");

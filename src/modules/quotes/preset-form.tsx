@@ -3,23 +3,40 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/shared/ui/button";
 import { useUnsavedChanges } from "@/shared/ui/use-unsaved-changes";
+import {
+  LayoutEditor,
+  type LayoutImage,
+} from "@/modules/documents/layout-editor";
+import {
+  defaultDocumentOptions,
+  type DocumentOptions,
+} from "@/modules/documents/schema";
 import { savePreset } from "./actions";
 import type { Service } from "./schema";
 export function PresetForm({
   services,
+  images = [],
+  imageError = false,
   preset,
 }: {
   services: Service[];
+  images?: LayoutImage[];
+  imageError?: boolean;
   preset?: {
     id: string;
     name: string;
     notes: string;
     conditions: string;
+    document_layout?: DocumentOptions | null;
     version: number;
     items: { service_id: string; quantity: string }[];
   };
 }) {
   const [state, action, pending] = useActionState(savePreset, {});
+  const [layout, setLayout] = useState<DocumentOptions>(
+    structuredClone(preset?.document_layout ?? defaultDocumentOptions),
+  );
+  const [useLayout, setUseLayout] = useState(!!preset?.document_layout);
   const [selected, setSelected] = useState(preset?.items || []);
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty);
@@ -65,6 +82,30 @@ export function PresetForm({
         Selecciona servicios y cantidades iniciales. Cada cotización conservará
         una copia editable.
       </p>
+      <input
+        type="hidden"
+        name="document_layout"
+        value={JSON.stringify(useLayout ? layout : null)}
+      />
+      <label>
+        <input
+          type="checkbox"
+          checked={useLayout}
+          onChange={(e) => setUseLayout(e.target.checked)}
+        />{" "}
+        Copiar diseño del PDF al aplicar el preset
+      </label>
+      {useLayout && (
+        <LayoutEditor
+          options={layout}
+          setOptions={(v) => {
+            setLayout(v);
+            setDirty(true);
+          }}
+          images={images}
+          imageError={imageError}
+        />
+      )}
       <div className="preset-list">
         {services.map((service) => {
           const item = selected.find((s) => s.service_id === service.id);

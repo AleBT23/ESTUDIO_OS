@@ -6,6 +6,7 @@ import { requireContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
 import type { FormState } from "@/shared/auth/actions";
 import { toCents, calculateQuote } from "@/shared/money";
+import { documentOptionsSchema } from "@/modules/documents/schema";
 import { serviceSchema, quoteSchema } from "./schema";
 export async function saveService(
   _previous: FormState,
@@ -124,7 +125,7 @@ export async function savePreset(
     .object({
       name: z.string().trim().min(2).max(160),
       notes: z.string().max(10000),
-      conditions: z.string().max(20000).default(''),
+      conditions: z.string().max(20000).default(""),
       items: z
         .array(
           z.object({
@@ -147,15 +148,29 @@ export async function savePreset(
         "Escribe un nombre y selecciona de 1 a 100 servicios con cantidades mayores a cero.",
     };
   const input = parsed.data;
-  const { data, error } = await ctx.db.rpc("save_preset_terms", {
-    org: ctx.organization.id,
-    preset: input.id || null,
-    expected_version: input.version,
-    preset_name: input.name,
-    preset_notes: input.notes,
-    preset_conditions: input.conditions,
-    items: input.items,
-  });
+  let layout;
+  try {
+    layout = documentOptionsSchema
+      .nullable()
+      .parse(JSON.parse(String(form.get("document_layout") ?? "null")));
+  } catch {
+    return { error: "Revisa las opciones del documento." };
+  }
+  const { data, error } = await ctx.db.rpc(
+    form.has("document_layout")
+      ? "save_preset_with_layout"
+      : "save_preset_terms",
+    {
+      ...(form.has("document_layout") ? { layout } : {}),
+      org: ctx.organization.id,
+      preset: input.id || null,
+      expected_version: input.version,
+      preset_name: input.name,
+      preset_notes: input.notes,
+      preset_conditions: input.conditions,
+      items: input.items,
+    },
+  );
   if (error)
     return {
       error:
@@ -201,7 +216,7 @@ export async function saveQuote(
     };
   }
   const { externalCost, ...header } = input.data.header;
-  const { data, error } = await ctx.db.rpc("save_quote_draft", {
+  const { data, error } = await ctx.db.rpc("save_quote_with_layout", {
     org: ctx.organization.id,
     quote: identity.data.id || null,
     expected_version: identity.data.version,

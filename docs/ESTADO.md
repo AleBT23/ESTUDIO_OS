@@ -514,3 +514,6 @@ El editor vincula una versión emitida. El folio, total y anticipo provienen de 
 
 ### Exportación de movimientos financieros
 Reportes descarga cobros, pagos, anticipos y reversos bajo los filtros activos. Cada fila conserva origen, área, custodia, importe original y contribución efectiva al flujo. Un reverso aporta cero de efectivo y conserva fecha y motivo. La descarga toma una instantánea SQL y pide acotar la selección si supera 5.000 movimientos. Se verificaron importes, aislamiento y escape de celdas. Pasaron 206 pruebas, TypeScript, lint, build, nueve recorridos Playwright y restauración con 70 migraciones. El inventario de solo lectura del destino configurado confirmó 10 aplicadas y 60 pendientes.
+
+### Diseño documental reutilizable en presets
+El preset puede guardar el orden de secciones, los márgenes y la revisión del membrete. Al aplicarlo se guarda una copia en el borrador. La prueba de integración verifica que editar el preset o guardar el borrador desde un cliente anterior conserve el diseño copiado. Un diseño inválido revierte también el cambio de versión. Pasaron 207 pruebas, TypeScript, lint, build, nueve recorridos Playwright y restauración sintética con 71 migraciones.

@@ -9,7 +9,7 @@
 | CRM-01 | Parcial: clientes/contactos/notas/origen, búsqueda/paginación, archivo y auditoría; src/modules/crm, database.test | Adjuntos y enlaces (060), proyectos, propuestas y obras relacionados (066). Pendiente recorrido autenticado del expediente |
 | CRM-02 | Parcial: pipeline seis etapas, notas y fecha de seguimiento, señales vencidas; pipeline-schema y database.test | Historial detallado de interacciones y notificaciones persistentes |
 | QUO-01 | Parcial: catálogo editable, línea, costo/precio, vigencia, archivo, clave única | Categorías como catálogo normalizado; E2E |
-| QUO-02 | Parcial: presets con servicios/cantidades/notas, copia editable en propuesta | Condiciones reutilizables y retrocompatibilidad verificadas en 061. Pendientes documentos/secciones configurables por preset |
+| QUO-02 | Parcial: presets con servicios/cantidades/notas, copia editable en propuesta | Condiciones reutilizables y retrocompatibilidad verificadas en 061. Diseño de secciones, márgenes y membrete copiado al borrador (071). Pendiente recorrido autenticado |
 | QUO-03 | Parcial: partidas, cantidades, descuentos, IVA, anticipo, vigencia, condiciones; cálculo servidor y SQL coinciden | Multimoneda solo tras reglas explícitas; UI principal contra Supabase |
 | QUO-04 | Parcial: borrador, emisión/snapshot/PDF, envío manual, aceptación, rechazo/vencimiento y revisión con motivo e historial; snapshots anteriores inmutables | E2E remoto y aceptación del usuario |
 | QUO-05 | Parcial: aceptación crea proyecto/paquetes/plan atómicamente; prueba 25,000/50%/cobrado cero | Fases por línea aplicadas al convertir (065). Pendientes tareas desde plantilla y recorrido remoto |
