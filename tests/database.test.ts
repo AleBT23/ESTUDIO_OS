@@ -2011,3 +2011,17 @@ it("el calendario deriva cobros efectivos pendientes, respeta permisos y retira 
  await asUser(owner);await db.query("select public.record_payment($1,$2,1500,current_date-1,'Parcial',$3)",[org,schedule,crypto.randomUUID()]);expect((await dues()).rows).toHaveLength(1);
  await db.query("select public.record_payment($1,$2,2500,current_date-1,'Liquidación',$3)",[org,schedule,crypto.randomUUID()]);expect((await dues()).rows).toHaveLength(0);
 });
+
+it("estima el avance parcial con redondeo acumulado y protege la partida de reintentos y sobreestimación",async()=>{
+ await asUser(owner);
+ const work=crypto.randomUUID(),item=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,name) values($1,$2,'Estimación de prueba')",[work,org]);
+ await db.query("insert into work_budget_items(id,organization_id,work_id,chapter,description,unit,quantity,unit_price_cents) values($1,$2,$3,'Acabados','Pintura','m2',1,3)",[item,org,work]);
+ const add=(id:string,q:string)=>db.query("insert into work_estimates(id,organization_id,work_id,item_id,measured_on,quantity) values($1,$2,$3,$4,current_date,$5) on conflict do nothing",[id,org,work,item,q]);
+ const first=crypto.randomUUID();await add(first,"0.5");await add(first,"0.5");
+ await expect(add(crypto.randomUUID(),"0.6")).rejects.toThrow();
+ await add(crypto.randomUUID(),"0.5");
+ expect((await db.query("select count(*)::int entries,sum(amount_cents)::int total from work_estimates where item_id=$1",[item])).rows).toEqual([{entries:2,total:3}]);
+ expect((await db.query("select * from work_balances where work_id=$1",[work])).rows).toHaveLength(0);
+ await asUser(other);expect((await db.query("select * from work_estimates where item_id=$1",[item])).rows).toHaveLength(0);await asUser(owner);
+});

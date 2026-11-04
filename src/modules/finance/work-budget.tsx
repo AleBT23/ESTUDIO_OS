@@ -57,7 +57,11 @@ export async function WorkBudget({ id, page }: { id: string; page: number }) {
               {items.data.map((r) => (
                 <tr key={r.id}>
                   <td>{r.chapter}</td>
-                  <td>{r.description}</td>
+                  <td>
+                    <Link href={"/obras/partidas/" + r.id}>
+                      {r.description}
+                    </Link>
+                  </td>
                   <td>{r.quantity}</td>
                   <td>{r.unit}</td>
                   <td>{formatMoney(r.unit_price_cents)}</td>
