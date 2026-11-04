@@ -2405,3 +2405,16 @@ it("reprograma un recordatorio privado y genera una sola recurrencia al cerrarlo
   await asUser(other);expect((await events()).rows).toHaveLength(0);
   await asUser(owner);
 });
+
+it("el expediente atribuye los acuerdos sin duplicar al cliente de la obra o del proyecto", async () => {
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Casa del cliente',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,project_id,name) values($1,$2,$3,'Obra del cliente')",[work,org,project]);
+ const account=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,work_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Acopio de material','construction',true,900,750)",[account,org,work]);
+ const visible=()=>db.query("select client_id,managed,receivable,payable from client_agreements where id=$1",[account]);
+ expect((await visible()).rows).toEqual([{client_id:client,managed:true,receivable:"900",payable:"750"}]);
+ await asUser(reader);expect((await visible()).rows).toHaveLength(0);
+ await asUser(other);expect((await visible()).rows).toHaveLength(0);await asUser(owner);
+});

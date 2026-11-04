@@ -420,3 +420,6 @@ Los acuerdos admiten fechas opcionales e independientes de cobro y pago. El expe
 
 ### Recordatorios personales sin proyecto
 Agenda → Mis recordatorios permite crear, reprogramar y completar pendientes privados. Un intervalo de 1 a 365 días crea una nueva ocurrencia desde la fecha programada al completar la anterior. Calendario, avisos y conteos reutilizan la misma fuente con RLS. Se probaron aislamiento, versiones obsoletas, reprogramación y cierre simultáneo en dos conexiones reales. Pasaron 170 pruebas, TypeScript, ESLint, build, empaquetado PDF, siete recorridos Playwright y concurrencia en PostgreSQL con 49 migraciones. Un recorrido exclusivo de instalaciones sin credenciales se omitió. Migración 049 pendiente de producción; falta recorrido autenticado en preview.
+
+### Acuerdos en el expediente del cliente
+Comercial → Cliente muestra los acuerdos propios y administrados con sus saldos por cobrar y por pagar. Incluye acuerdos vinculados indirectamente por proyecto u obra y enlaza a su historial y al reporte filtrado. Se verificaron atribución y permisos. Pasaron 171 pruebas, TypeScript, ESLint, build, Playwright (7 aprobadas y 1 omitida) y concurrencia PostgreSQL con 50 migraciones. Pendiente validar en preview y producción.

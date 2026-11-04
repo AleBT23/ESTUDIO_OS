@@ -1,3 +1,4 @@
+import { ClientAgreements } from "@/modules/crm/client-agreements";
 import { Journal } from "@/modules/journal/panel";
 import { PortalAccess } from "@/modules/portal/manage";
 import Link from "next/link";
@@ -14,11 +15,15 @@ export default async function ClientPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ edit?: string; historial?: string }>;
+  searchParams: Promise<{
+    edit?: string;
+    historial?: string;
+    acuerdos?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   const { id } = await params;
-  const { edit, historial } = await searchParams;
+  const { edit, historial, acuerdos } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const { data, error } = await ctx.db
     .from("clients")
@@ -140,6 +145,12 @@ export default async function ClientPage({
           clientId={id}
           contacts={(contacts.data || []) as Contact[]}
           writable={canWrite && !client.deleted_at}
+        />
+      )}
+      {canWrite && edit !== "1" && (
+        <ClientAgreements
+          id={id}
+          page={Math.max(1, Math.min(10000, parseInt(acuerdos ?? "1") || 1))}
         />
       )}
       {canWrite && edit !== "1" && (
