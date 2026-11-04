@@ -31,7 +31,8 @@
 | DOC-02 | Parcial: PNG real carta, proporción preservada, márgenes seguros y preview PDF | Membretes múltiples privados/carga, aviso de proporción/ajuste y guías visuales |
 | DOC-03 | Parcial: seis secciones opcionales/reordenables, presupuesto obligatorio; Unicode, 1/12 páginas, encabezado repetido y firmas; pdf.test | Personalización de textos/plantillas/anexos y escenarios extremos de contenido |
 | DOC-04 | Parcial: cartas/oficios/minutas/reportes, borradores guardados, contexto cliente/proyecto opcional, márgenes, preview y emisión/descarga/versiones privadas sin presupuesto | E2E remoto; tablas/imágenes/adjuntos; archivo recuperable del documento |
-| LIB-01, SOP-01 | Pendiente | Biblioteca técnica/BIM/adjuntos/versiones, procedimientos/checklists |
+| LIB-01 | Pendiente | Biblioteca técnica/BIM/adjuntos/versiones |
+| SOP-01 | Implementado localmente | Procedimientos reutilizables, ejecuciones independientes por proyecto y pasos reversibles. Preview autenticada pendiente. |
 | CORE-01 | Parcial: Supabase SSR, roles, RLS y autorización servidor probados SQL | Credenciales y E2E Auth, invitaciones/roles editables, revisión de acceso por proyecto |
 | CORE-02 | Parcial: auditoría, versiones, archivo de clientes/contactos/servicios, reversos de cobro | Completar recuperación en restantes entidades |
 | CORE-03 | Parcial: exportador legado/validador SHA-256, migrador con checksums | Importación staging/reconciliación, backups BD/archivos, exportación general y restauración ensayada |

@@ -13,7 +13,7 @@ export default function ResourcesPage() {
         <Link href="/recursos/documentos">Documentos</Link>
         <Link href="/recursos/plantillas">Plantillas</Link>
         <span className="planned">Biblioteca · pendiente</span>
-        <span className="planned">Procedimientos · pendiente</span>
+        <Link href="/recursos/procedimientos">Procedimientos</Link>
       </nav>
       <div className="settings-grid">
         <section className="panel padded">

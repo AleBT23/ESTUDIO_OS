@@ -2177,3 +2177,18 @@ it("el calendario editorial protege la organización, las fechas y las ediciones
   expect((await db.query("update editorial_items set title='Modificado' where id=$1 returning id",[id])).rows).toHaveLength(0);
   await asUser(owner);
 });
+
+it("cada ejecución conserva su propio avance y solo admite pasos definidos",async()=>{
+ await asUser(owner);
+ const procedure=crypto.randomUUID(), a=crypto.randomUUID(), b=crypto.randomUUID();
+ const create=(steps:string[])=>db.query("insert into studio_procedures(id,organization_id,name,steps) values($1,$2,'Entrega', $3)",[procedure,org,steps]);
+ await expect(create([])).rejects.toThrow();await create(["Revisar planos","Entregar expediente"]);
+ for(const run of [a,b])await db.query("insert into procedure_runs(id,organization_id,procedure_id,name) values($1,$2,$3,'Entrega final')",[run,org,procedure]);
+ const check=(step:number)=>db.query("insert into procedure_checks(organization_id,run_id,step) values($1,$2,$3)",[org,a,step]);
+ await check(1);await expect(check(3)).rejects.toThrow();
+ expect((await db.query("select step from procedure_checks where run_id=$1",[b])).rows).toHaveLength(0);
+ await asUser(reader);await expect(check(2)).rejects.toThrow();
+ await asUser(other);expect((await db.query("select id from procedure_runs where procedure_id=$1",[procedure])).rows).toHaveLength(0);
+ await asUser(owner);await db.query("delete from procedure_checks where run_id=$1 and step=1",[a]);
+ expect((await db.query("select step from procedure_checks where run_id=$1",[a])).rows).toHaveLength(0);
+});

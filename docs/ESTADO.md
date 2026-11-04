@@ -330,3 +330,6 @@ El editor inicializado desde plantilla se incorporó a la prueba de composición
 
 ### Calendario editorial y portafolio
 Migración 033 pendiente de producción. Comercial → Marketing permite registrar ideas sin fecha, programar y publicar por canal, capturar enlaces y resultados, y filtrar el portafolio asociado a proyectos y oportunidades. Acceso de propietario y administrador, aislamiento por organización y control de versión. Se verificaron TypeScript, ESLint, 143 pruebas, las 33 migraciones en PostgreSQL local y el build con empaquetado PDF. Pendiente la prueba autenticada en preview.
+
+### Procedimientos reutilizables
+Recursos → Procedimientos permite a administración definir pasos ordenados y al equipo iniciar listas independientes con proyecto opcional. Cada ejecución muestra el avance y permite completar o reabrir pasos. Migración 034 verificada en PostgreSQL local, con aislamiento y permisos por rol. Pasaron 144 pruebas, TypeScript, lint y compilación. Pendientes la preview autenticada y la biblioteca técnica/BIM.
