@@ -9,7 +9,7 @@
 | CRM-01 | Parcial: clientes/contactos/notas/origen, búsqueda/paginación, archivo y auditoría; src/modules/crm, database.test | Adjuntos y enlaces en 060. Pendiente recorrido autenticado del expediente |
 | CRM-02 | Parcial: pipeline seis etapas, notas y fecha de seguimiento, señales vencidas; pipeline-schema y database.test | Historial detallado de interacciones y notificaciones persistentes |
 | QUO-01 | Parcial: catálogo editable, línea, costo/precio, vigencia, archivo, clave única | Categorías como catálogo normalizado; E2E |
-| QUO-02 | Parcial: presets con servicios/cantidades/notas, copia editable en propuesta | Condiciones/documentos/secciones configurables por preset |
+| QUO-02 | Parcial: presets con servicios/cantidades/notas, copia editable en propuesta | Condiciones reutilizables y retrocompatibilidad verificadas en 061. Pendientes documentos/secciones configurables por preset |
 | QUO-03 | Parcial: partidas, cantidades, descuentos, IVA, anticipo, vigencia, condiciones; cálculo servidor y SQL coinciden | Multimoneda solo tras reglas explícitas; UI principal contra Supabase |
 | QUO-04 | Parcial: borrador, emisión/snapshot/PDF, envío manual, aceptación, rechazo/vencimiento y revisión con motivo e historial; snapshots anteriores inmutables | E2E remoto y aceptación del usuario |
 | QUO-05 | Parcial: aceptación crea proyecto/paquetes/plan atómicamente; prueba 25,000/50%/cobrado cero | Fases/tareas desde plantillas al convertir; E2E remoto |
@@ -19,11 +19,11 @@
 | PRJ-02 | Parcial: paquetes mixtos de una cotización, alcance y presupuesto neto por línea segregado | Edición de paquetes y continuidad completa |
 | PRJ-03 | Implementado localmente | Plantillas editables por línea o servicio y planes por proyecto. Arquitectura y visualización tienen fases iniciales distintas. Preview autenticada pendiente. |
 | TASK-01 | Implementado localmente | Tareas con responsables, prioridades, fechas, recurrencias, subtareas y dependencia previa. Lista, calendario y tablero en Agenda. Pendiente preview autenticada. |
-| DEL-01 | Pendiente | Entregables, archivos, revisiones y aprobaciones |
-| CHG-01 | Pendiente | Impacto, aprobación, extra y alcance trazable |
-| FIN-01 | Planes, saldos, pagos efectivos, reversos y reprogramación total o por parcialidades. Recibos PDF por movimiento de proyecto o acuerdo. Pruebas SQL de conservación y concurrencia, permisos y lectura del PDF. | Cancelaciones de obligaciones y E2E autenticado en preview. |
+| DEL-01 | Entregables y revisiones fechadas con responsable, aprobación y publicación selectiva al portal (020, 027). | Recorrido autenticado con cuentas del estudio y del cliente. |
+| CHG-01 | Solicitudes con impacto en días y cotización adicional vinculada. Aceptación transaccional de paquetes y obligaciones en el mismo proyecto (031). | Validación autenticada del ciclo de aprobación. |
+| FIN-01 | Planes, saldos, pagos efectivos, reversos y reprogramación total o por parcialidades. Recibos PDF por movimiento de proyecto o acuerdo. Pruebas SQL de conservación y concurrencia, permisos y lectura del PDF. | Cancelación del saldo de planes con motivo y auditoría (063). Pendiente recorrido autenticado. |
 | FIN-02 | Acuerdos y movimientos por área y origen de fondos, comprobantes privados, padrón de proveedores y estado de cuenta vinculado con pagos, reversos y saldo pendiente. | Categorías y pagos conciliados con flujo en 055. Falta verificar captura y exportación con sesión aislada. |
-| FIN-03 | Pendiente | Colaboradores/reglas/repartos y pagos |
+| FIN-03 | Honorarios por miembro y paquete, fijos o porcentuales, con saldo, pagos y comprobantes (029). Probado el límite concurrente de reparto. | Conciliación en preview. |
 | TIME-01 | Implementado localmente | Captura y corrección versionada por usuario, proyecto, paquete y tarea. Historial paginado en expediente. Pendiente recorrido autenticado en preview. |
 | PROF-01 | Presupuesto aceptado, margen previsto, cobrado y flujo por hora, margen sobre cobros propios. Las horas usan tarifa vigente por miembro y reportan minutos sin tarifa por separado (056). | Validar datos de referencia, indirectos y aceptación del reporte en preview. |
 | REP-01 | Reportes de flujo y egresos por categoría con filtros de periodo, cliente, proyecto, obra, paquete y línea. CSV con centavos exactos. | Recorrido autenticado, descarga y conciliación con datos representativos. |

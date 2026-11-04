@@ -471,3 +471,6 @@ Los presets guardan condiciones junto a partidas y notas. Al aplicarlos se conse
 
 ### Recuperación de cotizaciones
 Comercial → Cotizaciones permite filtrar archivadas por nombre y estado y restaurar una propuesta. Se conserva el documento emitido, se registra el actor y se rechazan versiones obsoletas y roles ajenos. Pasaron 189 pruebas, lint, TypeScript, build, 9 recorridos Playwright y restauración sintética con 62 migraciones. Pendiente validación remota.
+
+### Cancelación del saldo de planes de proyecto
+Administración permite cancelar exclusivamente lo pendiente, con motivo obligatorio. El historial conserva importe anterior, saldo cancelado, actor y fecha. La cartera y la agenda se actualizan y los pagos efectivos permanecen. La prueba multiconexión enfrentó cancelación y cobro sobre la misma obligación. Pasaron 190 pruebas, TypeScript, ESLint, build, nueve recorridos Playwright (uno omitido) y restauración con 63 migraciones. Pendientes validación autenticada y migración de producción.

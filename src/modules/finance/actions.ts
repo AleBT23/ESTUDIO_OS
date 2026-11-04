@@ -130,3 +130,36 @@ export async function replanSchedule(
     revalidatePath(path, "layout");
   return { success: "Plan actualizado." };
 }
+export async function cancelScheduleBalance(
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const ctx = await requireContext();
+  if (!canReadFinance(ctx.membership.role))
+    return { error: "Permisos insuficientes." };
+  const input = z
+    .object({
+      id: z.uuid(),
+      schedule: z.uuid(),
+      expected_due: z.iso.date(),
+      expected_amount: z.string().regex(/^\d+$/),
+      expected_balance: z.string().regex(/^\d+$/),
+      reason: z.string().trim().min(3).max(1000),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!input.success) return { error: "Indica el motivo de la cancelación." };
+  const { id, ...args } = input.data;
+  const { error } = await ctx.db.rpc("cancel_schedule_balance", {
+    org: ctx.organization.id,
+    request_id: id,
+    ...args,
+  });
+  if (error)
+    return {
+      error:
+        "No se pudo cancelar. Actualiza la página para comprobar el saldo vigente.",
+    };
+  for (const path of ["/", "/administracion", "/agenda", "/proyectos"])
+    revalidatePath(path, "layout");
+  return { success: "Saldo cancelado." };
+}

@@ -117,6 +117,7 @@ export default async function FinancePage({
         <Link href="/administracion/reprogramaciones">
           Historial de reprogramaciones
         </Link>
+        <p><Link href="/administracion/cancelaciones">Historial de cancelaciones</Link></p>
         {plans.length ? (
           <div className="table-scroll">
             <table>

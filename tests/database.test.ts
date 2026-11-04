@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(28);
+  expect(rows).toHaveLength(29);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2615,4 +2615,19 @@ it("restaura una propuesta emitida conservando su versión documental y audita l
   expect((await db.query("select version from quotes where id=$1 and deleted_at is null",[id])).rows).toEqual([{version:version+2}]);
   expect((await db.query<{snapshot:unknown}>("select snapshot from quote_versions where id=$1",[prepared.id])).rows[0].snapshot).toEqual(prepared.snapshot);
   expect((await db.query("select actor_id from audit_events where entity_id=$1 and action='restored'",[id])).rows).toEqual([{actor_id:owner}]);
+});
+it("cancelar saldo conserva los cobros y excluye la deuda de agenda y cartera", async()=>{
+ await asUser(owner);
+ const proj=(await db.query<{id:string}>("select create_project_record($1,$2,'Convenio de cierre',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const schedule=(await db.query<{id:string}>("select id from payment_schedules where project_id=$1",[proj])).rows[0].id;
+ const request=crypto.randomUUID(),cancel=(balance:number,reason:string)=>db.query("select cancel_schedule_balance($1,$2,$3,current_date-1,1000,$4,$5)",[org,schedule,request,balance,reason]);
+ const pay=(amount:number)=>db.query("select record_payment($1,$2,$3,current_date-1,'Cobro',$4)",[org,schedule,amount,crypto.randomUUID()]);
+ await pay(350);await expect(cancel(1000,"Convenio")).rejects.toThrow("cambiaron");
+ await asUser(reader);await expect(cancel(650,"Convenio")).rejects.toThrow("Permisos");
+ await asUser(owner);await cancel(650,"Convenio");await cancel(650,"Convenio");await expect(cancel(650,"Motivo diferente")).rejects.toThrow("otro cambio");
+ expect((await db.query("select amount_cents::int vigente,collected_cents::int cobros,balance_cents::int saldo from payment_schedule_balances where id=$1",[schedule])).rows).toEqual([{vigente:350,cobros:350,saldo:0}]);
+ await expect(pay(1)).rejects.toThrow("saldo");
+ expect((await db.query("select id from agenda_events where kind='collection' and id=$1",[schedule])).rows).toEqual([]);
+ expect((await db.query("select previous_amount,amount_cents,reason from schedule_cancellation_history where id=$1",[request])).rows).toEqual([{previous_amount:"1000",amount_cents:"650",reason:"Convenio"}]);
+ await asUser(other);expect((await db.query("select id from schedule_cancellations where id=$1",[request])).rows).toEqual([]);await asUser(owner);
 });

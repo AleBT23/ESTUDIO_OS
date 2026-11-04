@@ -330,7 +330,7 @@ try {
         "cobros concurrentes",
         "estimaciones concurrentes",
         "repartos concurrentes",
-        "reprogramación simultánea a un cobro",
+        "reprogramación y cancelación simultáneas a cobros",
         "cierre simultáneo de recordatorios",
       ],
     }),
