@@ -2317,3 +2317,17 @@ it("el tablero refleja el cierre compartido y rechaza movimientos con una versiÃ
  await asUser(reader);expect((await board()).rows).toHaveLength(1);expect((await db.query("update project_notes set completed_at=null where id=$1 returning id",[id])).rows).toHaveLength(0);
  await asUser(other);expect((await board()).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el presupuesto del proyecto cuenta cada cotizaciÃ³n aceptada una sola vez aunque tenga dos paquetes",async()=>{
+ const issue=async(project?:string)=>{
+ const {id,version,prepared}=await issuedFixture();
+ if(project){const change=crypto.randomUUID();await db.query("insert into scope_changes(id,organization_id,client_id,project_id,description,days_impact) values($1,$2,$3,$4,'Alcance adicional',1)",[change,org,client,project]);
+ await db.query("update scope_changes set quote_id=$1 where id=$2",[id,change]);}
+ await db.query("select mark_quote_sent($1,$2,$3,$4)",[org,id,version,prepared.id]);
+ return (await db.query<{id:string}>("select accept_quote($1,id,version,current_date,current_date) id from quotes where id=$2",[org,id])).rows[0].id;
+ };
+ const project=await issue();expect(await issue(project)).toBe(project);
+ const report=()=>db.query("select quote_count::int,net_cents,external_cost_cents,expected_profit_cents,margin_percent,estimated_hours,estimated_hourly_cents from project_quote_estimates where project_id=$1",[project]);
+ expect((await report()).rows).toEqual([{quote_count:2,net_cents:"5000000",external_cost_cents:"5000",expected_profit_cents:"4995000",margin_percent:"99.90",estimated_hours:"24.0000",estimated_hourly_cents:"208333"}]);
+ await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(owner);
+});

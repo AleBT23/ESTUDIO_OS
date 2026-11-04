@@ -1,3 +1,4 @@
+import {ProjectPerformance} from "@/modules/projects/project-performance";
 import { PhasePanel } from "@/modules/projects/phase-panel";
 import { DeliveryPanel } from "@/modules/projects/delivery-panel";
 import { canManageCommercial } from "@/shared/permissions";
@@ -140,6 +141,7 @@ export default async function ProjectPage({
         packages={packagesResult.data ?? []}
         page={page(filter.honorarios)}
       />
+      <ProjectPerformance project={id}/>
       <TimePanel project={id} page={page(filter.tiempo)} />
       <ProjectFinance
         project={id}

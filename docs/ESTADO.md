@@ -375,3 +375,6 @@ Agenda → Tablero Kanban presenta pendientes, tareas en curso y completadas con
 
 ### Historial de correcciones de tiempo
 El expediente expone las versiones previas del registro de horas con fecha, minutos, actividad, tarea y paquete, además de quién corrigió y cuándo. El formulario conserva una asociación anterior aunque ya no aparezca en su selector. Los permisos proceden de las políticas de tiempo existentes. Pasaron 158 pruebas, TypeScript, lint y compilación. Sin migración nueva. Pendiente validación autenticada en preview.
+
+### Estimación y ejecución en el expediente
+El proyecto reúne las cotizaciones aceptadas y extras aprobados una sola vez, con honorarios netos sin IVA, costos externos previstos, utilidad y margen previstos antes de horas internas, horas estimadas y tarifa por hora estimada. Se contrastan con cobros, pagos efectivos propios y minutos registrados del reporte financiero. Probado con dos propuestas de dos paquetes y control de lectura. Pasaron 159 pruebas, TypeScript, ESLint, build y 44 migraciones en PostgreSQL local. Migración 044 pendiente de producción y recorrido autenticado pendiente.
