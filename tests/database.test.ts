@@ -485,7 +485,7 @@ it("otro estudio no puede usar cliente ajeno aunque conozca su UUID", async () =
   ).rejects.toThrow("Cliente no disponible");
 });
 
-async function issuedFixture() {
+async function issuedFixture(costs?:{unitCost:number;hourlyCost:number}) {
   const { line } = await commercialFixture();
   const lines = (
     await db.query<{ id: string }>(
@@ -500,7 +500,7 @@ async function issuedFixture() {
       description: "Alcance A",
       quantity: "1",
       unit: "fixed",
-      unit_price_cents: 2000000,
+      unit_price_cents: 2000000,...(costs&&{unit_cost_cents:costs.unitCost}),
       discount_rate: "0",
     },
     {
@@ -515,7 +515,7 @@ async function issuedFixture() {
   ];
   const id = await draft(items, null, 0, {
     ...quoteHeader(),
-    apply_vat: false,
+    apply_vat: false,...(costs&&{hourly_cost_cents:costs.hourlyCost}),
   });
   const version = (
     await db.query<{ version: number }>(
@@ -2323,15 +2323,15 @@ it("el tablero refleja el cierre compartido y rechaza movimientos con una versiÃ
 
 it("el presupuesto del proyecto cuenta cada cotizaciÃ³n aceptada una sola vez aunque tenga dos paquetes",async()=>{
  const issue=async(project?:string)=>{
- const {id,version,prepared}=await issuedFixture();
+ const {id,version,prepared}=await issuedFixture(project?{unitCost:20100,hourlyCost:800}:undefined);
  if(project){const change=crypto.randomUUID();await db.query("insert into scope_changes(id,organization_id,client_id,project_id,description,days_impact) values($1,$2,$3,$4,'Alcance adicional',1)",[change,org,client,project]);
  await db.query("update scope_changes set quote_id=$1 where id=$2",[id,change]);}
  await db.query("select mark_quote_sent($1,$2,$3,$4)",[org,id,version,prepared.id]);
  return (await db.query<{id:string}>("select accept_quote($1,id,version,current_date,current_date) id from quotes where id=$2",[org,id])).rows[0].id;
  };
  const project=await issue();expect(await issue(project)).toBe(project);
- const report=()=>db.query("select quote_count::int,net_cents,external_cost_cents,expected_profit_cents,margin_percent,estimated_hours,estimated_hourly_cents from project_quote_estimates where project_id=$1",[project]);
- expect((await report()).rows).toEqual([{quote_count:2,net_cents:"5000000",external_cost_cents:"5000",expected_profit_cents:"4995000",margin_percent:"99.90",estimated_hours:"24.0000",estimated_hourly_cents:"208333"}]);
+ const report=()=>db.query("select quote_count::int,net_cents,external_cost_cents,expected_profit_cents,margin_percent,estimated_hours,estimated_hourly_cents,direct_cost_cents,labor_cost_cents,unrated_hours from project_quote_estimates where project_id=$1",[project]);
+ expect((await report()).rows).toEqual([{quote_count:2,net_cents:"5000000",external_cost_cents:"5000",direct_cost_cents:"20100",labor_cost_cents:"9600",unrated_hours:"12.0000",expected_profit_cents:"4965300",margin_percent:"99.31",estimated_hours:"24.0000",estimated_hourly_cents:"208333"}]);
  await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(owner);
 });
 

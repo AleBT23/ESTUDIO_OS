@@ -50,3 +50,5 @@
 1. Contrastar el historial mediante `npm run db:plan` y repetir la restauración en una copia aislada actualizada, incluidos los objetos de Storage.
 2. Ejecutar los recorridos autenticados del anticipo, del lector y de emisión PDF y aceptación de una propuesta con `npm run test:e2e:auth`. Completar la verificación de portal, expedientes, cotizaciones y obras con identidades separadas.
 3. Continuar las funcionalidades abiertas en la matriz, incluidos los costos internos previstos de cotización y el cotejo con muestras reales del archivo histórico y los conceptos (077 y 078), y contrastar importes y PDFs antes de preparar la publicación.
+
+FIN · Estimación del proyecto y ampliaciones aceptadas con costos privados por versión, horas sin tarifa identificadas y prueba de conciliación (085).

@@ -569,3 +569,6 @@ La cotización copia el costo del servicio al agregarlo y permite modificarlo pa
 
 ### Estimación interna histórica por versión documental
 Al preparar una versión se guarda por separado el desglose de costos, horas, tarifas y resultado previsto. Comercial puede inspeccionarlo junto al folio emitido. Las versiones antiguas sin estimación se identifican expresamente. La prueba cambia un costo en el borrador y comprueba tanto la conservación de la estimación anterior como su exclusión del contenido para el cliente. Pasaron 227 pruebas y la restauración sintética con 84 migraciones.
+
+### Margen consolidado del proyecto
+El expediente suma los honorarios sin IVA y los costos directos, externos y de horas del contrato base y sus ampliaciones aceptadas. Advierte de horas pendientes de tarifa y de propuestas anteriores al historial privado. Pasaron 227 pruebas y la restauración con 85 migraciones en PostgreSQL 17.

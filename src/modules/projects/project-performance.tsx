@@ -50,9 +50,13 @@ export async function ProjectPerformance({ project }: { project: string }) {
           <dl>
             <dt>Honorarios netos sin IVA</dt>
             <dd>{money(e.net_cents)}</dd>
-            <dt>Costo externo previsto</dt>
+            <dt>Costos directos de partidas</dt>
+            <dd>{money(e.direct_cost_cents)}</dd>
+            <dt>Otros costos externos previstos</dt>
             <dd>{money(e.external_cost_cents)}</dd>
-            <dt>Utilidad prevista antes del costo interno de horas</dt>
+            <dt>Costo imputado a las horas previstas con tarifa</dt>
+            <dd>{money(e.labor_cost_cents)}</dd>
+            <dt>Resultado previsto después de los costos registrados</dt>
             <dd>
               {money(e.expected_profit_cents)}{" "}
               {e.margin_percent !== null && " · " + e.margin_percent + " %"}
@@ -66,6 +70,18 @@ export async function ProjectPerformance({ project }: { project: string }) {
                 : money(e.estimated_hourly_cents)}
             </dd>
           </dl>
+          {Number(e.unrated_hours) > 0 && (
+            <p>
+              {Number(e.unrated_hours)} horas previstas pendientes de tarifa. El
+              margen incluye únicamente los costos registrados.
+            </p>
+          )}
+          {Number(e.historical_quotes) > 0 && (
+            <p>
+              {e.historical_quotes} propuestas anteriores al historial interno
+              usan los importes de sus cabeceras aceptadas.
+            </p>
+          )}
         </>
       ) : (
         <p>Sin cotizaciones aceptadas vinculadas.</p>
