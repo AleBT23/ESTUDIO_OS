@@ -1645,3 +1645,16 @@ dialog {
     scroll-behavior: auto !important;
   }
 }
+
+.compact-toggle { display: none; }
+.area-shortcuts { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; }
+@media (min-width: 1025px) {
+ .compact-toggle { display: inline-flex; }
+ .compact-menu .sidebar { width: 76px; padding-inline: 10px; overflow-y: auto; }
+ .compact-menu .main-wrap { margin-left: 76px; }
+ .compact-menu .nav-link { justify-content: center; }
+ .compact-menu .studio-brand img { width: 44px; height: auto; }
+ .compact-menu .studio-brand { padding: 0; justify-content:center; }
+ .compact-menu .sidebar-caption, .compact-menu .studio-brand span, .compact-menu .nav-link span, .compact-menu .profile-text { display: none; }
+ .compact-menu .profile { flex-direction: column; }
+}

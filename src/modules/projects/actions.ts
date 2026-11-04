@@ -8,6 +8,7 @@ import type { FormState } from "@/shared/auth/actions";
 import { noteSchema, projectSchema, cents } from "./schema";
 const refresh = (id: string) => {
   revalidatePath("/");
+  revalidatePath("/agenda");
   revalidatePath(`/proyectos/${id}`);
   revalidatePath("/proyectos");
 };

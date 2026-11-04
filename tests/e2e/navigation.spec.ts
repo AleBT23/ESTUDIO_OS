@@ -101,3 +101,20 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
     await expect(page).toHaveURL(/\/acceso$/);
   }
 });
+
+test("la barra lateral conserva la preferencia al recargar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Contraer barra lateral" }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Expandir barra lateral" }),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Navegación principal" })
+    .getByRole("link", { name: "Comercial", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/comercial$/);
+});

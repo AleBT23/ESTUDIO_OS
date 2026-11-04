@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  CalendarDays,
   Home,
   BriefcaseBusiness,
   Layers3,
@@ -28,13 +29,18 @@ export function Shell({
   children,
   organization,
   email,
+  compactMenu,
+  finance,
 }: {
   children: React.ReactNode;
   organization?: string;
   email?: string;
+  compactMenu?: boolean;
+  finance?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [compact, setCompact] = useState(!!compactMenu);
   const sidebar = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -75,7 +81,7 @@ export function Shell({
     n.href === "/" ? pathname === "/" : pathname.startsWith(n.href),
   );
   return (
-    <div className="workspace">
+    <div className={compact ? "workspace compact-menu" : "workspace"}>
       <RefreshOnReturn />
       <a href="#contenido" className="skip-link">
         Saltar al contenido
@@ -100,6 +106,8 @@ export function Shell({
         <nav aria-label="Navegación principal">
           {navigation.map(({ href, label, icon: Icon }) => (
             <Link
+              title={label}
+              aria-label={label}
               key={href}
               href={href}
               onClick={() => setOpen(false)}
@@ -115,23 +123,42 @@ export function Shell({
             </Link>
           ))}
         </nav>
-        <div className="sidebar-note">
-          <span className="status-dot" />
-          Un estudio. Una visión.
-          <p>
-            Arquitectura y visualización,
-            <br />
-            conectadas en un solo lugar.
-          </p>
-        </div>
+        {organization && (
+          <nav aria-label="Herramientas del estudio" className="area-shortcuts">
+            <Link
+              href="/agenda"
+              title="Agenda"
+              aria-label="Agenda"
+              className="nav-link"
+              onClick={() => setOpen(false)}
+            >
+              <CalendarDays size={18} />
+              <span>Agenda</span>
+            </Link>
+            {finance && (
+              <Link
+                href="/administracion/operaciones"
+                title="Operaciones financieras"
+                aria-label="Operaciones financieras"
+                className="nav-link"
+                onClick={() => setOpen(false)}
+              >
+                <Wallet size={18} />
+                <span>Operaciones financieras</span>
+              </Link>
+            )}
+          </nav>
+        )}
         <div className="sidebar-bottom">
           <Link
+            aria-label="Configuración"
+            title="Configuración"
             href="/configuracion"
             className="nav-link"
             onClick={() => setOpen(false)}
           >
             <Settings2 size={18} />
-            Configuración
+            <span>Configuración</span>
           </Link>
           <div className="profile">
             <span className="avatar">AT</span>
@@ -168,12 +195,34 @@ export function Shell({
           >
             {open ? <X size={21} /> : <Menu size={21} />}
           </button>
+          <button
+            type="button"
+            className="icon-button compact-toggle"
+            aria-label={
+              compact ? "Expandir barra lateral" : "Contraer barra lateral"
+            }
+            aria-expanded={!compact}
+            aria-controls="studio-menu"
+            onClick={() => {
+              setCompact(!compact);
+              document.cookie =
+                "studio-menu-compact=" +
+                (compact ? "0" : "1") +
+                "; Path=/; SameSite=Lax; Max-Age=31536000";
+            }}
+          >
+            <Menu size={18} />
+          </button>
           <div className="breadcrumb">
             <span>Mi estudio</span>
             <span>/</span>
             <strong>
               {current?.label ||
-                (pathname === "/acceso" ? "Acceso" : "Configuración")}
+                (pathname === "/agenda"
+                  ? "Agenda"
+                  : pathname === "/acceso"
+                    ? "Acceso"
+                    : "Configuración")}
             </strong>
           </div>
           <Link className="topbar-link" href="/comercial">

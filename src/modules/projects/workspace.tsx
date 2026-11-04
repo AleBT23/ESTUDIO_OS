@@ -5,7 +5,15 @@ import { NoteForm, NoteRow } from "./forms";
 import { ObservationForm } from "./observation-form";
 import type { ProjectNote } from "./schema";
 import { projectWorkspaceReady } from "./availability";
-export async function DashboardTasks({ page = 1 }: { page?: number }) {
+export async function DashboardTasks({
+  page = 1,
+  view,
+  date,
+}: {
+  page?: number;
+  view?: string;
+  date?: string;
+}) {
   const ctx = await getContext();
   if (!ctx?.organization || !ctx.membership) return null;
   if (!(await projectWorkspaceReady()))
@@ -15,7 +23,7 @@ export async function DashboardTasks({ page = 1 }: { page?: number }) {
         actualización.
       </p>
     );
-  const { data, error, count } = await ctx.db
+  let query = ctx.db
     .from("project_notes_context")
     .select(
       "id,project_id,project_name,kind,body,due_on,completed_at,version,created_at",
@@ -23,8 +31,30 @@ export async function DashboardTasks({ page = 1 }: { page?: number }) {
     )
     .eq("organization_id", ctx.organization.id)
     .eq("kind", "task")
-    .is("completed_at", null)
-    .is("deleted_at", null)
+    .is("deleted_at", null);
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ctx.organization.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const weekEnd = new Date(today + "T12:00:00Z");
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+  query =
+    view === "completed"
+      ? query.not("completed_at", "is", null)
+      : query.is("completed_at", null);
+  if (view === "today") query = query.eq("due_on", today);
+  if (view === "date" && date) query = query.eq("due_on", date);
+  if (view === "week")
+    query = query
+      .gte("due_on", today)
+      .lte("due_on", weekEnd.toISOString().slice(0, 10));
+  if (view === "overdue") query = query.lt("due_on", today);
+  const pager = view
+    ? "/agenda?view=" + view + (date ? "&date=" + date : "") + "&page="
+    : "/?pendingPage=";
+  const { data, error, count } = await query
     .order("due_on", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range((page - 1) * 20, page * 20 - 1);
@@ -35,9 +65,13 @@ export async function DashboardTasks({ page = 1 }: { page?: number }) {
       <div className="section-heading">
         <div>
           <p className="eyebrow">PARA TENERLO PRESENTE</p>
-          <h2>Pendientes del estudio</h2>
+          <h2>
+            {view === "completed"
+              ? "Recordatorios completados"
+              : "Pendientes del estudio"}
+          </h2>
         </div>
-        <span className="tag">{count || 0} pendientes</span>
+        <span className="tag">{count || 0} registros</span>
       </div>
       {data?.length ? (
         data.map((note) => (
@@ -58,19 +92,14 @@ export async function DashboardTasks({ page = 1 }: { page?: number }) {
         <Link className="text-link" href="/proyectos">
           Abrir proyectos →
         </Link>
+        {!view && <Link href="/agenda">Ver agenda</Link>}
         {page > 1 && (
-          <Link
-            className="button button-outline"
-            href={`/?pendingPage=${page - 1}`}
-          >
+          <Link className="button button-outline" href={pager + (page - 1)}>
             Anteriores
           </Link>
         )}
         {page * 20 < (count || 0) && (
-          <Link
-            className="button button-outline"
-            href={`/?pendingPage=${page + 1}`}
-          >
+          <Link className="button button-outline" href={pager + (page + 1)}>
             Más pendientes
           </Link>
         )}
