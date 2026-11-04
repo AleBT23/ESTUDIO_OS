@@ -16,7 +16,7 @@
 | QUO-06 | Parcial: seis unidades, porcentaje corregido, horas/costos externos previstos, resultado/margen e ingreso por hora exactos y fórmulas visibles | Atribución completa de costos por partida, tarifas para costo imputado de horas y E2E |
 | MKT-01 | Implementado localmente | Comercial → Marketing. Ideas, agenda por mes, canal, publicación, enlace, resultados y portafolio asociado a proyecto y oportunidad. Pendiente el recorrido autenticado en preview. |
 | PRJ-01 | Parcial: expediente con cliente, ubicación, responsable, inicio, cierre en Agenda y vínculo a versión. Adjuntos privados y enlaces (059 y 060) | Recorrido autenticado de ficha y adjuntos |
-| PRJ-02 | Parcial: paquetes mixtos de una cotización, alcance y presupuesto neto por línea segregado | Edición de paquetes y continuidad completa |
+| PRJ-02 | Parcial: paquetes mixtos de una cotización, alcance y presupuesto neto por línea segregado | Alta y edición operativa por línea (080). Pendiente validación autenticada del expediente. |
 | PRJ-03 | Implementado localmente | Plantillas editables por línea o servicio y planes por proyecto. Arquitectura y visualización tienen fases iniciales distintas. Preview autenticada pendiente. |
 | TASK-01 | Implementado localmente | Tareas con responsables, prioridades, fechas, recurrencias, subtareas y dependencia previa. Lista, calendario y tablero en Agenda. Pendiente preview autenticada. |
 | DEL-01 | Entregables y revisiones fechadas con responsable, aprobación y publicación selectiva al portal (020, 027). | Recorrido autenticado con cuentas del estudio y del cliente. |
@@ -49,4 +49,4 @@
 ## Secuencia para retomar
 1. Contrastar el historial mediante `npm run db:plan` y repetir la restauración en una copia aislada actualizada, incluidos los objetos de Storage.
 2. Ejecutar los recorridos autenticados del anticipo y del lector con `npm run test:e2e:auth`. Completar la verificación de portal, expedientes, cotizaciones y obras con identidades separadas.
-3. Continuar las funcionalidades abiertas en la matriz, incluidos los paquetes de trabajo manuales y el cotejo con muestras reales del archivo histórico y los conceptos (077 y 078), y contrastar importes y PDFs antes de preparar la publicación.
+3. Continuar las funcionalidades abiertas en la matriz, incluidos los costos internos previstos de cotización y el cotejo con muestras reales del archivo histórico y los conceptos (077 y 078), y contrastar importes y PDFs antes de preparar la publicación.

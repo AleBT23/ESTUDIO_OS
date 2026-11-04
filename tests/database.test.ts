@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(36);
+  expect(rows).toHaveLength(37);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2868,4 +2868,20 @@ it("exporta una instantánea verificable del estudio sin adjuntos binarios ni re
  await expect(download(org,"inexistente")).rejects.toThrow("Sección");
  await expect(download(otherOrg,"todo")).rejects.toThrow("propietario");
  await asUser(reader);await expect(download(org,"todo")).rejects.toThrow("propietario");await asUser(owner);
+});
+it("gestiona paquetes por línea sin crear obligaciones ni cambiar el alcance contratado",async()=>{
+ const {line}=await commercialFixture();
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto manual con paquetes',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const second=(await db.query<{id:string}>("select id from business_lines where organization_id=$1 and id<>$2 limit 1",[org,line])).rows[0].id;
+ const save=(id:string,version:number,workLine:string,title:string)=>db.query("select save_work_package($1,$2,$3,$4,$5,$6,'Coordinar entrega')",[org,project,id,version,workLine,title]);
+ const one=crypto.randomUUID(),two=crypto.randomUUID();
+ await asUser(reader);await expect(save(one,0,line,"Anteproyecto")).rejects.toThrow("Permisos");await asUser(owner);
+ await save(one,0,line,"Anteproyecto");await save(one,0,line,"Anteproyecto");await save(two,0,second,"Visualización");
+ await expect(save(one,0,line,"Duplicado")).rejects.toThrow("utilizado");
+ await save(one,1,line,"Anteproyecto revisado");await expect(save(one,1,line,"Obsoleto")).rejects.toThrow("cambió");
+ expect((await db.query("select count(*)::int n from project_service_packages where project_id=$1 and manual",[project])).rows).toEqual([{n:2}]);
+ expect((await db.query("select id from payment_schedules where project_id=$1",[project])).rows).toEqual([]);
+ expect((await db.query("select package_id from package_financials where package_id in ($1,$2)",[one,two])).rows).toEqual([]);
+ await db.query("select edit_project_details(organization_id,id,version,name,location,start_date,target_end,lead_id,'closed') from projects where id=$1",[project]);
+ await expect(save(one,2,line,"Actualización tardía")).rejects.toThrow("disponible");
 });

@@ -550,3 +550,6 @@ La importación de staging verifica huella e identidad y conserva el texto origi
 
 ### Exportación operativa del despacho
 Configuración permite al propietario descargar los registros visibles de cinco módulos, juntos o por sección, bajo las políticas de Supabase. Una lectura consistente incorpora las referencias y metadatos documentales. Los binarios requieren el respaldo de archivos. La descarga conserva los números originales de PostgreSQL y admite hasta 3.500.000 bytes de registros por selección. El navegador comprueba la huella SHA-256 y los conteos sin enviar el archivo. Se verificó el aislamiento entre estudios, la denegación a otros roles y la exclusión de adjuntos. Pasaron 219 pruebas y la restauración sintética con 79 migraciones.
+
+### Paquetes de trabajo por proyecto
+Los administradores pueden agregar paquetes operativos a proyectos activos o pausados y editar su nombre e instrucciones con control de versión. La ficha identifica por separado el alcance contratado. La prueba cubre dos líneas en el mismo proyecto, reintento sin duplicado, edición obsoleta, permisos y rechazo de cambios después del cierre. Crear el paquete no programa cobros ni asigna un ingreso contratado. Pasaron 220 pruebas y la restauración con 80 migraciones.

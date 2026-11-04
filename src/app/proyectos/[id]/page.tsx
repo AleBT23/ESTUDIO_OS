@@ -1,3 +1,4 @@
+import {PackageForm} from "@/modules/projects/package-form";
 import {DossierNav} from "@/shared/ui/dossier-nav";
 import { DossierPanel } from "@/modules/documents/dossier-panel";
 import {ProjectDetails} from "@/modules/projects/project-details";
@@ -56,15 +57,16 @@ export default async function ProjectPage({
       .maybeSingle(),
     ctx.db
       .from("project_service_packages")
-      .select("id,name,scope,business_line_id")
+      .select("id,name,scope,business_line_id,manual,version,execution_notes")
       .eq("organization_id", ctx.organization.id)
-      .eq("project_id", id)
+      .eq("project_id", id).is("deleted_at",null)
       .order("created_at"),
   ]);
   if (projectResult.error || packagesResult.error)
     throw new Error("No se pudo consultar el proyecto.");
   const project = projectResult.data;
   if (!project) notFound();
+  const editPackages=canManageCommercial(ctx.membership.role) && ["active","paused"].includes(project.state);
   const client = await ctx.db
     .from("clients")
     .select("name")
@@ -84,25 +86,26 @@ export default async function ProjectPage({
           {client.data.name}
         </p>
       </div>
-      <DossierNav scope="project" role={ctx.membership.role} packages={!!packagesResult.data?.length}/>
+      <DossierNav scope="project" role={ctx.membership.role} packages={editPackages || !!packagesResult.data?.length}/>
       <ProjectDetails project={project}/>
       <DossierPanel scope="project" parent={id} inactive={project.state==="archived"} archived={filter.archivados==="1"} page={page(filter.archivos)}/>
-      {packagesResult.data?.length ? (
+      {editPackages || packagesResult.data?.length ? (
         <>
           <div className="section-heading">
             <h2 id="paquetes">Paquetes de servicios</h2>
             <span className="caption">
-              Un expediente · {packagesResult.data?.length || 0} líneas
-              contratadas
+              {packagesResult.data?.length || 0} paquetes
+              de trabajo
             </span>
           </div>
+          {editPackages && <PackageForm project={id} lines={ctx.lines}/>}
           <div className="settings-grid">
             {packagesResult.data?.map((pkg) => (
               <section key={pkg.id} className="panel padded">
                 <p className="eyebrow">
                   {ctx.lines.find((l) => l.id === pkg.business_line_id)?.name}
                 </p>
-                <h2>{pkg.name}</h2>
+                <h2>{pkg.name}</h2><p className="caption">{pkg.manual?"Paquete operativo":"Alcance de cotización aceptada"}</p>{pkg.execution_notes&&<p style={{whiteSpace:"pre-wrap"}}>{pkg.execution_notes}</p>}{editPackages&&<PackageForm project={id} lines={ctx.lines} existing={pkg}/>}
                 {scopeSchema.parse(pkg.scope).map((item, index) => (
                   <div className="activity-row" key={index}>
                     <strong>{item.name}</strong>
