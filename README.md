@@ -36,7 +36,7 @@ Los módulos están conectados a datos persistentes, probados, navegables y docu
 
 Código en src/, migraciones aditivas en supabase/migrations y pruebas en tests/. Consulta [estado real](docs/ESTADO.md), [guía de arranque](docs/GUIA-DESARROLLO.md), [auditoría del legado](docs/AUDITORIA-LEGACY.md) y [trazabilidad completa](docs/TRAZABILIDAD.md).
 
-Arranque: npm ci, configurar .env.local a partir de .env.example, npm run db:migrate, npm run dev. Sin Supabase la interfaz muestra conexión pendiente; no simula datos guardados. El sitio está conectado al Supabase original y publicado en Netlify; consulta el estado verificado y las limitaciones en docs/PUBLICACION_NETLIFY.md. El alcance integral continúa en desarrollo.
+Arranque: npm ci, configurar .env.local a partir de .env.example, npm run db:plan y npm run dev. Para una base aislada de desarrollo o staging, aplicar npm run db:migrate tras validar el inventario y el respaldo. Sin Supabase la interfaz muestra conexión pendiente; no simula datos guardados. El sitio está conectado al Supabase original y publicado en Netlify; consulta el estado verificado y las limitaciones en docs/PUBLICACION_NETLIFY.md. El alcance integral continúa en desarrollo.
 
 ## Primera publicación en Netlify
 

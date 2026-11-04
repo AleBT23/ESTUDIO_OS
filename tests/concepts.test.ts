@@ -1,6 +1,6 @@
 import { it, expect } from "vitest";
 import { conceptSchema, insertConcept } from "@/modules/quotes/concept-schema";
-import { estimateFees } from "@/shared/money";
+import { estimateFees, quoteLineCostCents } from "@/shared/money";
 it("inserta copia de concepto conservando el alcance de la partida", () => {
   const original = { body: "Iluminación y revisión de diseño." };
   let description = insertConcept("Modelado del edificio.", original.body);
@@ -26,6 +26,7 @@ it("rechaza conceptos vacíos y textos combinados demasiado extensos", () => {
 it("honorarios calculan margen e ingreso horario sin incluir IVA ni descontar horas dos veces", () => {
   expect(estimateFees(2500000, "5000.00", "100")).toEqual({
     externalCostCents: 500000,
+    laborCostCents: null,
     profitCents: 2000000,
     marginPercent: "80.00",
     effectiveHourlyCents: 25000,
@@ -48,5 +49,25 @@ it("rechaza horas/costos inválidos y tarifa fuera del rango seguro", () => {
   expect(() => estimateFees(100, "0", "NaN")).toThrow();
   expect(() => estimateFees(Number.MAX_SAFE_INTEGER, "0", "0.0001")).toThrow(
     "tarifa",
+  );
+});
+it("descuenta las horas previstas una sola vez y distingue cero de una tarifa ausente", () => {
+  expect(estimateFees(2500000, "5000.00", "10.125", "800.00")).toMatchObject({
+    laborCostCents: 810000,
+    profitCents: 1190000,
+    marginPercent: "47.60",
+  });
+  expect(estimateFees(10000, "0", "2", "0")).toMatchObject({
+    laborCostCents: 0,
+    profitCents: 10000,
+  });
+});
+it("concilia el costo directo con la base de obra y las cantidades fraccionarias", () => {
+  const costs =
+    quoteLineCostCents({ unit: "pct", quantity: "100000", unitCost: "30.00" }) +
+    quoteLineCostCents({ unit: "m2", quantity: "2.5", unitCost: "1.01" });
+  expect(costs).toBe(3253);
+  expect(estimateFees(250000, "10", "1", "100", costs).profitCents).toBe(
+    235747,
   );
 });

@@ -4,8 +4,14 @@ import { redirect } from "next/navigation";
 import { getContext } from "@/shared/auth/context";
 import { isConfigured } from "@/shared/db/server";
 import { LoginForm } from "@/shared/ui/auth-forms";
-export default async function LoginPage() {
-  if (await getContext()) redirect("/");
+import { studioDestination } from "@/shared/auth/destination";
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ volver?: string }>;
+}) {
+  const volver = studioDestination((await searchParams).volver);
+  if (await getContext()) redirect(volver);
   return (
     <div className="auth-card panel">
       <Image
@@ -21,7 +27,12 @@ export default async function LoginPage() {
         Entra para continuar con el trabajo de tu estudio.
       </p>
       {isConfigured() ? (
-        <LoginForm />
+        <>
+          <LoginForm volver={volver} />
+          <Link href="/invitaciones">
+            Entrar con una invitación del estudio
+          </Link>
+        </>
       ) : (
         <div className="notice">
           El estudio aún no está conectado.{" "}
@@ -31,3 +42,5 @@ export default async function LoginPage() {
     </div>
   );
 }
+
+export const metadata = { title: "Acceso al estudio" };

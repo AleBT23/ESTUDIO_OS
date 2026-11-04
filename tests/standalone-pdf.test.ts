@@ -87,3 +87,44 @@ it("no emite documentos con variables faltantes o no permitidas", async () => {
     }),
   ).rejects.toThrow("no permitida");
 });
+
+it("renderiza tablas multipágina con columnas alineadas y variables dentro de la celda", async () => {
+  const snapshotWithTable = {
+    ...snapshot,
+    client: { name: "Luz | Norte" },
+    body: [
+      "| Concepto | Responsable |",
+      "| --- | --- |",
+      ...Array.from(
+        { length: 65 },
+        (_, i) => "| Renglón " + (i + 1) + " | Contacto {{cliente.nombre}} |",
+      ),
+    ].join("\n"),
+  };
+  const bytes = await new StandaloneRenderer().render(snapshotWithTable);
+  const task = getDocument({
+    data: new Uint8Array(bytes),
+    useSystemFonts: false,
+  });
+  try {
+    const pdf = await task.promise;
+    expect(pdf.numPages).toBeGreaterThan(1);
+    const all: string[] = [];
+    const rightEdges: number[] = [];
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const content = await (await pdf.getPage(n)).getTextContent();
+      for (const item of content.items) {
+        if (!("str" in item)) continue;
+        all.push(item.str);
+        if (item.str === "Responsable" || item.str === "Contacto Luz | Norte")
+          rightEdges.push(item.transform[4]);
+      }
+    }
+    expect(all).toContain("Renglón 65");
+    expect(rightEdges.length).toBeGreaterThanOrEqual(66);
+    expect(Math.max(...rightEdges) - Math.min(...rightEdges)).toBeLessThan(1);
+    expect(all).not.toContain("| --- | --- |");
+  } finally {
+    await task.destroy();
+  }
+});

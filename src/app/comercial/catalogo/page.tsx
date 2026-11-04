@@ -16,6 +16,8 @@ export default async function CatalogPage({
     edit?: string;
     archived?: string;
     q?: string;
+    category?: string;
+    page?: string;
   }>;
 }) {
   const ctx = await requireContext();
@@ -27,19 +29,39 @@ export default async function CatalogPage({
       </p>
     );
   const q = typeof filter.q === "string" ? filter.q.slice(0, 120) : "";
+  const page = Math.max(1, Math.min(10000, parseInt(filter.page || "1") || 1));
+  const pageLink = (n: number) =>
+    "/comercial/catalogo?" +
+    new URLSearchParams({
+      q,
+      category: filter.category || "",
+      archived: filter.archived === "1" ? "1" : "0",
+      page: String(n),
+    });
   let query = ctx.db
     .from("services")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("organization_id", ctx.organization.id)
     .order("name")
-    .limit(500);
+    .order("id")
+    .range((page - 1) * 30, page * 30 - 1);
   query =
     filter.archived === "1"
       ? query.not("deleted_at", "is", null)
       : query.is("deleted_at", null);
   if (q) query = query.ilike("name", `%${q.replace(/[\\%_]/g, "\\$&")}%`);
-  const { data, error } = await query;
-  if (error) throw new Error("No se pudo cargar el catálogo.");
+  if (filter.category) query = query.eq("category_key", filter.category);
+  const [{ data, error, count }, categories] = await Promise.all([
+    query,
+    ctx.db
+      .from("service_categories")
+      .select("category_key,name")
+      .eq("organization_id", ctx.organization.id)
+      .order("name")
+      .limit(1000),
+  ]);
+  if (error || categories.error)
+    throw new Error("No se pudo cargar el catálogo.");
   const services = (data || []) as Service[];
   let selected = services.find((s) => s.id === filter.service);
   if (filter.service && !selected) {
@@ -64,6 +86,7 @@ export default async function CatalogPage({
       (selected && filter.edit === "1" && !selected.deleted_at) ? (
         <ServiceForm
           service={filter.new === "1" ? undefined : selected}
+          categories={(categories.data ?? []).map((c) => c.name)}
           lines={ctx.lines}
         />
       ) : selected ? (
@@ -125,6 +148,18 @@ export default async function CatalogPage({
               >
                 <option value="0">Activos</option>
                 <option value="1">Archivados</option>
+              </select>
+              <select
+                name="category"
+                aria-label="Categoría de servicios"
+                defaultValue={filter.category || ""}
+              >
+                <option value="">Todas las categorías</option>
+                {categories.data?.map((c) => (
+                  <option key={c.category_key} value={c.category_key}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
               <Button variant="outline">Buscar</Button>
             </form>
@@ -201,12 +236,19 @@ export default async function CatalogPage({
               </p>
             </section>
           )}
-          <p className="caption" style={{ marginTop: 16 }}>
-            Hasta 500 resultados por búsqueda. Los servicios archivados
-            conservan sus referencias.
-          </p>
+          <nav aria-label="Páginas de servicios">
+            {page > 1 && <Link href={pageLink(page - 1)}>Anterior</Link>}{" "}
+            <span>
+              Página {page} · {count ?? 0} servicios
+            </span>{" "}
+            {page * 30 < (count ?? 0) && (
+              <Link href={pageLink(page + 1)}>Siguiente</Link>
+            )}
+          </nav>
         </>
       )}
     </>
   );
 }
+
+export const metadata = { title: "Catálogo de servicios" };

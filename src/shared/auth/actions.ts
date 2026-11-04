@@ -1,4 +1,5 @@
 "use server";
+import { studioDestination } from "./destination";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { database, isConfigured } from "@/shared/db/server";
@@ -21,7 +22,14 @@ export async function signIn(
       error:
         "No se pudo iniciar sesión. Revisa tus datos o inténtalo más tarde.",
     };
-  redirect("/");
+  const destination = form.get("destination");
+  redirect(
+    destination === "invitation"
+      ? "/invitaciones"
+      : destination === "portal"
+        ? "/portal"
+        : studioDestination(form.get("volver")),
+  );
 }
 export async function signOut() {
   const db = await database();

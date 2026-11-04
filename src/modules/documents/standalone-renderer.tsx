@@ -1,3 +1,5 @@
+import { referencedImage, splitLetterhead } from "./image-references";
+import { documentLines } from "./document-lines";
 import {
   Document,
   Page,
@@ -38,12 +40,34 @@ Font.register({
 });
 const pt = (mm: number) => (mm * 72) / 25.4;
 export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> {
-  async render(input: StandaloneSnapshot) {
+  async render(
+    input: StandaloneSnapshot,
+    images: ReadonlyMap<string, Buffer> = new Map(),
+  ) {
     const s = standaloneSnapshotSchema.parse(input);
-    const body = resolveDocumentBody(s);
-    const letterhead = await readFile(
-      path.join(process.cwd(), "branding/membretes/MEMBRETA_CARTA_AT.png"),
-    );
+    const { id: letterheadId, content: body } = splitLetterhead(s.body);
+    const lines = documentLines(body).map((block) => {
+      if (typeof block !== "string")
+        return {
+          ...block,
+          cells: block.cells.map((cell) => resolveDocumentBody(s, cell)),
+        };
+      const ref = referencedImage(block);
+      if (!ref) return resolveDocumentBody(s, block);
+      const bytes = images.get(ref);
+      if (!bytes)
+        throw Error("Imagen no disponible en la biblioteca de este estudio.");
+      return { kind: "image" as const, bytes };
+    });
+    const letterhead = letterheadId
+      ? images.get(letterheadId)
+      : await readFile(
+          path.join(process.cwd(), "branding/membretes/MEMBRETA_CARTA_AT.png"),
+        );
+    if (!letterhead)
+      throw Error(
+        "Imagen de membrete no disponible en la biblioteca del estudio.",
+      );
     const content = (
       <Document title={s.title} author={s.organization.name} language="es-MX">
         <Page
@@ -62,7 +86,7 @@ export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> 
         >
           <PdfImage
             fixed
-            src={{ data: letterhead, format: "png" }}
+            src={{ data: letterhead, format: letterheadId ? "jpg" : "png" }}
             style={{
               position: "absolute",
               top: 0,
@@ -102,8 +126,45 @@ export class StandaloneRenderer implements DocumentRenderer<StandaloneSnapshot> 
               )}
             </View>
           )}
-          {body.split("\n").map((line, index) =>
-            line.trim() === "[[salto]]" ? (
+          {lines.map((line, index) =>
+            typeof line !== "string" && line.kind === "image" ? (
+              <View key={index} wrap={false} style={{ marginVertical: 8 }}>
+                <PdfImage
+                  src={{ data: line.bytes, format: "jpg" }}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: 290,
+                    objectFit: "contain",
+                    objectPosition: "left",
+                  }}
+                />
+              </View>
+            ) : typeof line !== "string" ? (
+              <View
+                key={index}
+                wrap={line.cells.some((c) => c.length > 200)}
+                minPresenceAhead={line.header ? 26 : 0}
+                style={{
+                  flexDirection: "row",
+                  backgroundColor: line.header ? "#e6eee9" : "#ffffff",
+                  borderBottom: "0.5pt solid #b5c2bb",
+                }}
+              >
+                {line.cells.map((cell, column) => (
+                  <Text
+                    key={column}
+                    style={{
+                      width: 100 / line.cells.length + "%",
+                      padding: 4,
+                      fontSize: 9,
+                      fontWeight: line.header ? 600 : 400,
+                    }}
+                  >
+                    {cell || " "}
+                  </Text>
+                ))}
+              </View>
+            ) : line.trim() === "[[salto]]" ? (
               <View key={index} break />
             ) : line.startsWith("## ") ? (
               <Text

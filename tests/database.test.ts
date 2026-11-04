@@ -24,7 +24,7 @@ async function asUser(user: string) {
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(
-    `create role authenticated noinherit; create role anon noinherit; create schema storage; create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]); create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text references storage.buckets(id),name text,unique(bucket_id,name)); alter table storage.objects enable row level security; grant usage on schema storage to authenticated; grant select,insert,update,delete on storage.objects to authenticated; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to authenticated; grant execute on function auth.uid() to authenticated; insert into auth.users values('${owner}'),('${other}'),('${reader}');`,
+    `${await readFile("tests/fixtures/pg-bootstrap.sql","utf8")} insert into auth.users values('${owner}'),('${other}'),('${reader}');`,
   );
   // Reproduce las concesiones explícitas del entorno Supabase real.
   await db.exec(
@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(19);
+  expect(rows).toHaveLength(37);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -485,7 +485,7 @@ it("otro estudio no puede usar cliente ajeno aunque conozca su UUID", async () =
   ).rejects.toThrow("Cliente no disponible");
 });
 
-async function issuedFixture() {
+async function issuedFixture(costs?:{unitCost:number;hourlyCost:number}) {
   const { line } = await commercialFixture();
   const lines = (
     await db.query<{ id: string }>(
@@ -500,7 +500,7 @@ async function issuedFixture() {
       description: "Alcance A",
       quantity: "1",
       unit: "fixed",
-      unit_price_cents: 2000000,
+      unit_price_cents: 2000000,...(costs&&{unit_cost_cents:costs.unitCost}),
       discount_rate: "0",
     },
     {
@@ -515,7 +515,7 @@ async function issuedFixture() {
   ];
   const id = await draft(items, null, 0, {
     ...quoteHeader(),
-    apply_vat: false,
+    apply_vat: false,...(costs&&{hourly_cost_cents:costs.hourlyCost}),
   });
   const version = (
     await db.query<{ version: number }>(
@@ -1881,4 +1881,1149 @@ it("RPC de preparación rechaza lector, estudio ajeno y más de cinco imágenes 
       ])
     ).rows,
   ).toHaveLength(0);
+});
+
+it("separa cobros parciales, anticipos, costo y fondos de obra con aislamiento", async () => {
+  await asUser(owner);
+  const service = crypto.randomUUID();
+  const managed = crypto.randomUUID();
+  const create = (id:string, area:string, custody:boolean) => db.query(
+    "insert into finance_cases(id,organization_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,'Estudio de suelos',$3,$4,1200000,960000)",
+    [id,org,area,custody]);
+  await create(service,"service",false);
+  await create(managed,"construction",true);
+  await expect(create(crypto.randomUUID(),"architecture",true)).rejects.toThrow();
+  const enter = (id:string,target:string,direction:string,amount:number,advance=false) => db.query(
+    "insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on,advance) values($1,$2,$3,$4,$5,current_date-1,$6)",
+    [id,org,target,direction,amount,advance]);
+  const first=crypto.randomUUID();
+  await enter(first,service,"in",300000,true);
+  await expect(enter(first,service,"in",300000,true)).rejects.toThrow();
+  await enter(crypto.randomUUID(),service,"in",200000);
+  await enter(crypto.randomUUID(),service,"out",160000);
+  await expect(enter(crypto.randomUUID(),service,"out",800001)).rejects.toThrow(/saldo/);
+  const balance = (id:string) => db.query("select receivable_cents::int,payable_cents::int,expected_margin_cents::int,cash_cents::int from finance_case_balances where id=$1",[id]);
+  expect((await balance(service)).rows[0]).toEqual({receivable_cents:700000,payable_cents:800000,expected_margin_cents:240000,cash_cents:340000});
+  await enter(crypto.randomUUID(),managed,"in",100000,true);
+  expect((await balance(managed)).rows[0]).toMatchObject({expected_margin_cents:null,cash_cents:100000});
+  const totals = await db.query("select area,managed,received_cents,cash_cents,expected_margin_cents from finance_area_indicators where organization_id=$1 and source='operations'",[org]);
+  expect(totals.rows).toEqual(expect.arrayContaining([
+    {area:"service",managed:false,received_cents:"500000",cash_cents:"340000",expected_margin_cents:"240000"},
+    {area:"construction",managed:true,received_cents:"100000",cash_cents:"100000",expected_margin_cents:null}
+  ]));
+  for (const user of [other,reader]) {
+    await asUser(user);
+    expect((await balance(service)).rows).toHaveLength(0);
+    await expect(enter(crypto.randomUUID(),service,"in",1)).rejects.toThrow();
+  }
+  await asUser(owner);
+});
+
+it("calcula por obra y custodia, sin mezclar obras ni organizaciones", async () => {
+ await asUser(owner);
+ const work=crypto.randomUUID(),otherWork=crypto.randomUUID();
+ for(const id of [work,otherWork]) await db.query("insert into works(id,organization_id,name) values($1,$2,'Obra de prueba')",[id,org]);
+ for(const [target,managed,amount] of [[work,true,7000],[work,false,3000],[otherWork,true,1000]] as const){
+ const id=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,managed,work_id,revenue_cents,cost_cents) values($1,$2,'Acuerdo','construction',$3,$4,$5,100)",[id,org,managed,target,amount]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,paid_on,amount_cents) values($1,$2,$3,'in',current_date-1,$4)",[crypto.randomUUID(),org,id,amount]);
+ }
+ const balances=()=>db.query("select managed,cash_cents,expected_margin_cents from work_balances where work_id=$1 order by managed",[work]);
+ expect((await balances()).rows).toEqual([{managed:false,cash_cents:"3000",expected_margin_cents:"2900"},{managed:true,cash_cents:"7000",expected_margin_cents:null}]);
+ await asUser(other); expect((await balances()).rows).toHaveLength(0);
+ await asUser(owner);
+});
+
+it("un reverso conserva el importe y el actor y libera el saldo una sola vez",async()=>{
+ await asUser(owner);
+ const id=crypto.randomUUID(),entry=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values($1,$2,'Costo independiente','service',0,12345)",[id,org]);
+ const pay=(key:string)=>db.query("insert into finance_entries(id,organization_id,case_id,direction,paid_on,amount_cents) values($1,$2,$3,'out',current_date-1,12345)",[key,org,id]);
+ await pay(entry);
+ const reverse=()=>db.query("update finance_entries set reversal_reason='Referencia equivocada' where id=$1 returning id",[entry]);
+ await asUser(other);expect((await reverse()).rows).toHaveLength(0);
+ await asUser(owner);await reverse();await expect(reverse()).rejects.toThrow();
+ await expect(db.query("update finance_entries set amount_cents=0 where id=$1",[entry])).rejects.toThrow();
+ expect((await db.query("select amount_cents::int,reversed_by from finance_entries where id=$1",[entry])).rows[0]).toEqual({amount_cents:12345,reversed_by:owner});
+ expect((await db.query("select payable_cents::int,paid_cents::int from finance_case_balances where id=$1",[id])).rows[0]).toEqual({payable_cents:12345,paid_cents:0});
+ await pay(crypto.randomUUID());
+});
+
+it("presupuesta cantidades fraccionarias redondeadas por partida sin registrar pagos",async()=>{
+ await asUser(owner);const work=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,name) values($1,$2,'Obra presupuestada')",[work,org]);
+ const add=()=>db.query("insert into work_budget_items(id,organization_id,work_id,chapter,description,unit,quantity,unit_price_cents) values($1,$2,$3,'Materiales','Acabado','m2',1.125,100)",[crypto.randomUUID(),org,work]);
+ await add();await add();
+ const sum=()=>db.query("select base_cents from work_budget_totals where work_id=$1",[work]);
+ expect((await sum()).rows).toEqual([{base_cents:"226"}]);
+ expect((await db.query("select * from work_balances where work_id=$1",[work])).rows).toHaveLength(0);
+ await asUser(reader);expect((await sum()).rows).toHaveLength(0);await expect(add()).rejects.toThrow();
+ await asUser(owner);
+});
+
+it("facturar deja intactos caja y cartera, y el folio identifica duplicados dentro del estudio", async()=>{
+ await asUser(owner);const id=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values($1,$2,'Honorarios','architecture',10000,0)",[id,org]);
+ const add=(ref:string)=>db.query("insert into case_invoices(id,organization_id,case_id,reference,issued_on,amount_cents) values($1,$2,$3,$4,current_date,4000)",[crypto.randomUUID(),org,id,ref]);
+ await add("A-25");await expect(add(" a-25 ")).rejects.toThrow();
+ const total=()=>db.query("select invoiced_cents from case_invoice_totals where case_id=$1",[id]);
+ expect((await total()).rows).toEqual([{invoiced_cents:"4000"}]);
+ expect((await db.query("select received_cents::int,receivable_cents::int from finance_case_balances where id=$1",[id])).rows).toEqual([{received_cents:0,receivable_cents:10000}]);
+ await asUser(other);expect((await total()).rows).toHaveLength(0);await expect(add("B-25")).rejects.toThrow();
+ await asUser(owner);
+});
+
+it("vincula subcontratistas del propio estudio y conserva el nombre en el acuerdo",async()=>{
+ await asUser(owner);const supplier=crypto.randomUUID();
+ await db.query("insert into suppliers(id,organization_id,name,kind) values($1,$2,'Topografía Norte','subcontractor')",[supplier,org]);
+ const add=(organization:string)=>db.query("insert into finance_cases(id,organization_id,name,area,cost_cents,revenue_cents,supplier_id) values($1,$2,'Levantamiento','service',12300,0,$3) returning provider",[crypto.randomUUID(),organization,supplier]);
+ expect((await add(org)).rows).toEqual([{provider:"Topografía Norte"}]);
+ await asUser(other);await expect(add(otherOrg)).rejects.toThrow();expect((await db.query('select id from suppliers where id=$1',[supplier])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("las comunicaciones y la bitácora usan su expediente, categorías y permisos",async()=>{
+ await asUser(owner);const work=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,name) values($1,$2,'Visita de campo')",[work,org]);
+ const add=(kind:string,c:string|null,w:string|null)=>db.query("insert into journal_entries(id,organization_id,client_id,work_id,kind,occurred_on,body) values($1,$2,$3,$4,$5,current_date,'Acuerdos registrados')",[crypto.randomUUID(),org,c,w,kind]);
+ await add("call",client,null);await add("incident",null,work);
+ await expect(add("call",null,work)).rejects.toThrow();await expect(add("visit",client,work)).rejects.toThrow();
+ await asUser(other);expect((await db.query("select * from journal_entries where organization_id=$1",[org])).rows).toHaveLength(0);
+ await expect(add("call",client,null)).rejects.toThrow();await asUser(owner);
+});
+
+it("el entregable conserva revisiones ordenadas y se cierra al aprobar",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Proyecto de revisiones',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=crypto.randomUUID();
+ await db.query("insert into project_deliverables(id,organization_id,project_id,stage,name,due_on,assignee) values($1,$2,$3,'Ejecutivo','Plano de cimentación',current_date,$4)",[id,org,project,owner]);
+ const add=(version:number,state:string)=>db.query("insert into deliverable_revisions(id,organization_id,project_id,deliverable_id,revision,state,notes) values($1,$2,$3,$4,$5,$6,'Comentarios del plano')",[crypto.randomUUID(),org,project,id,version,state]);
+ await expect(add(1,"approved")).rejects.toThrow();
+ await add(1,"review");await expect(add(1,"review")).rejects.toThrow();
+ await add(2,"changes");await add(3,"review");await add(4,"approved");await expect(add(5,"review")).rejects.toThrow();
+ await asUser(reader);expect((await db.query("select state,revision from deliverable_status where id=$1",[id])).rows).toEqual([{state:"approved",revision:4}]);await expect(add(5,"review")).rejects.toThrow();
+ await asUser(other);expect((await db.query("select * from deliverable_revisions where deliverable_id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("el calendario deriva cobros efectivos pendientes, respeta permisos y retira el aviso al liquidar",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Proyecto con vencimiento',current_date,4000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const dues=()=>db.query<{id:string}>("select id from agenda_events where organization_id=$1 and project_id=$2 and kind='collection'",[org,project]);
+ const schedule=(await dues()).rows[0].id;
+ await asUser(reader);expect((await dues()).rows).toHaveLength(0);
+ await asUser(owner);await db.query("select public.record_payment($1,$2,1500,current_date-1,'Parcial',$3)",[org,schedule,crypto.randomUUID()]);expect((await dues()).rows).toHaveLength(1);
+ await db.query("select public.record_payment($1,$2,2500,current_date-1,'Liquidación',$3)",[org,schedule,crypto.randomUUID()]);expect((await dues()).rows).toHaveLength(0);
+});
+
+it("estima el avance parcial con redondeo acumulado y protege la partida de reintentos y sobreestimación",async()=>{
+ await asUser(owner);
+ const work=crypto.randomUUID(),item=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,name) values($1,$2,'Estimación de prueba')",[work,org]);
+ await db.query("insert into work_budget_items(id,organization_id,work_id,chapter,description,unit,quantity,unit_price_cents) values($1,$2,$3,'Acabados','Pintura','m2',1,3)",[item,org,work]);
+ const add=(id:string,q:string)=>db.query("insert into work_estimates(id,organization_id,work_id,item_id,measured_on,quantity) values($1,$2,$3,$4,current_date,$5) on conflict do nothing",[id,org,work,item,q]);
+ const first=crypto.randomUUID();await add(first,"0.5");await add(first,"0.5");
+ const progress=()=>db.query("select budget,earned,outstanding from work_item_progress where id=$1",[item]);
+ expect((await progress()).rows).toEqual([{budget:"3",earned:"2",outstanding:"1"}]);
+ await asUser(other);expect((await progress()).rows).toHaveLength(0);await asUser(owner);
+ await expect(add(crypto.randomUUID(),"0.6")).rejects.toThrow();
+ await add(crypto.randomUUID(),"0.5");
+ expect((await db.query("select count(*)::int entries,sum(amount_cents)::int total from work_estimates where item_id=$1",[item])).rows).toEqual([{entries:2,total:3}]);
+ expect((await db.query("select * from work_balances where work_id=$1",[work])).rows).toHaveLength(0);
+ await asUser(other);expect((await db.query("select * from work_estimates where item_id=$1",[item])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("asocia recursos a la partida y rechaza consumos de otra obra u organización",async()=>{
+ await asUser(owner);
+ const work=crypto.randomUUID(),second=crypto.randomUUID(),item=crypto.randomUUID();
+ for(const id of [work,second])await db.query("insert into works(id,organization_id,name) values($1,$2,'Control de consumos')",[id,org]);
+ await db.query("insert into work_budget_items(id,organization_id,work_id,chapter,description,unit,quantity,unit_price_cents) values($1,$2,$3,'Campo','Levantamiento','jornada',1,100)",[item,org,work]);
+ const add=(w:string,category:string)=>db.query("insert into work_resource_usage(id,organization_id,work_id,item_id,category,description,used_on,quantity,unit) values($1,$2,$3,$4,$5,'Equipo en campo',current_date,2.5,'horas')",[crypto.randomUUID(),org,w,item,category]);
+ for(const t of ["labor","equipment","material"])await add(work,t);
+ await expect(add(second,"labor")).rejects.toThrow();await expect(add(work,"financial")).rejects.toThrow();
+ expect((await db.query("select estimated_quantity::int from work_budget_items where id=$1",[item])).rows).toEqual([{estimated_quantity:0}]);
+ await asUser(other);expect((await db.query("select * from work_resource_usage where item_id=$1",[item])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("completar un pendiente semanal genera una única ocurrencia y conserva prioridad y responsable",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Agenda semanal',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body,due_on,assignee,priority,repeat_days) values($1,$2,'task','Visita semanal','2026-12-29',$3,'high',7) returning id",[org,project,owner])).rows[0].id;
+ const toggle=(done:boolean)=>db.query("update project_notes set completed_at=case when $2 then now() else null end where id=$1",[id,done]);
+ await toggle(true);await toggle(false);await toggle(true);
+ const rows=await db.query("select due_on::text due,priority,assignee,repeat_days from project_notes_context where project_id=$1 and completed_at is null",[project]);
+ expect(rows.rows).toEqual([{due:"2027-01-05",priority:"high",assignee:owner,repeat_days:7}]);
+ await expect(db.query("update project_notes set assignee=$2 where id=$1",[id,other])).rejects.toThrow();
+ await expect(db.query("update project_notes set due_on=null where id=$1",[id])).rejects.toThrow();
+});
+
+it("publica comprobantes solo tras cargar el objeto y limita acceso, sustitución y borrado",async()=>{
+ await asUser(owner);
+ const account=crypto.randomUUID(),entry=crypto.randomUUID(),receipt=crypto.randomUUID(),hash="a".repeat(64),path=[org,entry,hash].join("/");
+ await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values($1,$2,'Reembolso','service',100,0)",[account,org]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',100,current_date-1)",[entry,org,account]);
+ const put=(name:string)=>db.query("insert into storage.objects(bucket_id,name) values('finance-receipts',$1)",[name]);
+ await expect(put(path)).rejects.toThrow();
+ await db.query("insert into finance_receipts(id,organization_id,entry_id,filename,mime,sha256,size_bytes) values($1,$2,$3,'Nota.pdf','application/pdf',$4,10)",[receipt,org,entry,hash]);
+ const list=()=>db.query("select id from available_receipts where entry_id=$1",[entry]);expect((await list()).rows).toHaveLength(0);
+ await asUser(other);await expect(put(path)).rejects.toThrow();await asUser(owner);await put(path);
+ expect((await list()).rows).toEqual([{id:receipt}]);
+ expect((await db.query("delete from storage.objects where name=$1 returning name",[path])).rows).toHaveLength(0);
+ expect((await db.query("update storage.objects set name=name where name=$1 returning name",[path])).rows).toHaveLength(0);
+ for(const user of [reader,other]){await asUser(user);expect((await list()).rows).toHaveLength(0);expect((await db.query("select name from storage.objects where name=$1",[path])).rows).toHaveLength(0);}
+ await asUser(owner);
+});
+
+it("el contrato firmado conserva el cliente del proyecto y no duplica sus cobros",async()=>{
+ await asUser(owner);
+ const proj=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Proyecto contratado',current_date,5000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const another=(await db.query<{id:string}>("insert into clients(organization_id,name) values($1,'Cliente distinto') returning id",[org])).rows[0].id;
+ const create=(customer:string,reference:string)=>db.query("insert into contracts(id,organization_id,client_id,project_id,reference,title,signed_on,scope) values($1,$2,$3,$4,$5,'Servicios técnicos',current_date,'Planos ejecutivos')",[crypto.randomUUID(),org,customer,proj,reference]);
+ await create(client,"CT-A");await expect(create(client," ct-a ")).rejects.toThrow();await expect(create(another,"CT-B")).rejects.toThrow();
+ expect((await db.query("select collected_cents::int,balance_cents::int from project_financial_summary where project_id=$1",[proj])).rows).toEqual([{collected_cents:0,balance_cents:5000}]);
+ for(const user of [reader,other]){await asUser(user);expect((await db.query("select id from contracts where project_id=$1",[proj])).rows).toHaveLength(0);await expect(create(client,"CT-C")).rejects.toThrow();}
+ await asUser(owner);
+});
+
+it("el cliente solo consulta entregas aprobadas y publicadas hasta que se revoca su acceso",async()=>{
+ const external=crypto.randomUUID();await db.exec("reset role");await db.query("insert into auth.users(id) values($1)",[external]);await asUser(owner);
+ const project=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Portal privado',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const delivery=crypto.randomUUID();
+ await db.query("insert into project_deliverables(id,organization_id,project_id,stage,name,due_on) values($1,$2,$3,'Planos','Entrega autorizada',current_date)",[delivery,org,project]);
+ const publish=()=>db.query("insert into portal_deliveries(id,organization_id,project_id,deliverable_id,resource_url) values($1,$2,$3,$4,'https://example.test/plano')",[crypto.randomUUID(),org,project,delivery]);
+ await expect(publish()).rejects.toThrow();for(const [rev,state] of [[1,"review"],[2,"approved"]])await db.query("insert into deliverable_revisions(id,organization_id,project_id,deliverable_id,revision,state,notes) values($1,$2,$3,$4,$5,$6,'Nota interna')",[crypto.randomUUID(),org,project,delivery,rev,state]);await publish();
+ const list=()=>db.query("select title from my_portal_deliveries");await asUser(external);expect((await list()).rows).toHaveLength(0);await asUser(owner);
+ await db.query("insert into client_portal_access(organization_id,client_id,user_id) values($1,$2,$3)",[org,client,external]);await asUser(external);expect((await list()).rows).toEqual([{title:"Entrega autorizada"}]);expect((await db.query("select * from deliverable_revisions where deliverable_id=$1",[delivery])).rows).toHaveLength(0);
+ await asUser(owner);await db.query("update portal_deliveries set visible=false where deliverable_id=$1",[delivery]);await asUser(external);expect((await list()).rows).toHaveLength(0);
+ await asUser(owner);await db.query("update portal_deliveries set visible=true where deliverable_id=$1",[delivery]);await db.query("update client_portal_access set enabled=false where user_id=$1",[external]);await asUser(external);expect((await list()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("el colaborador registra tiempo propio por tarea, con corrección versionada y aislamiento",async()=>{
+ const worker=crypto.randomUUID();await db.exec("reset role");await db.query("insert into auth.users(id) values($1)",[worker]);await db.query("insert into memberships(organization_id,user_id,role) values($1,$2,'collaborator')",[org,worker]);await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Control de tiempo',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const task=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,body) values($1,$2,'Revisión') returning id",[org,project])).rows[0].id;
+ const add=(id:string)=>db.query("insert into project_time(id,organization_id,project_id,task_id,worked_on,minutes,description) values($1,$2,$3,$4,current_date,45,'Revisión de planos')",[id,org,project,task]);
+ const managerEntry=crypto.randomUUID(),entry=crypto.randomUUID();await add(managerEntry);await asUser(worker);await add(entry);
+ expect((await db.query("select id from project_time where project_id=$1",[project])).rows).toEqual([{id:entry}]);
+ await db.query("update project_time set minutes=60 where id=$1 and version=1",[entry]);
+ expect((await db.query("update project_time set minutes=70 where id=$1 and version=1 returning id",[entry])).rows).toHaveLength(0);
+ expect((await db.query("select (previous_values->>'minutes')::int minutes,actor_id from time_corrections where time_id=$1",[entry])).rows).toEqual([{minutes:45,actor_id:worker}]);
+ await asUser(owner);expect((await db.query("select sum(minutes)::int minutes from project_time where project_id=$1",[project])).rows).toEqual([{minutes:105}]);
+ await asUser(reader);await expect(add(crypto.randomUUID())).rejects.toThrow();expect((await db.query("select * from time_corrections where time_id=$1",[entry])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("el reparto compromete un único costo, limita los porcentajes y concilia pagos parciales",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Reparto por paquete',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const pack=crypto.randomUUID();await db.exec("reset role");
+ await db.query("insert into project_service_packages(id,organization_id,project_id,business_line_id,name,scope) select $1,$2,$3,id,'Visualización','[]'::jsonb from business_lines where organization_id=$2 limit 1",[pack,org,project]);
+ await db.query("insert into package_financials(organization_id,package_id,contracted_net_cents) values($1,$2,10001)",[org,pack]);await asUser(owner);
+ const fee=crypto.randomUUID();const add=(id:string,bps:number)=>db.query("insert into collaborator_fees(id,organization_id,project_id,package_id,member_id,label,rate_bps) values($1,$2,$3,$4,$5,'Modelado', $6) on conflict do nothing",[id,org,project,pack,owner,bps]);
+ await add(fee,5000);await add(fee,5000);await expect(add(crypto.randomUUID(),5001)).rejects.toThrow();
+ expect((await db.query("select allocated_bps from package_financials where package_id=$1",[pack])).rows).toEqual([{allocated_bps:5000}]);
+ await add(crypto.randomUUID(),5000);expect((await db.query("select sum(cost_cents)::int total from finance_cases where package_id=$1",[pack])).rows).toEqual([{total:10001}]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'out',2000,current_date-1)",[crypto.randomUUID(),org,fee]);
+ expect((await db.query("select cost_cents::int,paid_cents::int,payable_cents::int from finance_case_balances where id=$1",[fee])).rows).toEqual([{cost_cents:5001,paid_cents:2000,payable_cents:3001}]);
+ await asUser(reader);expect((await db.query("select * from collaborator_fees where id=$1",[fee])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("clasifica honorarios propios y de obra antes de conciliar los pagos del colaborador", async () => {
+  await asUser(owner);
+  const project = (await db.query<{id:string}>("select create_project_record($1,$2,'Servicios y ejecución',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+  const add = (id:string, area:string, managed:boolean) => db.query(
+    "insert into collaborator_fees(id,organization_id,project_id,member_id,label,fixed_cents,area,managed) values($1,$2,$3,$4,'Honorario',12000,$5,$6)",
+    [id,org,project,owner,area,managed],
+  );
+  for (const [area, managed, amount] of [["service",false,900],["construction",true,700],["construction",false,300]] as const) {
+    const id = crypto.randomUUID();
+    await add(id,area,managed);
+    await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'out',$4,current_date)",[crypto.randomUUID(),org,id,amount]);
+    expect((await db.query("select area,managed,payable_cents::int outstanding from finance_case_balances where id=$1",[id])).rows).toEqual([{area,managed,outstanding:12000-amount}]);
+  }
+  expect((await db.query("select paid,managed_paid from project_package_execution($1,$2)",[org,project])).rows).toEqual([{paid:"1200",managed_paid:"700"}]);
+  const invalid = crypto.randomUUID();
+  await expect(add(invalid,"service",true)).rejects.toThrow();
+  expect((await db.query("select id from finance_cases where id=$1",[invalid])).rows).toHaveLength(0);
+});
+
+it("el reporte por periodo separa cobros sin atribuir y concilia pagos y horas del paquete",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Productividad',current_date,10000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const pack=crypto.randomUUID();await db.exec("reset role");
+ await db.query("insert into project_service_packages(id,organization_id,project_id,business_line_id,name,scope) select $1,$2,$3,id,'Paquete','[]'::jsonb from business_lines where organization_id=$2 limit 1",[pack,org,project]);await asUser(owner);
+ const account=crypto.randomUUID();await db.query("insert into finance_cases(id,organization_id,project_id,package_id,name,area,revenue_cents,cost_cents) values($1,$2,$3,$4,'Extra','architecture',5000,1500)",[account,org,project,pack]);
+ await db.query("insert into project_time(id,organization_id,project_id,package_id,worked_on,minutes,description) values($1,$2,$3,$4,current_date-1,120,'Entrega')",[crypto.randomUUID(),org,project,pack]);
+ for(const [direction,amount] of [["in",5000],["out",1500]])await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,$4,$5,current_date-1)",[crypto.randomUUID(),org,account,direction,amount]);
+ await db.query("select record_payment($1,id,2000,current_date-1,'Parcial',$3) from payment_schedules where organization_id=$1 and project_id=$2",[org,project,crypto.randomUUID()]);
+ const report=(days:number)=>db.query("select line_id is null as unattributed,received,paid,minutes,net_hourly from cash_productivity($1,current_date-$3::integer,current_date,$2,$4)",[org,client,days,project]);
+ expect((await report(1)).rows).toEqual([{unattributed:false,received:"5000",paid:"1500",minutes:"120",net_hourly:"1750"},{unattributed:true,received:"2000",paid:"0",minutes:"0",net_hourly:null}]);
+ expect((await report(0)).rows).toHaveLength(0);
+ const packages=()=>db.query("select package_id,received,paid,minutes from project_package_execution($1,$2)",[org,project]);
+ expect((await packages()).rows).toEqual([{package_id:pack,received:"5000",paid:"1500",minutes:"120"},{package_id:null,received:"2000",paid:"0",minutes:"0"}]);
+ await asUser(reader);expect((await packages()).rows).toHaveLength(0);await asUser(owner);
+ await asUser(reader);expect((await report(1)).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("aceptar la cotización complementaria añade paquetes y planes solo al proyecto original",async()=>{
+ const {id,version,prepared}=await issuedFixture();
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto con extra',current_date,5000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const request=crypto.randomUUID();await db.query("insert into scope_changes(id,organization_id,client_id,project_id,description,days_impact) values($1,$2,$3,$4,'Ampliación de alcance',3)",[request,org,client,project]);
+ await db.query("update scope_changes set quote_id=$1 where id=$2",[id,request]);
+ await db.query("select mark_quote_sent($1,$2,$3,$4)",[org,id,version,prepared.id]);
+ const ver=(await db.query<{version:number}>("select version from quotes where id=$1",[id])).rows[0].version;
+ const accept=()=>db.query("select accept_quote($1,$2,$3,current_date,current_date) id",[org,id,ver]);
+ expect((await accept()).rows).toEqual([{id:project}]);await expect(accept()).rejects.toThrow();
+ expect((await db.query("select count(*)::int packages from project_service_packages where project_id=$1 and scope_change_id=$2",[project,request])).rows).toEqual([{packages:2}]);
+ expect((await db.query("select amount_cents::int amount from payment_schedules where project_id=$1 and scope_change_id is null",[project])).rows).toEqual([{amount:5000}]);
+ expect((await db.query("select sum(amount_cents)=(select total_cents from quotes where id=$2) reconciles from payment_schedules where scope_change_id=$1",[request,id])).rows).toEqual([{reconciles:true}]);
+ expect((await db.query("select collected_cents::int collected from project_financial_summary where project_id=$1",[project])).rows).toEqual([{collected:0}]);
+ expect((await db.query("select id from projects where quote_version_id=$1",[prepared.id])).rows).toHaveLength(0);
+ const plan=(await db.query<{id:string;amount:number}>("select id,amount_cents::int amount from payment_schedules where scope_change_id=$1 order by id limit 1",[request])).rows[0];
+ const total=(await db.query<{total:number}>("select total_cents::int total from quotes where id=$1",[id])).rows[0].total;
+ const statement=()=>db.query("select scheduled::int,received::int,outstanding::int,cancelled::int from scope_change_statement where id=$1",[request]);
+ await db.query("select record_payment($1,id,100,current_date,'Pago base',$3) from payment_schedules where project_id=$2 and scope_change_id is null",[org,project,crypto.randomUUID()]);
+ const payment=(await db.query<{id:string}>("select record_payment($1,$2,275,current_date,'Cobro de extra',$3) id",[org,plan.id,crypto.randomUUID()])).rows[0].id;
+ expect((await statement()).rows).toEqual([{scheduled:total,received:275,outstanding:total-275,cancelled:0}]);
+ await db.query("select reverse_payment($1,$2,1,'Corrección de referencia')",[org,payment]);
+ await db.query("select replan_schedule($1,$2,$3,current_date,$4,$4,600,current_date+10)",[org,plan.id,crypto.randomUUID(),plan.amount]);
+ await db.query("select cancel_schedule_balance($1,id,$3,due_date,600,600,'Descuento autorizado') from payment_schedules where scope_change_id=$2 and due_date=current_date+10",[org,request,crypto.randomUUID()]);
+ expect((await statement()).rows).toEqual([{scheduled:total-600,received:0,outstanding:total-600,cancelled:600}]);
+ const details=()=>db.query("select change_description,sum(balance_cents)::int balance from project_schedule_details where project_id=$1 and scope_change_id=$2 group by change_description",[project,request]);
+ expect((await details()).rows).toEqual([{change_description:"Ampliación de alcance",balance:total-600}]);
+ const options=(await db.query<{options:{id:string;name:string}[]}>("select options from schedule_package_options($1,array[$2::uuid])",[org,plan.id])).rows[0].options;
+ expect(options).toHaveLength(2);
+ const pack=options[0].id, token=crypto.randomUUID();
+ const collect=(pkg:string,key:string)=>db.query<{id:string}>("select record_package_payment($1,$2,125,current_date,'Atribuido',$3,$4) id",[org,plan.id,key,pkg]);
+ const assigned=(await collect(pack,token)).rows[0].id;
+ expect((await collect(pack,token)).rows[0].id).toBe(assigned);
+ await expect(collect(options[1].id,token)).rejects.toThrow();
+ await expect(db.query("select record_package_payment($1,id,125,current_date,'Alcance ajeno',$3,$4) from payment_schedules where project_id=$2 and scope_change_id is null",[org,project,crypto.randomUUID(),pack])).rejects.toThrow();
+ expect((await db.query("select received from cash_productivity($1,null,null,null,$2,null,$3)",[org,project,pack])).rows).toEqual([{received:"125"}]);
+ expect((await db.query("select received from project_package_execution($1,$2) where package_id=$3",[org,project,pack])).rows).toEqual([{received:"125"}]);
+ expect((await db.query("select area,received from area_cash_report($1,null,null,null,$2,null,$3)",[org,project,pack])).rows).toEqual([{area:"project_plan",received:"125"}]);
+ expect((await db.query("select (cash_ledger_export($1,null,null,null,$2,null,$3)->0->>'id') id",[org,project,pack])).rows).toEqual([{id:assigned}]);
+ const history=(await db.query("select package_name from project_payment_history where id=$1",[assigned])).rows;
+ expect(history).toEqual([{package_name:options[0].name}]);
+ const lineId=(await db.query<{id:string}>("select business_line_id id from project_service_packages where id=$1",[pack])).rows[0].id;
+ expect((await db.query("select received from area_cash_report($1,current_date,current_date,null,$2,null,null,$3)",[org,project,lineId])).rows).toEqual([{received:"125"}]);
+ const ledger=(await db.query<{rows:{package_name:string;line_name:string}[]}>("select cash_ledger_export($1,null,null,null,$2,null,null,$3) rows",[org,project,lineId])).rows[0].rows;
+ expect(ledger).toHaveLength(1);expect(ledger[0].package_name).toBe(options[0].name);expect(ledger[0].line_name).toBeTruthy();
+ expect((await statement()).rows).toEqual([{scheduled:total-600,received:125,outstanding:total-725,cancelled:600}]);
+ await db.query("select reverse_payment($1,$2,1,'Ajuste documentado')",[org,assigned]);
+ expect((await db.query("select received from project_package_execution($1,$2) where package_id=$3",[org,project,pack])).rows).toEqual([{received:"0"}]);
+ expect((await db.query("select cash_ledger_export($1,null,null,null,$2,null,$3)->0->>'reversed' reversed",[org,project,pack])).rows).toEqual([{reversed:"true"}]);
+ await asUser(reader);expect((await details()).rows).toHaveLength(0);await asUser(owner);
+ await asUser(reader);expect((await statement()).rows).toHaveLength(0);await asUser(owner);
+ await asUser(other);expect((await db.query("select * from scope_changes where id=$1",[request])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("permite consultar y cobrar una obligación posterior a las primeras 500 del expediente",async()=>{
+  await asUser(owner);
+  const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto de larga duración',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+  await db.exec("reset role");
+  await db.query("insert into payment_schedules(organization_id,project_id,label,amount_cents,due_date) select $1,$2,'Parcialidad ' || n,100,current_date+n from generate_series(1,505) n",[org,project]);
+  await asUser(owner);
+  const tail=await db.query<{id:string;label:string}>("select id,label from project_schedule_details where organization_id=$1 and project_id=$2 order by due_date,id offset 480 limit 30",[org,project]);
+  expect(tail.rows).toHaveLength(25);
+  const last=tail.rows[24];
+  expect(last.label).toBe("Parcialidad 505");
+  await db.query("select record_payment($1,$2,35,current_date,'Cobro parcial',$3)",[org,last.id,crypto.randomUUID()]);
+  expect((await db.query("select balance_cents::int remaining from project_schedule_details where id=$1",[last.id])).rows).toEqual([{remaining:65}]);
+});
+
+it("las versiones de plantilla conservan su texto al editar el documento de origen",async()=>{
+ await asUser(owner);const header={title:"Carta técnica",kind:"letter",body:"Para {{cliente.nombre}}",client_id:client,project_id:null,margins:defaultDocumentOptions.margins};
+ const source=(await db.query<{id:string}>("select save_studio_document($1,null,0,$2::jsonb) id",[org,JSON.stringify(header)])).rows[0].id;
+ const publish=(rev:number,v:number)=>db.query("insert into document_templates(id,organization_id,source_id,source_version,name,version) values($1,$2,$3,$4,'Carta base',$5)",[crypto.randomUUID(),org,source,rev,v]);
+ await publish(1,1);await db.query("select save_studio_document($1,$2,1,$3::jsonb)",[org,source,JSON.stringify({...header,body:"Versión revisada para {{cliente.nombre}}"})]);
+ await expect(publish(1,2)).rejects.toThrow();await publish(2,2);await expect(publish(2,2)).rejects.toThrow();
+ expect((await db.query("select body from document_templates where source_id=$1 order by version",[source])).rows).toEqual([{body:header.body},{body:"Versión revisada para {{cliente.nombre}}"}]);
+ expect((await db.query("select version from latest_document_templates where organization_id=$1 and name='Carta base'",[org])).rows).toEqual([{version:2}]);
+ await asUser(other);expect((await db.query("select * from document_templates where source_id=$1",[source])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("el calendario editorial protege la organización, las fechas y las ediciones concurrentes", async () => {
+  await asUser(owner);
+  const id = crypto.randomUUID();
+  const create = (status: string) => db.query("insert into editorial_items(id,organization_id,title,channel,status,portfolio) values($1,$2,'Expediente de entrega','Web',$3,true)", [id,org,status]);
+  await expect(create("scheduled")).rejects.toThrow();
+  await create("idea");
+  const publish = () => db.query("update editorial_items set status='published',publication_on=current_date,url='https://example.org/obra',results='Tres consultas' where id=$1 and version=1 returning version", [id]);
+  expect((await publish()).rows).toEqual([{ version: 2 }]);
+  expect((await publish()).rows).toHaveLength(0);
+  await expect(db.query("update editorial_items set url='javascript:alert(1)' where id=$1",[id])).rejects.toThrow();
+  await asUser(other);
+  expect((await db.query("select id from editorial_items where id=$1",[id])).rows).toHaveLength(0);
+  await asUser(reader);
+  expect((await db.query("update editorial_items set title='Modificado' where id=$1 returning id",[id])).rows).toHaveLength(0);
+  await asUser(owner);
+});
+
+it("cada ejecución conserva su propio avance y solo admite pasos definidos",async()=>{
+ await asUser(owner);
+ const procedure=crypto.randomUUID(), a=crypto.randomUUID(), b=crypto.randomUUID();
+ const create=(steps:string[])=>db.query("insert into studio_procedures(id,organization_id,name,steps) values($1,$2,'Entrega', $3)",[procedure,org,steps]);
+ await expect(create([])).rejects.toThrow();await create(["Revisar planos","Entregar expediente"]);
+ for(const run of [a,b])await db.query("insert into procedure_runs(id,organization_id,procedure_id,name) values($1,$2,$3,'Entrega final')",[run,org,procedure]);
+ const check=(step:number)=>db.query("insert into procedure_checks(organization_id,run_id,step) values($1,$2,$3)",[org,a,step]);
+ await check(1);await expect(check(3)).rejects.toThrow();
+ expect((await db.query("select step from procedure_checks where run_id=$1",[b])).rows).toHaveLength(0);
+ await asUser(reader);await expect(check(2)).rejects.toThrow();
+ await asUser(other);expect((await db.query("select id from procedure_runs where procedure_id=$1",[procedure])).rows).toHaveLength(0);
+ await asUser(owner);await db.query("delete from procedure_checks where run_id=$1 and step=1",[a]);
+ expect((await db.query("select step from procedure_checks where run_id=$1",[a])).rows).toHaveLength(0);
+});
+
+it("la biblioteca preserva adjuntos históricos y busca solo la revisión vigente",async()=>{
+ await asUser(owner);
+ const id=crypto.randomUUID();
+ const add=(version:number,title:string)=>db.query("insert into library_revisions(id,resource_id,organization_id,version,title,tags,filename,attachment) values($1,$2,$3,$4,$5,'BIM','plano.ifc',decode('0102ff','hex'))",[version===1?id:crypto.randomUUID(),id,org,version,title]);
+ await add(1,"Primera familia");await expect(add(3,"Revisión adelantada")).rejects.toThrow();
+ await add(2,"Segunda familia");await expect(add(2,"Edición concurrente")).rejects.toThrow();
+ const search=(term:string)=>db.query("select version from current_library_resources where resource_id=$1 and search_text ilike $2",[id,"%"+term+"%"]);
+ expect((await search("Primera")).rows).toHaveLength(0);expect((await search("bim")).rows).toEqual([{version:2}]);
+ await asUser(reader);expect((await db.query("select encode(attachment,'hex') bytes from library_revisions where id=$1",[id])).rows).toEqual([{bytes:"0102ff"}]);await expect(add(3,"Sin permiso")).rejects.toThrow();
+ await asUser(other);expect((await search("BIM")).rows).toHaveLength(0);expect((await db.query("select attachment from library_revisions where id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("las fases aplicadas conservan su versión aunque administración revise la plantilla",async()=>{
+ await asUser(owner);
+ const templates=(await db.query<{id:string;name:string;phases:string[]}>("select id,name,phases from phase_templates where organization_id=$1 order by name",[org])).rows;
+ const architectural=templates.find(t=>t.name==="Arquitectura")!;
+ expect(architectural.phases).not.toEqual(templates.find(t=>t.name==="Visualización")!.phases);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Prueba de fases',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=crypto.randomUUID();
+ await db.query("insert into project_phase_plans(id,organization_id,project_id,template_id,template_version) values($1,$2,$3,$4,1)",[id,org,project,architectural.id]);
+ await db.query("update phase_templates set phases=array['Diagnóstico','Entrega'] where id=$1",[architectural.id]);
+ expect((await db.query("select phases,template_version from project_phase_plans where id=$1",[id])).rows).toEqual([{phases:architectural.phases,template_version:1}]);
+ expect((await db.query("update project_phase_plans set completed=1 where id=$1 and completed=0 returning completed",[id])).rows).toEqual([{completed:1}]);
+ await expect(db.query("update project_phase_plans set completed=1000 where id=$1",[id])).rejects.toThrow();
+ await asUser(other);expect((await db.query("select id from project_phase_plans where id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("la agenda reprograma el seguimiento comercial y retira publicaciones y oportunidades cerradas",async()=>{
+ await asUser(owner);
+ const opp=(await db.query<{id:string}>("insert into opportunities(organization_id,client_id,business_line_id,name,next_follow_up) select $1,$2,id,'Visita comercial',current_date from business_lines where organization_id=$1 limit 1 returning id",[org,client])).rows[0].id;
+ const pub=crypto.randomUUID();
+ await db.query("insert into editorial_items(id,organization_id,title,channel,status,publication_on) values($1,$2,'Publicación de proyecto','Web','scheduled',current_date)",[pub,org]);
+ const items=()=>db.query("select kind from agenda_events where organization_id=$1 and id in ($2,$3) and due_on=current_date order by kind",[org,opp,pub]);
+ expect((await items()).rows).toEqual([{kind:"follow_up"},{kind:"publication"}]);
+ await asUser(reader);expect((await items()).rows).toHaveLength(0);await asUser(owner);
+ await db.query("update opportunities set next_follow_up=current_date+1 where id=$1",[opp]);
+ await db.query("update editorial_items set status='published' where id=$1",[pub]);expect((await items()).rows).toHaveLength(0);
+ expect((await db.query("select id from agenda_events where id=$1 and due_on=current_date+1",[opp])).rows).toHaveLength(1);
+ await db.query("update opportunities set stage='won' where id=$1",[opp]);expect((await db.query("select id from agenda_events where id=$1",[opp])).rows).toHaveLength(0);
+});
+
+it("leer un aviso es personal y una reprogramación genera un aviso sin leer",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Avisos internos',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body,due_on) values($1,$2,'task','Revisar expediente',current_date-2) returning id",[org,project])).rows[0].id;
+ const inbox=()=>db.query("select read_at is not null as seen from agenda_notifications where id=$1",[id]);
+ const mark=()=>db.query("insert into agenda_notification_reads(organization_id,kind,event_id,due_on) select organization_id,kind,id,due_on from agenda_events where id=$1",[id]);
+ await mark();expect((await inbox()).rows).toEqual([{seen:true}]);
+ await asUser(reader);expect((await inbox()).rows).toEqual([{seen:false}]);await mark();
+ await db.query("delete from agenda_notification_reads where event_id=$1",[id]);expect((await inbox()).rows).toEqual([{seen:false}]);
+ await asUser(other);expect((await inbox()).rows).toHaveLength(0);
+ await asUser(owner);expect((await inbox()).rows).toEqual([{seen:true}]);
+ await db.query("update project_notes set due_on=current_date-1 where id=$1",[id]);expect((await inbox()).rows).toEqual([{seen:false}]);
+ await db.query("update project_notes set due_on=current_date+2 where id=$1",[id]);expect((await inbox()).rows).toHaveLength(0);await expect(mark()).rejects.toThrow();
+});
+
+it("los favoritos siguen los permisos y nombres actuales del registro",async()=>{
+ await asUser(owner);
+ const id=(await db.query<{id:string}>("insert into clients(organization_id,name) values($1,'Cliente favorito') returning id",[org])).rows[0].id;
+ const mark=()=>db.query("insert into studio_favorites(organization_id,source,record_id) values($1,'clients',$2)",[org,id]);
+ const result=()=>db.query("select label,favorite from personal_search_results where organization_id=$1 and source='clients' and id=$2",[org,id]);
+ await mark();await db.query("update clients set name='Cliente actualizado' where id=$1",[id]);
+ expect((await result()).rows).toEqual([{label:"Cliente actualizado",favorite:true}]);
+ await asUser(reader);expect((await result()).rows).toEqual([{label:"Cliente actualizado",favorite:false}]);await mark();
+ await db.query("delete from studio_favorites where record_id=$1",[id]);
+ await asUser(other);expect((await result()).rows).toHaveLength(0);await expect(mark()).rejects.toThrow();
+ await asUser(owner);expect((await result()).rows[0]).toMatchObject({favorite:true});
+ await db.query("update clients set deleted_at=now() where id=$1",[id]);expect((await result()).rows).toHaveLength(0);
+});
+
+it("la actividad conserva registro y reverso con permisos financieros",async()=>{
+ await asUser(owner);
+ const account=crypto.randomUUID(),entry=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values($1,$2,'Estudio externo','service',5000,0)",[account,org]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',2000,current_date-1)",[entry,org,account]);
+ await db.query("update finance_entries set reversal_reason='Corrección de importe' where id=$1",[entry]);
+ const history=()=>db.query("select action,target_id from studio_activity where organization_id=$1 and id=$2 order by occurred_at,action",[org,entry]);
+ expect((await history()).rows).toEqual([{action:"received",target_id:account},{action:"reversed",target_id:account}]);
+ await asUser(reader);expect((await history()).rows).toHaveLength(0);
+ await asUser(other);expect((await history()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("el cierre exige subtareas completas y la siguiente recurrencia comienza con pasos abiertos",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Desglose de tareas',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const task=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body,due_on,repeat_days) values($1,$2,'task','Revisión semanal',current_date,7) returning id",[org,project])).rows[0].id;
+ const step=crypto.randomUUID();await db.query("insert into task_subtasks(id,organization_id,task_id,label) values($1,$2,$3,'Revisar cotas')",[step,org,task]);
+ const close=()=>db.query("update project_notes set completed_at=now() where id=$1",[task]);
+ await expect(close()).rejects.toThrow(/subtareas/);
+ await db.query("update task_subtasks set done=true where id=$1",[step]);await close();
+ expect((await db.query("select s.label,s.done from task_subtasks s join project_notes n on n.id=s.task_id where n.previous_occurrence=$1",[task])).rows).toEqual([{label:"Revisar cotas",done:false}]);
+ await expect(db.query("update task_subtasks set done=false where id=$1",[step])).rejects.toThrow(/Reabre/);
+ await asUser(other);expect((await db.query("select id from task_subtasks where id=$1",[step])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("una dependencia no puede cerrar en desorden, formar ciclos ni cruzar proyectos",async()=>{
+ await asUser(owner);
+ const project=async()=> (await db.query<{id:string}>("select create_project_record($1,$2,'Tareas enlazadas',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const task=async(p:string)=>(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body) values($1,$2,'task','Revisión') returning id",[org,p])).rows[0].id;
+ const p=await project(),a=await task(p),b=await task(p),c=await task(p),otherTask=await task(await project());
+ const link=(id:string,prev:string)=>db.query("update project_notes set predecessor_id=$2 where id=$1",[id,prev]);
+ const close=(id:string)=>db.query("update project_notes set completed_at=now() where id=$1",[id]);
+ await link(b,a);await link(c,b);
+ await expect(link(a,c)).rejects.toThrow(/ciclo/);await expect(link(a,otherTask)).rejects.toThrow(/mismo proyecto/);
+ await expect(close(b)).rejects.toThrow(/tarea previa/);await close(a);await close(b);
+ await expect(db.query("update project_notes set completed_at=null where id=$1",[a])).rejects.toThrow(/dependientes/);
+ await db.query("update project_notes set completed_at=null where id=$1",[b]);await db.query("update project_notes set predecessor_id=null where id=$1",[b]);
+ await db.query("update project_notes set completed_at=null where id=$1",[a]);
+});
+
+it("el tablero refleja el cierre compartido y rechaza movimientos con una versión anterior",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Tablero',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body) values($1,$2,'task','Revisar plantas') returning id",[org,project])).rows[0].id;
+ const board=()=>db.query("select lane,version from project_task_board where id=$1",[id]);
+ expect((await board()).rows).toEqual([{lane:"pending",version:1}]);
+ await db.query("update project_notes set in_progress=true where id=$1 and version=1",[id]);
+ expect((await board()).rows).toEqual([{lane:"working",version:2}]);
+ expect((await db.query("update project_notes set completed_at=now() where id=$1 and version=1 returning id",[id])).rows).toHaveLength(0);
+ await db.query("update project_notes set completed_at=now() where id=$1 and version=2",[id]);
+ expect((await board()).rows).toEqual([{lane:"done",version:3}]);
+ await asUser(reader);expect((await board()).rows).toHaveLength(1);expect((await db.query("update project_notes set completed_at=null where id=$1 returning id",[id])).rows).toHaveLength(0);
+ await asUser(other);expect((await board()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("el presupuesto del proyecto cuenta cada cotización aceptada una sola vez aunque tenga dos paquetes",async()=>{
+ const issue=async(project?:string)=>{
+ const {id,version,prepared}=await issuedFixture(project?{unitCost:20100,hourlyCost:800}:undefined);
+ if(project){const change=crypto.randomUUID();await db.query("insert into scope_changes(id,organization_id,client_id,project_id,description,days_impact) values($1,$2,$3,$4,'Alcance adicional',1)",[change,org,client,project]);
+ await db.query("update scope_changes set quote_id=$1 where id=$2",[id,change]);}
+ await db.query("select mark_quote_sent($1,$2,$3,$4)",[org,id,version,prepared.id]);
+ return (await db.query<{id:string}>("select accept_quote($1,id,version,current_date,current_date) id from quotes where id=$2",[org,id])).rows[0].id;
+ };
+ const project=await issue();expect(await issue(project)).toBe(project);
+ const report=()=>db.query("select quote_count::int,net_cents,external_cost_cents,expected_profit_cents,margin_percent,estimated_hours,estimated_hourly_cents,direct_cost_cents,labor_cost_cents,unrated_hours from project_quote_estimates where project_id=$1",[project]);
+ expect((await report()).rows).toEqual([{quote_count:2,net_cents:"5000000",external_cost_cents:"5000",direct_cost_cents:"20100",labor_cost_cents:"9600",unrated_hours:"12.0000",expected_profit_cents:"4965300",margin_percent:"99.31",estimated_hours:"24.0000",estimated_hourly_cents:"208333"}]);
+ await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("el reporte atribuye acuerdos de una obra al proyecto y cliente sin mezclar sus fondos",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto con ejecución',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID();await db.query("insert into works(id,organization_id,name,project_id) values($1,$2,'Obra vinculada',$3)",[work,org,project]);
+ for(const [managed,amount] of [[false,1250],[true,3000]] as const){
+ const account=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,work_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Acuerdo por obra','construction',$4,$5,0)",[account,org,work,managed,amount]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',$4,current_date)",[crypto.randomUUID(),org,account,amount]);
+ }
+ const report=(customer:string|null,proj:string|null)=>db.query("select managed,received from cash_productivity($1,current_date,current_date,$2,$3,$4) order by managed",[org,customer,proj,work]);
+ expect((await db.query("select package_id,received,managed_received from project_package_execution($1,$2)",[org,project])).rows).toEqual([{package_id:null,received:"1250",managed_received:"3000"}]);
+ const expected=[{managed:false,received:"1250"},{managed:true,received:"3000"}];
+ expect((await report(null,null)).rows).toEqual(expected);expect((await report(client,project)).rows).toEqual(expected);
+ expect((await report(client,crypto.randomUUID())).rows).toHaveLength(0);
+ await asUser(reader);expect((await report(client,project)).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("las asociaciones opcionales respetan el cliente y el proyecto realmente vinculados a la obra",async()=>{
+ await asUser(owner);
+ const customer=(await db.query<{id:string}>("insert into clients(organization_id,name) values($1,'Segundo cliente de obra') returning id",[org])).rows[0].id;
+ const project=async(c:string)=>(await db.query<{id:string}>("select create_project_record($1,$2,'Encargo asociado',current_date,0,$3) id",[org,c,crypto.randomUUID()])).rows[0].id;
+ const first=await project(client),sameClient=await project(client),second=await project(customer);
+ const work=async(c:string|null,p:string|null)=>(await db.query<{id:string}>("insert into works(id,organization_id,name,client_id,project_id) values($1,$2,'Obra asociada',$3,$4) returning id",[crypto.randomUUID(),org,c,p])).rows[0].id;
+ const agreement=(c:string|null,p:string|null,w:string|null)=>db.query("insert into finance_cases(id,organization_id,name,area,client_id,project_id,work_id,revenue_cents,cost_cents) values($1,$2,'Acuerdo de control','construction',$3,$4,$5,1000,0)",[crypto.randomUUID(),org,c,p,w]);
+ await expect(work(customer,first)).rejects.toThrow(/work_project_client/);
+ const byProject=await work(null,first),byClient=await work(customer,null);
+ await expect(agreement(customer,first,null)).rejects.toThrow(/agreement_project_client/);
+ await expect(agreement(null,sameClient,byProject)).rejects.toThrow(/obra/);
+ await expect(agreement(customer,null,byProject)).rejects.toThrow(/obra/);
+ await expect(agreement(null,first,byClient)).rejects.toThrow(/obra/);
+ await agreement(null,second,byClient);await agreement(null,null,byProject);await agreement(null,null,null);
+});
+
+it("los vencimientos del acuerdo siguen el saldo parcial, la liquidación y el reverso", async () => {
+  await asUser(owner);
+  const account = crypto.randomUUID();
+  await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents,collect_on,pay_on) values($1,$2,'Estudio de suelos','service',100,60,current_date-1,current_date-1)", [account,org]);
+  const notices = async () => (await db.query<{kind:string}>("select kind from agenda_notifications where id=$1 order by kind",[account])).rows.map(r=>r.kind);
+  const movement = async (amount:number) => {
+    const id=crypto.randomUUID();
+    await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',$4,current_date-1)",[id,org,account,amount]);
+    return id;
+  };
+  await movement(40);
+  expect(await notices()).toEqual(["agreement_collection","agreement_payment"]);
+  const amounts=()=>db.query("select kind,balance_cents,managed from agenda_notifications where id=$1 order by kind",[account]);
+  expect((await amounts()).rows).toEqual([{kind:"agreement_collection",balance_cents:"60",managed:false},{kind:"agreement_payment",balance_cents:"60",managed:false}]);
+  const finalPayment=await movement(60);
+  expect(await notices()).toEqual(["agreement_payment"]);
+  await db.query("update finance_entries set reversal_reason='Captura duplicada' where id=$1",[finalPayment]);
+  expect(await notices()).toEqual(["agreement_collection","agreement_payment"]);
+  await db.query("update finance_cases set pay_on=null where id=$1",[account]);
+  expect(await notices()).toEqual(["agreement_collection"]);
+  await asUser(reader);expect(await notices()).toEqual([]);
+  await asUser(other);expect(await notices()).toEqual([]);
+  await asUser(owner);
+});
+
+it("reprograma un recordatorio privado y genera una sola recurrencia al cerrarlo", async () => {
+  await asUser(owner);
+  const id=crypto.randomUUID();
+  await db.query("insert into personal_reminders(id,organization_id,label,due_on,repeat_days) values($1,$2,'Renovar licencia','2026-03-01',7)",[id,org]);
+  const events=()=>db.query("select due_on::text from agenda_events where organization_id=$1 and kind='personal' and label='Renovar licencia'",[org]);
+  expect((await events()).rows).toEqual([{due_on:"2026-03-01"}]);
+  await db.query("update personal_reminders set due_on='2026-03-02' where id=$1 and version=1",[id]);
+  const close=()=>db.query("update personal_reminders set completed=true where id=$1 and version=2 returning id",[id]);
+  expect((await close()).rows).toHaveLength(1);expect((await close()).rows).toHaveLength(0);
+  expect((await events()).rows).toEqual([{due_on:"2026-03-09"}]);
+  await asUser(reader);expect((await events()).rows).toHaveLength(0);
+  await expect(db.query("insert into personal_reminders(organization_id,label,due_on) values($1,'Privado',current_date)",[org])).rejects.toThrow();
+  await asUser(other);expect((await events()).rows).toHaveLength(0);
+  await asUser(owner);
+});
+
+it("el recordatorio mensual conserva el día de la serie y la prioridad tras febrero bisiesto",async()=>{
+  await asUser(owner);
+  const id=crypto.randomUUID(),label="Cierre mensual "+id;
+  await db.query("insert into personal_reminders(id,organization_id,label,due_on,repeat_months,priority) values($1,$2,$3,'2028-01-31',1,'high')",[id,org,label]);
+  const pending=()=>db.query<{due_on:string;anchor_day:number;priority:string}>("select due_on::text,anchor_day,priority from personal_reminders where organization_id=$1 and label=$2 and not completed",[org,label]);
+  const close=()=>db.query("update personal_reminders set completed=true where organization_id=$1 and label=$2 and not completed",[org,label]);
+  await close();expect((await pending()).rows).toEqual([{due_on:"2028-02-29",anchor_day:31,priority:"high"}]);
+  await close();expect((await pending()).rows).toEqual([{due_on:"2028-03-31",anchor_day:31,priority:"high"}]);
+  await db.query("update personal_reminders set due_on='2028-03-15',priority='low' where label=$1 and not completed",[label]);
+  await close();expect((await pending()).rows).toEqual([{due_on:"2028-04-15",anchor_day:15,priority:"low"}]);
+  await expect(db.query("update personal_reminders set repeat_days=7 where label=$1 and not completed",[label])).rejects.toThrow();
+  await asUser(other);expect((await pending()).rows).toEqual([]);await asUser(owner);
+});
+
+it("el expediente atribuye los acuerdos sin duplicar al cliente de la obra o del proyecto", async () => {
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Casa del cliente',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,project_id,name) values($1,$2,$3,'Obra del cliente')",[work,org,project]);
+ const account=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,work_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Acopio de material','construction',true,900,750)",[account,org,work]);
+ const visible=()=>db.query("select client_id,managed,receivable,payable from client_agreements where id=$1",[account]);
+ expect((await visible()).rows).toEqual([{client_id:client,managed:true,receivable:"900",payable:"750"}]);
+ await asUser(reader);expect((await visible()).rows).toHaveLength(0);
+ await asUser(other);expect((await visible()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("archiva y recupera el documento con control de versión, permisos y auditoría",async()=>{
+ await asUser(owner);
+ const header={title:"Acta de archivo",kind:"letter",body:"Texto del documento",margins:defaultDocumentOptions.margins};
+ const {id}=(await db.query<{id:string}>("select save_studio_document($1,null,0,$2::jsonb) id",[org,JSON.stringify(header)])).rows[0];
+ const issued=(await db.query<{data:{id:string;storage_path:string;snapshot:unknown}}>("select prepare_studio_document($1,$2,1) data",[org,id])).rows[0].data;
+ await db.query("insert into storage.objects(bucket_id,name) values('estudio-documents',$1)",[issued.storage_path]);
+ await db.query("select finalize_studio_document($1,$2,$3)",[org,issued.id,"d".repeat(64)]);
+ const change=(v:number,archive:boolean)=>db.query("select set_studio_document_archived($1,$2,$3,$4)",[org,id,v,archive]);
+ await asUser(reader);await expect(change(1,true)).rejects.toThrow();
+ await asUser(other);await expect(change(1,true)).rejects.toThrow();
+ await asUser(owner);await change(1,true);
+ await expect(change(1,false)).rejects.toThrow();
+ await expect(db.query("select prepare_studio_document($1,$2,2)",[org,id])).rejects.toThrow();
+ expect((await db.query("select snapshot,storage_path,state from generated_documents where id=$1",[issued.id])).rows).toEqual([{snapshot:issued.snapshot,storage_path:issued.storage_path,state:"issued"}]);
+ await change(2,false);
+ expect((await db.query("select title,body,version,deleted_at from studio_documents where id=$1",[id])).rows).toEqual([{title:header.title,body:header.body,version:3,deleted_at:null}]);
+ expect((await db.query("select action from audit_events where entity_id=$1 order by action",[id])).rows).toEqual([{action:"archived"},{action:"created"},{action:"restored"}]);
+});
+
+it("divide un saldo parcialmente cobrado, conserva la cartera y protege el cambio de reintentos", async () => {
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Reprogramación',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const schedule=(await db.query<{id:string}>("select id from payment_schedules where project_id=$1",[project])).rows[0].id;
+ await db.query("select record_payment($1,$2,300,current_date-1,'Abono',$3)",[org,schedule,crypto.randomUUID()]);
+ const key=crypto.randomUUID();
+ const move=(request:string,amount:number)=>db.query<{id:string}>("select replan_schedule($1,$2,$3,current_date-1,1000,700,$4,current_date+10) id",[org,schedule,request,amount]);
+ await asUser(reader);await expect(move(key,300)).rejects.toThrow();
+ await asUser(other);await expect(move(key,300)).rejects.toThrow();await asUser(owner);
+ await expect(move(key,701)).rejects.toThrow();
+ const split=(await move(key,500)).rows[0].id;
+ expect((await move(key,500)).rows[0].id).toBe(split);
+ await expect(move(key,400)).rejects.toThrow();
+ await expect(move(crypto.randomUUID(),300)).rejects.toThrow();
+ expect((await db.query("select amount_cents::int amount,collected_cents::int collected,balance_cents::int balance from payment_schedule_balances where project_id=$1 order by due_date",[project])).rows).toEqual([{amount:500,collected:300,balance:200},{amount:500,collected:0,balance:500}]);
+ expect((await db.query("select replan_schedule($1,$2,$3,current_date+10,500,500,500,current_date+12) id",[org,split,crypto.randomUUID()])).rows).toEqual([{id:split}]);
+ expect((await db.query("select due_on=current_date+12 updated from agenda_events where id=$1 and kind='collection'",[split])).rows).toEqual([{updated:true}]);
+ const history=()=>db.query("select project_id,project_name,amount_cents from schedule_change_history where schedule_id=$1",[schedule]);
+ expect((await history()).rows).toEqual([{project_id:project,project_name:"Reprogramación",amount_cents:"500"}]);
+ await asUser(reader);expect((await history()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("el recibo separa el origen, resuelve la obra y refleja el reverso sin exponer fondos a lectores",async()=>{
+ await asUser(owner);
+ const proj=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto de recibo',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const payment=(await db.query<{id:string}>("select record_payment($1,id,725,current_date-1,'Transferencia',$3) id from payment_schedules where project_id=$2",[org,proj,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID(),account=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,project_id,name) values($1,$2,$3,'Obra de recibo')",[work,org,proj]);
+ await db.query("insert into finance_cases(id,organization_id,work_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Material','construction',true,0,600)",[account,org,work]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,paid_on,amount_cents) values($1,$2,$3,'out',current_date-1,350)",[payment,org,account]);
+ await db.query("update finance_entries set reversal_reason='Concepto equivocado' where id=$1",[payment]);
+ const rows=()=>db.query("select source,amount,direction,managed,reversed,project_name from movement_receipts where id=$1 order by source",[payment]);
+ expect((await rows()).rows).toEqual([{source:"acuerdo",amount:"350",direction:"out",managed:true,reversed:true,project_name:"Proyecto de recibo"},{source:"proyecto",amount:"725",direction:"in",managed:false,reversed:false,project_name:"Proyecto de recibo"}]);
+ await asUser(reader);expect((await rows()).rows).toHaveLength(0);await asUser(other);expect((await rows()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("concilia costo, pagos y reversos por proveedor separando fondos administrados y propios",async()=>{
+ await asUser(owner);
+ const supplier=crypto.randomUUID();await db.query("insert into suppliers(id,organization_id,name,kind) values($1,$2,'Topografía del sur','subcontractor')",[supplier,org]);
+ for(const managed of [true,false]){
+ const agreement=crypto.randomUUID(),entry=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,managed,revenue_cents,cost_cents,supplier_id) values($1,$2,'Topografía','construction',$3,0,840,$4)",[agreement,org,managed,supplier]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,paid_on,direction,amount_cents) values($1,$2,$3,current_date-1,'out',40)",[entry,org,agreement]);
+ if(managed)await db.query("update finance_entries set reversal_reason='Pago duplicado' where id=$1",[entry]);
+ }
+ const find=()=>db.query("select label,favorite from personal_search_results where source='suppliers' and id=$1",[supplier]);
+ await db.query("insert into studio_favorites(organization_id,source,record_id) values($1,'suppliers',$2)",[org,supplier]);
+ expect((await find()).rows).toEqual([{label:"Topografía del sur",favorite:true}]);
+ const report=()=>db.query("select managed,cost,paid,payable from supplier_totals where supplier_id=$1 order by managed",[supplier]);
+ expect((await report()).rows).toEqual([{managed:false,cost:"840",paid:"40",payable:"800"},{managed:true,cost:"840",paid:"0",payable:"840"}]);
+ await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(other);expect((await report()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("desglosa pagos efectivos por área, categoría y fondos y concilia con el flujo",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Clasificación de egresos',current_date-1,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,project_id,name) values($1,$2,$3,'Obra de egresos')",[work,org,project]);
+ for(const managed of [true,false]){
+ const account=crypto.randomUUID();await db.query("insert into finance_cases(id,organization_id,work_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Suministros','construction',$4,900,900)",[account,org,work,managed]);
+ const entry=(direction:string,category:string|null)=>db.query<{id:string}>("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,expense_category,paid_on) values($1,$2,$3,$4,90,$5,current_date-1) returning id",[crypto.randomUUID(),org,account,direction,category]);
+ await entry("out","material");await entry("out",null);await entry("in",null);
+ await expect(entry("in","material")).rejects.toThrow();
+ const reversed=(await entry("out","external")).rows[0].id;await db.query("update finance_entries set reversal_reason='Duplicado en pago' where id=$1",[reversed]);
+ }
+ const report=()=>db.query<{managed:boolean;category:string|null;paid:string}>("select managed,category,paid from expense_breakdown($1,current_date-1,current_date-1,$2,$3,$4) order by managed,category",[org,client,project,work]);
+ const rows=(await report()).rows;
+ expect(rows).toEqual([false,true].flatMap(managed=>[{managed,category:"material",paid:"90"},{managed,category:null,paid:"90"}]));
+ expect((await db.query("select managed,paid from cash_productivity($1,current_date-1,current_date-1,$2,$3,$4) order by managed",[org,client,project,work])).rows).toEqual([{managed:false,paid:"180"},{managed:true,paid:"180"}]);
+ await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(other);expect((await report()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("valora minutos por tarifa vigente, distingue cero de falta de tarifa y protege los costos internos",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Horas imputadas','2026-01-01',0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const time=(day:string,minutes:number)=>db.query("insert into project_time(id,organization_id,project_id,worked_on,minutes,description) values($1,$2,$3,$4,$5,'Diseño interior')",[crypto.randomUUID(),org,project,day,minutes]);
+ const rate=(day:string,cents:number)=>db.query("insert into member_cost_rates(id,organization_id,member_id,effective_on,hourly_cents) values($1,$2,$3,$4,$5)",[crypto.randomUUID(),org,owner,day,cents]);
+ await time("2026-01-01",10);await rate("2026-01-02",0);await time("2026-01-02",60);
+ await rate("2026-01-03",101);await time("2026-01-03",15);await time("2026-01-03",15);
+ await rate("2026-01-04",240);await time("2026-01-04",60);
+ const report=(start:string|null)=>db.query("select * from time_cost_report($1,$2,null,$3,$4)",[org,start,client,project]);
+ expect((await report(null)).rows).toEqual([{rated_minutes:"150",unrated_minutes:"10",estimated_cost:"291"}]);
+ expect((await report("2026-01-04")).rows).toEqual([{rated_minutes:"60",unrated_minutes:"0",estimated_cost:"240"}]);
+ await expect(rate("2026-01-04",1000)).rejects.toThrow();
+ await asUser(other);expect((await report(null)).rows).toHaveLength(0);await asUser(reader);expect((await report(null)).rows).toHaveLength(0);await expect(rate("2026-01-05",99)).rejects.toThrow();await asUser(owner);
+});
+
+it("solo el propietario cambia roles no propietarios y el cambio se aplica a los permisos financieros",async()=>{
+ await asUser(owner);
+ const change=(member:string,expected:string,desired:string)=>db.query("select change_studio_member_role($1,$2,$3,$4)",[org,member,expected,desired]);
+ const history=()=>db.query("select old_role,new_role,actor_id from member_role_changes where organization_id=$1 and member_id=$2 order by changed_at",[org,reader]);
+ const financial=()=>db.query("select id from finance_cases where organization_id=$1 limit 1",[org]);
+ await asUser(reader);expect((await financial()).rows).toHaveLength(0);await expect(change(reader,"reader","admin")).rejects.toThrow();
+ await asUser(other);await expect(change(reader,"reader","admin")).rejects.toThrow();
+ await asUser(owner);await expect(change(owner,"owner","reader")).rejects.toThrow();await expect(change(reader,"reader","owner")).rejects.toThrow();
+ await change(reader,"reader","admin");await expect(change(reader,"reader","collaborator")).rejects.toThrow();
+ await asUser(reader);expect((await financial()).rows).toHaveLength(1);expect((await history()).rows).toHaveLength(0);
+ await expect(change(reader,"admin","reader")).rejects.toThrow();
+ await asUser(owner);await change(reader,"admin","reader");
+ expect((await history()).rows).toEqual([{old_role:"reader",new_role:"admin",actor_id:owner},{old_role:"admin",new_role:"reader",actor_id:owner}]);
+ await asUser(reader);expect((await financial()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("solo una cuenta con el correo confirmado acepta la invitación y no puede elevar ni duplicar su membresía",async()=>{
+ const guest=crypto.randomUUID(),orgId=org,email=guest+"@example.test";
+ await db.exec("reset role");await db.query("insert into auth.users(id,email) values($1,$2)",[guest,email]);await asUser(owner);
+ const issue=async()=>{const id=crypto.randomUUID();await db.query("insert into studio_invitations(id,organization_id,email,role) values($1,$2,$3,'collaborator')",[id,orgId,email]);return id;};
+ const accept=(id:string)=>db.query("select accept_studio_invitation($1) org",[id]);
+ const inbox=()=>db.query("select id from my_studio_invitations()");
+ const revoked=await issue();await db.query("select revoke_studio_invitation($1,$2)",[org,revoked]);const id=await issue();
+ await asUser(guest);expect((await inbox()).rows).toEqual([]);await expect(accept(id)).rejects.toThrow();
+ await db.exec("reset role");await db.query("update auth.users set email_confirmed_at=now() where id=$1",[guest]);await asUser(other);
+ await expect(accept(id)).rejects.toThrow();await asUser(guest);expect((await inbox()).rows).toEqual([{id}]);await expect(accept(revoked)).rejects.toThrow();
+ expect((await accept(id)).rows).toEqual([{org}]);expect((await accept(id)).rows).toEqual([{org}]);
+ expect((await db.query("select role from memberships where user_id=$1",[guest])).rows).toEqual([{role:"collaborator"}]);
+ await expect(issue()).rejects.toThrow();expect((await inbox()).rows).toEqual([]);
+ await asUser(owner);const expired=await issue();await db.exec("reset role");
+ await db.query("update studio_invitations set expires_at=now()-interval '1 minute' where id=$1",[expired]);
+ await asUser(guest);await expect(accept(expired)).rejects.toThrow(/no disponible/);expect((await inbox()).rows).toEqual([]);
+ await asUser(owner);await db.query("select revoke_studio_invitation($1,$2)",[org,expired]);const second=await issue();await asUser(guest);await expect(accept(second)).rejects.toThrow(/perteneces/);await asUser(owner);
+});
+
+it("edita la ficha y sincroniza el cierre con agenda sin modificar acuerdos de cobro",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Casa original','2026-02-01',10000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const edit=(v:number,start:string,end:string|null,lead:string|null,state:string)=>db.query("select edit_project_details($1,$2,$3,'Casa del valle','Valle norte',$4,$5,$6,$7)",[org,project,v,start,end,lead,state]);
+ await expect(edit(1,"2026-03-01","2026-02-28",owner,"active")).rejects.toThrow();
+ await expect(edit(1,"2026-02-01",null,crypto.randomUUID(),"active")).rejects.toThrow();
+ await edit(1,"2026-02-02","2026-05-01",owner,"active");
+ const notice=()=>db.query("select label,due_on::text from agenda_events where kind='project_end' and id=$1",[project]);
+ expect((await notice()).rows).toEqual([{label:"Casa del valle",due_on:"2026-05-01"}]);
+ await expect(edit(1,"2026-02-01",null,null,"closed")).rejects.toThrow();
+ await asUser(reader);expect((await notice()).rows).toHaveLength(1);await expect(edit(2,"2026-02-02",null,null,"closed")).rejects.toThrow();
+ await asUser(owner);await edit(2,"2026-02-02","2026-05-01",owner,"closed");expect((await notice()).rows).toHaveLength(0);
+ expect((await db.query("select amount_cents::int,due_date::text from payment_schedules where project_id=$1",[project])).rows).toEqual([{amount_cents:10000,due_date:"2026-02-01"}]);
+});
+it("protege adjuntos comerciales y restaura los bytes originales con control de versión", async () => {
+  await asUser(owner);
+  const project = (await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto con archivos','2026-03-01',100,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+  const commercial = crypto.randomUUID(), technical = crypto.randomUUID();
+  await db.query("insert into dossier_files(id,organization_id,client_id,title,url) values($1,$2,$3,'Referencia','https://example.test/')",[commercial,org,client]);
+  const insert = (id:string, tenant:string) => db.query("insert into dossier_files(id,organization_id,project_id,title,filename,attachment) values($1,$2,$3,'Plano','plano.pdf',decode('25504446','hex'))",[id,tenant,project]);
+  await asUser(other); await expect(insert(crypto.randomUUID(),otherOrg)).rejects.toThrow();
+  await asUser(reader); await expect(insert(technical,org)).rejects.toThrow();
+  await asUser(owner); await db.query("select change_studio_member_role($1,$2,'reader','collaborator')",[org,reader]);
+  await asUser(reader); await insert(technical,org);
+  expect((await db.query("select id from dossier_files order by id")).rows).toEqual([{id:technical}]);
+  await asUser(owner); await db.query("select change_studio_member_role($1,$2,'collaborator','reader')",[org,reader]);
+  await db.query("update dossier_files set deleted_at=now() where id=$1 and version=1",[technical]);
+  expect((await db.query("update dossier_files set deleted_at=null where id=$1 and version=1 returning id",[technical])).rows).toEqual([]);
+  await db.query("update dossier_files set deleted_at=null where id=$1 and version=2",[technical]);
+  await asUser(reader);
+  expect((await db.query("select encode(attachment,'hex') bytes from dossier_files where deleted_at is null")).rows).toEqual([{bytes:"25504446"}]);
+  await asUser(owner);
+});
+it("un cliente anterior puede editar el preset sin perder sus condiciones", async () => {
+  await asUser(owner);
+  const {service} = await commercialFixture();
+  const items=JSON.stringify([{service_id:service,quantity:"1"}]);
+  const id=(await db.query<{id:string}>("select save_preset_terms($1,null,0,'Vivienda','',$2::jsonb,'50% al inicio') id",[org,items])).rows[0].id;
+  await db.query("select save_preset($1,$2,1,'Vivienda ampliada','',$3::jsonb)",[org,id,items]);
+  await expect(db.query("select save_preset_terms($1,$2,1,'Obsoleta','',$3::jsonb,'Otro')",[org,id,items])).rejects.toThrow("Conflicto");
+  expect((await db.query("select conditions,version from service_presets where id=$1",[id])).rows).toEqual([{conditions:"50% al inicio",version:2}]);
+  await db.query("select save_preset_terms($1,$2,2,'Vivienda','',$3::jsonb,'')",[org,id,items]);
+  expect((await db.query("select conditions from service_presets where id=$1",[id])).rows).toEqual([{conditions:""}]);
+});
+it("restaura una propuesta emitida conservando su versión documental y audita la recuperación", async () => {
+  await asUser(owner);
+  const {id,version,prepared}=await issuedFixture();
+  await db.query("select archive_quote($1,$2,$3)",[org,id,version]);
+  const restore=(v:number)=>db.query("select restore_quote($1,$2,$3)",[org,id,v]);
+  await asUser(reader); await expect(restore(version+1)).rejects.toThrow("Permisos");
+  await asUser(other); await expect(restore(version+1)).rejects.toThrow("Permisos");
+  await asUser(owner); await expect(restore(version)).rejects.toThrow("cambió");
+  await restore(version+1); await expect(restore(version+1)).rejects.toThrow("cambió");
+  expect((await db.query("select version from quotes where id=$1 and deleted_at is null",[id])).rows).toEqual([{version:version+2}]);
+  expect((await db.query<{snapshot:unknown}>("select snapshot from quote_versions where id=$1",[prepared.id])).rows[0].snapshot).toEqual(prepared.snapshot);
+  expect((await db.query("select actor_id from audit_events where entity_id=$1 and action='restored'",[id])).rows).toEqual([{actor_id:owner}]);
+});
+it("cancelar saldo conserva los cobros y excluye la deuda de agenda y cartera", async()=>{
+ await asUser(owner);
+ const proj=(await db.query<{id:string}>("select create_project_record($1,$2,'Convenio de cierre',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const schedule=(await db.query<{id:string}>("select id from payment_schedules where project_id=$1",[proj])).rows[0].id;
+ const request=crypto.randomUUID(),cancel=(balance:number,reason:string)=>db.query("select cancel_schedule_balance($1,$2,$3,current_date-1,1000,$4,$5)",[org,schedule,request,balance,reason]);
+ const pay=(amount:number)=>db.query("select record_payment($1,$2,$3,current_date-1,'Cobro',$4)",[org,schedule,amount,crypto.randomUUID()]);
+ await pay(350);await expect(cancel(1000,"Convenio")).rejects.toThrow("cambiaron");
+ await asUser(reader);await expect(cancel(650,"Convenio")).rejects.toThrow("Permisos");
+ await asUser(owner);await cancel(650,"Convenio");await cancel(650,"Convenio");await expect(cancel(650,"Motivo diferente")).rejects.toThrow("otro cambio");
+ expect((await db.query("select amount_cents::int vigente,collected_cents::int cobros,balance_cents::int saldo from payment_schedule_balances where id=$1",[schedule])).rows).toEqual([{vigente:350,cobros:350,saldo:0}]);
+ await expect(pay(1)).rejects.toThrow("saldo");
+ expect((await db.query("select id from agenda_events where kind='collection' and id=$1",[schedule])).rows).toEqual([]);
+ expect((await db.query("select previous_amount,amount_cents,reason from schedule_cancellation_history where id=$1",[request])).rows).toEqual([{previous_amount:"1000",amount_cents:"650",reason:"Convenio"}]);
+ await asUser(other);expect((await db.query("select id from schedule_cancellations where id=$1",[request])).rows).toEqual([]);await asUser(owner);
+});
+it("concilia cobros y pagos por área sin convertir el saldo administrado en ingresos propios",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Reporte por área',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ await db.query("select record_payment($1,id,125,current_date-1,'Abono de proyecto',$3) from payment_schedules where project_id=$2",[org,project,crypto.randomUUID()]);
+ for(const [area,managed] of [["architecture",false],["service",false],["construction",true],["construction",false]] as const){
+  const id=crypto.randomUUID();
+  await db.query("insert into finance_cases(id,organization_id,project_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Prueba por área',$4,$5,1000,600)",[id,org,project,area,managed]);
+  for(const [dir,cents] of [["in",700],["out",200]] as const)await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,$4,$5,current_date-1)",[crypto.randomUUID(),org,id,dir,cents]);
+ }
+ const report=()=>db.query<{area:string,managed:boolean,received:string,paid:string,net:string}>("select * from area_cash_report($1,current_date-1,current_date-1,$2,$3)",[org,client,project]);
+ const rows=(await report()).rows;
+ expect(rows.filter(r=>r.area!=="project_plan").map(r=>[r.area,r.managed,r.net])).toEqual([["architecture",false,"500"],["construction",false,"500"],["construction",true,"500"],["service",false,"500"]]);
+ expect(rows.find(r=>r.area==="project_plan")).toMatchObject({received:"125",paid:"0",managed:false});
+ expect(rows.filter(r=>!r.managed).reduce((sum,r)=>sum+BigInt(r.net),0n)).toBe(1625n);
+ await asUser(reader);expect((await report()).rows).toEqual([]);await asUser(other);expect((await report()).rows).toEqual([]);await asUser(owner);
+});
+it("la aceptación mixta copia solo la plantilla automática y conserva su revisión",async()=>{
+ await asUser(owner);
+ const t=(await db.query<{id:string,phases:string[],business_line_id:string}>("select id,phases,business_line_id from phase_templates where organization_id=$1 and service_id is null order by name limit 1",[org])).rows[0];
+ await asUser(reader);
+ expect((await db.query("update phase_templates set on_quote_acceptance=true where id=$1 returning id",[t.id])).rows).toEqual([]);
+ await asUser(owner);
+ const enabled=(await db.query<{version:number}>("update phase_templates set on_quote_acceptance=true,tasks=array['Revisar levantamiento','Preparar propuesta'] where id=$1 returning version",[t.id])).rows[0].version;
+ const alternate=crypto.randomUUID();await db.query("insert into phase_templates(id,organization_id,business_line_id,name,phases) values($1,$2,$3,'Prueba alternativa',array['Inicio'])",[alternate,org,t.business_line_id]);
+ await expect(db.query("update phase_templates set on_quote_acceptance=true where id=$1",[alternate])).rejects.toThrow();
+ const {id,version,prepared}=await issuedFixture();
+ await db.query("select mark_quote_sent($1,$2,$3,$4)",[org,id,version,prepared.id]);
+ const proj=(await db.query<{id:string}>("select accept_quote($1,id,version,current_date,current_date) id from quotes where id=$2",[org,id])).rows[0].id;
+ const plans=()=>db.query("select template_id,template_version,phases,completed from project_phase_plans where project_id=$1",[proj]);
+ const tasks=()=>db.query("select body,lane from project_task_board where project_id=$1 order by body",[proj]);
+ expect((await plans()).rows).toEqual([{template_id:t.id,template_version:enabled,phases:t.phases,completed:0}]);
+ expect((await tasks()).rows).toEqual([{body:"Preparar propuesta",lane:"pending"},{body:"Revisar levantamiento",lane:"pending"}]);
+ await db.query("update phase_templates set on_quote_acceptance=false,phases=array['Nueva fase'],tasks=array['Otra tarea'] where id=$1",[t.id]);
+ expect((await plans()).rows).toEqual([{template_id:t.id,template_version:enabled,phases:t.phases,completed:0}]);
+ expect((await tasks()).rows).toEqual([{body:"Preparar propuesta",lane:"pending"},{body:"Revisar levantamiento",lane:"pending"}]);
+});
+it("el expediente vincula proyectos y obras indirectas y restringe documentos comerciales por rol",async()=>{
+ await asUser(owner);
+ const {id:quote,version}=await issuedFixture();
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Ficha relacionada',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID();await db.query("insert into works(id,organization_id,project_id,name) values($1,$2,$3,'Obra sin cliente directo')",[work,org,project]);
+ const list=()=>db.query("select id,kind from client_related_records where client_id=$1 and id in ($2,$3,$4) order by kind",[client,project,quote,work]);
+ expect((await list()).rows).toEqual([{id:project,kind:"project"},{id:quote,kind:"quote"},{id:work,kind:"work"}]);
+ await asUser(reader);expect((await list()).rows).toEqual([{id:project,kind:"project"}]);await asUser(other);expect((await list()).rows).toEqual([]);
+ await asUser(owner);await db.query("select archive_quote($1,$2,$3)",[org,quote,version]);expect((await list()).rows).toHaveLength(2);
+});
+it("la cartera clasifica vencimientos y saldo real por dirección y custodia",async()=>{
+ await asUser(owner);
+ const id=crypto.randomUUID(),scheduleProject=(await db.query<{id:string}>("select create_project_record($1,$2,'Cartera de prueba',current_date-7,200,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const today="(now() at time zone (select timezone from organizations where id=$2))::date";
+ await db.query("insert into finance_cases(id,organization_id,project_id,name,area,managed,revenue_cents,cost_cents,collect_on) values($1,$2,$3,'Antigüedad obra','construction',true,1000,800,"+today+"-31)",[id,org,scheduleProject]);
+ const list=()=>db.query("select source,direction,managed,balance_cents,age_group from open_obligations where project_id=$1 order by source,direction",[scheduleProject]);
+ const pay=(direction:string,amount:number)=>db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,$4,$5,current_date-1)",[crypto.randomUUID(),org,id,direction,amount]);
+ await pay("in",250);
+ expect((await list()).rows).toEqual([{source:"agreement",direction:"in",managed:true,balance_cents:"750",age_group:"late_60"},{source:"agreement",direction:"out",managed:true,balance_cents:"800",age_group:"undated"},{source:"schedule",direction:"in",managed:false,balance_cents:"200",age_group:"late_30"}]);
+ for(const [days,group] of [[-61,"late_over_60"],[-60,"late_60"],[-30,"late_30"],[0,"today"],[1,"upcoming"]] as const){
+  await db.query("update finance_cases set pay_on="+today+"+$3::int where id=$1",[id,org,days]);expect((await list()).rows[1]).toMatchObject({age_group:group});
+ }
+ await pay("out",800);expect((await list()).rows).toHaveLength(2);
+ await asUser(reader);expect((await list()).rows).toHaveLength(0);await asUser(other);expect((await list()).rows).toHaveLength(0);await asUser(owner);
+});
+it("importa clientes solo a staging habilitado, evita duplicados y revierte el lote ante conflictos",async()=>{
+ await asUser(owner);
+ const a={id:"cl-a",name:"Cliente legado A",email:"legado_a@example.test"},b={id:"cl-b",name:"Cliente legado B"};
+ const apply=(rows:unknown[])=>db.query<{result:{inserted:number;unchanged:number}}>("select stage_legacy_clients($1,$2::jsonb,'company') result",[org,JSON.stringify(rows)]);
+ await expect(apply([a,b])).rejects.toThrow("no habilitado");
+ await db.exec("reset role");await db.query("insert into private.legacy_staging_targets values($1)",[org]);await asUser(reader);
+ await expect(apply([a,b])).rejects.toThrow("no habilitado");await expect(db.query("insert into private.legacy_staging_targets values($1)",[otherOrg])).rejects.toThrow();
+ await asUser(owner);expect((await apply([a,b])).rows[0].result).toEqual({inserted:2,unchanged:0});
+ expect((await apply([a,b])).rows[0].result).toEqual({inserted:0,unchanged:2});
+ await expect(apply([a,{...b,id:a.id}])).rejects.toThrow("repetido");
+ await expect(apply([{id:"rollback",name:"Copia descartada"},{...a,name:"Nombre diferente"}])).rejects.toThrow("datos distintos");
+ expect((await db.query("select id from clients where legacy_id='rollback'")).rows).toEqual([]);
+ await expect(apply([{id:"cl-c",name:"Cliente independiente",email:a.email}])).rejects.toThrow("Posible duplicado");
+ await asUser(other);await expect(apply([a])).rejects.toThrow("no habilitado");await asUser(owner);
+});
+it("emite variables comerciales desde una cotización concreta y conserva el vínculo con clientes anteriores",async()=>{
+ await asUser(owner);
+ const {prepared}=await issuedFixture();
+ const header={title:"Carta de anticipo",kind:"letter",body:"{{cotizacion.folio}} · {{cotizacion.total}} · {{cotizacion.anticipo}}",margins:defaultDocumentOptions.margins,client_id:null,project_id:null};
+ const save=(h:object,id:string|null=null,v=0)=>db.query<{id:string}>("select save_studio_document($1,$2,$3,$4::jsonb) id",[org,id,v,JSON.stringify(h)]);
+ await expect(save({...header,quote_version_id:prepared.id,client_id:crypto.randomUUID()})).rejects.toThrow("no corresponde");
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Otro proyecto del cliente',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ await expect(save({...header,quote_version_id:prepared.id,project_id:project})).rejects.toThrow("no corresponde");
+ const id=(await save({...header,quote_version_id:prepared.id})).rows[0].id;
+ await save(header,id,1);
+ const {snapshot}=(await db.query<{snapshot:unknown}>("select prepare_studio_document($1,$2,2)->'snapshot' snapshot",[org,id])).rows[0];
+ const parsed=standaloneSnapshotSchema.parse(snapshot);
+ expect(parsed.quote?.folio).toBe(prepared.snapshot.folio);
+ expect(resolveDocumentBody(parsed)).toContain("$25,000.00");
+ expect(resolveDocumentBody(parsed)).toContain("$12,500.00");
+ await asUser(other);expect((await db.query("select id from document_quote_context where id=$1",[prepared.id])).rows).toEqual([]);await asUser(owner);
+});
+it("exporta el detalle con reversos sin modificar el flujo y excluye movimientos de otro proyecto",async()=>{
+ await asUser(owner);const proj=(await db.query<{id:string}>("select create_project_record($1,$2,'Detalle contable',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const entry=(await db.query<{id:string}>("select record_payment($1,id,300,current_date-1,'Referencia de proyecto',$3) id from payment_schedules where project_id=$2",[org,proj,crypto.randomUUID()])).rows[0].id;
+ const account=crypto.randomUUID();await db.query("insert into finance_cases(id,organization_id,project_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Gastos de obra','construction',true,0,600)",[account,org,proj]);
+ const out=crypto.randomUUID();await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,expense_category,paid_on) values($1,$2,$3,'out',100,'labor',current_date-1)",[out,org,account]);
+ await db.query("update finance_entries set reversal_reason='Duplicado' where id=$1",[out]);
+ const ledger=()=>db.query<{rows:{id:string;reversed:boolean}[]}>("select cash_ledger_export($1,current_date-1,current_date-1,$2,$3) rows",[org,client,proj]);
+ const list=(await ledger()).rows[0].rows;
+ expect(list).toHaveLength(2);expect(list.find(r=>r.id===entry)).toMatchObject({area:"project_plan",amount:"300",managed:false,reversed:false,reference:"Referencia de proyecto"});
+ expect(list.find(r=>r.id===out)).toMatchObject({area:"construction",amount:"100",managed:true,reversed:true,expense_category:"labor",reversal_reason:"Duplicado"});
+ await asUser(reader);await expect(ledger()).rejects.toThrow("Permisos");await asUser(other);await expect(ledger()).rejects.toThrow("Permisos");await asUser(owner);
+});
+it("conserva el diseño copiado aunque cambie el preset y revierte escrituras inválidas", async () => {
+  await asUser(owner);
+  const {line, service} = await commercialFixture();
+  const layout = {sections:["cover","budget"],margins:{top:32,bottom:30,left:20,right:30}};
+  const parts = JSON.stringify([{service_id:service,quantity:"1"}]);
+  const savePreset = (id:string|null, version:number, options:unknown) =>
+    db.query<{id:string}>("select save_preset_with_layout($1,$2,$3,'Diseño','',$4::jsonb,'',$5::jsonb) id",[org,id,version,parts,JSON.stringify(options)]);
+  const preset = (await savePreset(null,0,layout)).rows[0].id;
+  const copy = (await db.query<{document_layout:unknown}>("select document_layout from preset_specs where id=$1",[preset])).rows[0].document_layout;
+  const items = [{business_line_id:line,name:"Plano",quantity:"1",unit:"unit",unit_price_cents:100,discount_rate:"0"}];
+  const quote = (await db.query<{id:string}>("select save_quote_with_layout($1,null,0,$2::jsonb,$3::jsonb) id",[org,JSON.stringify({...quoteHeader(),document_layout:copy}),JSON.stringify(items)])).rows[0].id;
+  await savePreset(preset,1,{...layout,sections:["budget"]});
+  await expect(savePreset(preset,2,{...layout,sections:["scope"]})).rejects.toThrow("PDF");
+  await expect(savePreset(preset,2,{...layout,letterhead_revision:crypto.randomUUID()})).rejects.toThrow("Membrete");
+  expect((await db.query("select version from preset_specs where id=$1",[preset])).rows).toEqual([{version:2}]);
+  const version = (await db.query<{version:number}>("select version from quotes where id=$1",[quote])).rows[0].version;
+  await draft(items,quote,version);
+  const read = () => db.query("select options from sales_document_layouts where quote_id=$1",[quote]);
+  expect((await read()).rows).toEqual([{options:layout}]);
+  await asUser(reader);
+  expect((await read()).rows).toEqual([]);
+  await asUser(owner);
+});
+it("conserva el historial comercial con autor real y restringe lecturas y escrituras", async () => {
+  await asUser(owner);
+  const {line} = await commercialFixture();
+  const opportunity = (await db.query<{id:string}>("insert into opportunities(organization_id,client_id,business_line_id,name) values($1,$2,$3,'Seguimiento') returning id",[org,client,line])).rows[0].id;
+  const add = () => db.query("insert into opportunity_interactions(organization_id,opportunity_id,kind,body) values($1,$2,'call','Acordamos visita')",[org,opportunity]);
+  const read = () => db.query("select actor_id,kind,body from opportunity_interactions where opportunity_id=$1",[opportunity]);
+  await add();
+  expect((await read()).rows).toEqual([{actor_id:owner,kind:"call",body:"Acordamos visita"}]);
+  await expect(db.query("update opportunity_interactions set body='Cambio' where opportunity_id=$1",[opportunity])).rejects.toThrow();
+  for (const user of [reader,other]){
+    await asUser(user);
+    expect((await read()).rows).toEqual([]);
+    await expect(add()).rejects.toThrow();
+  }
+  await asUser(owner);
+  await db.query("update opportunities set deleted_at=now() where id=$1",[opportunity]);
+  await expect(add()).rejects.toThrow();
+  expect((await read()).rows).toHaveLength(1);
+});
+it("agrupa categorías por estudio y respeta el texto original de cada servicio",async()=>{
+  const {service:first}=await commercialFixture();
+  const {service:second}=await commercialFixture();
+  await db.query("update services set category=' Topografía ' where id=$1",[first]);
+  await db.query("update services set category='TOPOGRAFÍA' where id=$1",[second]);
+  const categories=()=>db.query("select name from service_categories where organization_id=$1 and category_key='topografía'",[org]);
+  expect((await categories()).rows).toEqual([{name:"Topografía"}]);
+  expect((await db.query("select category from services where id=$1 and category_key='topografía'",[first])).rows).toEqual([{category:" Topografía "}]);
+  await db.query("update services set category='' where id=$1",[first]);
+  expect((await db.query("select category_key from services where id=$1",[first])).rows).toEqual([{category_key:null}]);
+  await asUser(other);expect((await categories()).rows).toEqual([]);
+  await asUser(reader);expect((await categories()).rows).toEqual([]);await asUser(owner);
+});
+it("importa servicios a un destino aislado conservando precio, porcentaje, archivo e identidad",async()=>{
+ const {line}=await commercialFixture();
+ const item={id:"leg-service-1",name:"Supervisión histórica",price:8.25,unit:"pct",active:false,description:"Porcentaje de obra"};
+ const apply=(row:object)=>db.query<{result:string}>("select stage_legacy_service($1,$2,$3::jsonb) result",[org,line,JSON.stringify(row)]);
+ await db.exec("reset role");await db.query("delete from private.legacy_staging_targets where organization_id=$1",[org]);await asUser(owner);
+ await expect(apply(item)).rejects.toThrow("no habilitado");
+ await db.exec("reset role");await db.query("insert into private.legacy_staging_targets values($1)",[org]);await asUser(reader);
+ await expect(apply(item)).rejects.toThrow("no habilitado");await asUser(owner);
+ expect((await apply(item)).rows[0].result).toBe("inserted");
+ expect((await apply(item)).rows[0].result).toBe("unchanged");
+ expect((await db.query("select price_cents::int price,deleted_at is not null archived from services where organization_id=$1 and legacy_id=$2",[org,item.id])).rows).toEqual([{price:825,archived:true}]);
+ await expect(apply({...item,id:"otro"})).rejects.toThrow("ambiguo");
+ await expect(apply({...item,price:8.5})).rejects.toThrow("distintos");
+ await expect(apply({...item,price:0.123})).rejects.toThrow("Precio");
+ await expect(apply({...item,price:125})).rejects.toThrow("Precio");
+});
+it("el ensayo de presets conserva el orden, exige referencias activas y evita reescrituras",async()=>{
+ const {line}=await commercialFixture(),preset={id:"p-hist",name:"Preset histórico",serviceIds:["srv-B","srv-A"]};
+ const apply=(p:object)=>db.query<{result:string}>("select stage_legacy_preset($1,$2::jsonb) result",[org,JSON.stringify(p)]);
+ await db.exec("reset role"); await db.query("insert into private.legacy_staging_targets values($1) on conflict do nothing",[org]);await asUser(owner);
+ await expect(apply(preset)).rejects.toThrow("Faltan servicios");
+ expect((await db.query("select id from service_presets where legacy_id=$1",[preset.id])).rows).toEqual([]);
+ for(const id of preset.serviceIds) await db.query("select stage_legacy_service($1,$2,$3::jsonb)",[org,line,JSON.stringify({id,name:"Servicio "+id,active:true,unit:"m2",price:40})]);
+ await asUser(reader);await expect(apply(preset)).rejects.toThrow("no habilitado");await asUser(owner);
+ expect((await apply(preset)).rows[0].result).toBe("inserted");
+ expect((await apply(preset)).rows[0].result).toBe("unchanged");
+ expect((await db.query("select s.legacy_id,i.quantity::int qty from service_presets p join preset_items i on i.preset_id=p.id join services s on i.service_id=s.id where p.legacy_id=$1 order by i.position",[preset.id])).rows).toEqual([{legacy_id:"srv-B",qty:1},{legacy_id:"srv-A",qty:1}]);
+ await expect(apply({...preset,serviceIds:["srv-A","srv-B"]})).rejects.toThrow("distintos");
+});
+it("archiva literalmente una propuesta para cotejo sin crear proyectos, contratos ni cobros",async()=>{
+ await asUser(owner);
+ const cid="hist-cl-"+crypto.randomUUID();
+ const cli=(await db.query<{id:string}>("insert into clients(organization_id,legacy_id,name,kind) values($1,$2,'Archivo de prueba','company') returning id",[org,cid])).rows[0].id;
+ const record={id:"historica-077",proposalNumber:"COT-2024-001",clientId:cid,items:[{unit:"pct"}],grandTotal:3200000,notes:"Texto íntegro"};
+ const save=(row:object)=>db.query<{result:string}>("select stage_historical_quote($1,$2::jsonb,$3,'MXN') result",[org,JSON.stringify(row),"a".repeat(64)]);
+ const totals=()=>db.query("select (select count(*) from quotes) quotes,(select count(*) from projects) projects,(select count(*) from finance_cases) agreements,(select count(*) from payments) payments");
+ const read=()=>db.query("select payload,client_id from legacy_proposal_archive where organization_id=$1 and legacy_id=$2",[org,record.id]);
+ await db.exec("reset role");await db.query("insert into private.legacy_staging_targets values($1) on conflict do nothing",[org]);await asUser(owner);
+ const before=(await totals()).rows;
+ expect((await save(record)).rows[0].result).toBe("inserted");expect((await save(record)).rows[0].result).toBe("unchanged");
+ await expect(save({...record,grandTotal:1})).rejects.toThrow("distintos");
+ expect((await read()).rows).toEqual([{payload:record,client_id:cli}]);
+ expect((await totals()).rows).toEqual(before);
+ await expect(db.query("update legacy_proposal_archive set folio='X' where legacy_id=$1",[record.id])).rejects.toThrow();
+ for(const user of [other,reader]){await asUser(user);expect((await read()).rows).toEqual([]);await expect(save(record)).rejects.toThrow("no habilitado");}
+ await asUser(owner);
+});
+it("importa un concepto sin alterar espacios, acentos ni saltos de línea y protege ediciones locales",async()=>{
+ const item={id:"legacy-concept",name:"Alcance histórico",text:"Intervención · m²\nSegunda línea  "};
+ const apply=(v:object)=>db.query<{result:string}>("select stage_legacy_concept($1,$2::jsonb) result",[org,JSON.stringify(v)]);
+ await db.exec("reset role");await db.query("insert into private.legacy_staging_targets values($1) on conflict do nothing",[org]);await asUser(reader);
+ await expect(apply(item)).rejects.toThrow("no habilitado");await asUser(owner);
+ expect((await apply(item)).rows[0].result).toBe("inserted");
+ expect((await apply(item)).rows[0].result).toBe("unchanged");
+ expect((await db.query("select body from concepts where organization_id=$1 and legacy_id=$2",[org,item.id])).rows).toEqual([{body:item.text}]);
+ await expect(apply({...item,id:"duplicate"})).rejects.toThrow("ambiguo");
+ await db.query("update concepts set body='Nueva revisión' where organization_id=$1 and legacy_id=$2",[org,item.id]);
+ await expect(apply(item)).rejects.toThrow("distintos");
+});
+it("exporta una instantánea verificable del estudio sin adjuntos binarios ni registros ajenos",async()=>{
+ const download=(organization:string,section:string)=>db.query<{file:string}>("select export_workspace($1,$2) file",[organization,section]);
+ await asUser(owner);
+ const file=JSON.parse((await download(org,"todo")).rows[0].file);
+ expect(file).toMatchObject({format:"estudio-os-workspace",version:1,organization_id:org,section:"todo"});
+ expect(file.collections.clients.rows.some((row:{id:string})=>row.id===client)).toBe(true);
+ for(const collection of Object.values(file.collections) as {count:number;rows:{organization_id:string}[]}[]){
+   expect(collection.count).toBe(collection.rows.length);
+   expect(collection.rows.every(row=>row.organization_id===org)).toBe(true);
+ }
+ expect(file.collections.dossier_files.count).toBeGreaterThan(0);
+ expect(file.collections.dossier_files.rows.every((row:object)=>!("attachment" in row))).toBe(true);
+ const financial=JSON.parse((await download(org,"finanzas")).rows[0].file);
+ expect(financial.collections.finance_cases.count).toBeGreaterThan(0);
+ expect(financial.collections.clients).toBeUndefined();
+ await expect(download(org,"inexistente")).rejects.toThrow("Sección");
+ await expect(download(otherOrg,"todo")).rejects.toThrow("propietario");
+ await asUser(reader);await expect(download(org,"todo")).rejects.toThrow("propietario");await asUser(owner);
+});
+it("gestiona paquetes por línea sin crear obligaciones ni cambiar el alcance contratado",async()=>{
+ const {line}=await commercialFixture();
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto manual con paquetes',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const second=(await db.query<{id:string}>("select id from business_lines where organization_id=$1 and id<>$2 limit 1",[org,line])).rows[0].id;
+ const save=(id:string,version:number,workLine:string,title:string)=>db.query("select save_work_package($1,$2,$3,$4,$5,$6,'Coordinar entrega')",[org,project,id,version,workLine,title]);
+ const one=crypto.randomUUID(),two=crypto.randomUUID();
+ await asUser(reader);await expect(save(one,0,line,"Anteproyecto")).rejects.toThrow("Permisos");await asUser(owner);
+ await save(one,0,line,"Anteproyecto");await save(one,0,line,"Anteproyecto");await save(two,0,second,"Visualización");
+ await expect(save(one,0,line,"Duplicado")).rejects.toThrow("utilizado");
+ await save(one,1,line,"Anteproyecto revisado");await expect(save(one,1,line,"Obsoleto")).rejects.toThrow("cambió");
+ expect((await db.query("select count(*)::int n from project_service_packages where project_id=$1 and manual",[project])).rows).toEqual([{n:2}]);
+ expect((await db.query("select id from payment_schedules where project_id=$1",[project])).rows).toEqual([]);
+ expect((await db.query("select package_id from package_financials where package_id in ($1,$2)",[one,two])).rows).toEqual([]);
+ await db.query("select edit_project_details(organization_id,id,version,name,location,start_date,target_end,lead_id,'closed') from projects where id=$1",[project]);
+ await expect(save(one,2,line,"Actualización tardía")).rejects.toThrow("disponible");
+});
+it("conserva tarifa interna entre clientes de distintas versiones y la excluye del snapshot público",async()=>{
+ const {line}=await commercialFixture(),items=[{business_line_id:line,name:"Diseño",unit:"fixed",quantity:"1",unit_price_cents:2500000,discount_rate:"0"}];
+ const header={...quoteHeader(),hourly_cost_cents:80000};
+ const quote=await draft(items,null,0,header);
+ const read=async()=>(await db.query<{version:number;rate:number|null}>("select version,hourly_cost_cents::int rate from quotes where id=$1",[quote])).rows[0];
+ let row=await read();expect(row.rate).toBe(80000);
+ expect((await db.query("select labor_cents,profit_cents,margin_pct from quote_fee_estimates where id=$1",[quote])).rows).toEqual([{labor_cents:"960000",profit_cents:"1537500",margin_pct:"61.50"}]);
+ await draft(items,quote,row.version);row=await read();expect(row.rate).toBe(80000);
+ await expect(draft(items,quote,row.version,{...header,estimated_hours:"999999999999"})).rejects.toThrow();
+ expect(await read()).toEqual(row);
+ const prepared=(await db.query<{snap:string}>("select (prepare_quote_version($1,$2,$3,$4::jsonb)->'snapshot')::text snap",[org,quote,row.version,JSON.stringify(defaultDocumentOptions)])).rows[0].snap;
+ expect(prepared).not.toMatch(/hourly_cost|external_cost|estimated_hours/);
+});
+it("filtra proyectos y agenda por la misma línea y periodo sin duplicar un proyecto con dos paquetes",async()=>{
+ const {line}=await commercialFixture(),project=(await db.query<{id:string}>("select create_project_record($1,$2,'Panel filtrado',current_date-10,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ for(const name of ["Fase norte","Fase sur"]) await db.query("select save_work_package($1,$2,$3,0,$4,$5,'')",[org,project,crypto.randomUUID(),line,name]);
+ const task=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body,due_on) values($1,$2,'task','Tarea con línea',current_date-2) returning id",[org,project])).rows[0].id;
+ const items=(sql:string,l=line)=>db.query("select kind from dashboard_period_items($1,"+sql+",$2) where id in ($3,$4) order by kind",[org,l,project,task]);
+ expect((await items("current_date-12,current_date")).rows).toEqual([{kind:"project"},{kind:"task"}]);
+ expect((await items("current_date-3,current_date")).rows).toEqual([{kind:"task"}]);
+ expect((await items("null,null",crypto.randomUUID())).rows).toEqual([]);
+ await asUser(other);expect((await items("null,null")).rows).toEqual([]);
+ await asUser(reader);expect((await db.query("select id from dashboard_period_items($1) where kind='quote'",[org])).rows).toEqual([]);
+ await asUser(owner);
+});
+it("conserva el costo copiado, redondea por partida y mantiene el costo porcentual fijo",async()=>{
+ const {line,service}=await commercialFixture(),row={service_id:service,business_line_id:line,name:"Levantamiento",unit:"m2",quantity:"2.5",unit_price_cents:10000,discount_rate:"5"};
+ const pct={...row,name:"Coordinación",unit:"pct",quantity:"100000",unit_price_cents:800};
+ const items=[{...row,unit_cost_cents:101},{...pct,unit_cost_cents:3000}];
+ const quote=await draft(items);
+ const read=async()=>(await db.query<{version:number;cost:number}>("select version,direct_cost_cents::int cost from quotes where id=$1",[quote])).rows[0];
+ let saved=await read();expect(saved.cost).toBe(3253);
+ await db.query("update services set estimated_cost_cents=900 where id=$1",[service]);
+ await draft([row,pct],quote,saved.version);saved=await read();expect(saved.cost).toBe(3253);
+ await expect(draft([pct,row],quote,saved.version)).rejects.toThrow("conservar");
+ expect(await read()).toEqual(saved);
+ expect((await db.query("select unit_cost_cents::int cost from quote_items where quote_id=$1 order by position",[quote])).rows).toEqual([{cost:101},{cost:3000}]);
+ const snapshot=(await db.query<{snapshot:string}>("select (prepare_quote_version($1,$2,$3,$4::jsonb)->'snapshot')::text snapshot",[org,quote,saved.version,JSON.stringify(defaultDocumentOptions)])).rows[0].snapshot;
+ expect(snapshot).not.toMatch(/unit_cost|direct_cost/);
+});
+it("congela el desglose interno asociado al folio y lo aísla del PDF y de lectores",async()=>{
+ const {line}=await commercialFixture(),item={business_line_id:line,name:"Topografía",unit:"visit",quantity:"2",unit_price_cents:100000,unit_cost_cents:14000,discount_rate:"0"};
+ const quote=await draft([item]);
+ const version=(await db.query<{version:number}>("select version from quotes where id=$1",[quote])).rows[0].version;
+ const issued=(await db.query<{data:{id:string;snapshot:object}}>("select prepare_quote_version($1,$2,$3,$4::jsonb) data",[org,quote,version,JSON.stringify(defaultDocumentOptions)])).rows[0].data;
+ const read=()=>db.query<{internal_estimate:{direct:string;items:{unit_cost:string}[]}}>("select internal_estimate from quote_versions where id=$1",[issued.id]);
+ expect(JSON.stringify(issued.snapshot)).not.toMatch(/internal_estimate|unit_cost|total_cost/);
+ await draft([{...item,unit_cost_cents:65000}],quote,version);
+ const old=(await read()).rows[0].internal_estimate;
+ expect(old.direct).toBe("28000");expect(old.items[0].unit_cost).toBe("14000");
+ expect((await db.query("select direct_cost_cents::int amount from quotes where id=$1",[quote])).rows).toEqual([{amount:130000}]);
+ await asUser(reader);expect((await read()).rows).toEqual([]);await asUser(owner);
 });

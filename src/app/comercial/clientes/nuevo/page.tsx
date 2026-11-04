@@ -25,3 +25,5 @@ export default async function NewClientPage() {
     </>
   );
 }
+
+export const metadata = { title: "Nuevo cliente" };

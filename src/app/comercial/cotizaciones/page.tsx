@@ -1,3 +1,5 @@
+import { restoreQuote } from "@/modules/quotes/archive-action";
+import { RecordForm } from "@/shared/ui/record-form";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
@@ -5,10 +7,23 @@ import { CommercialTabs } from "@/shared/ui/commercial-tabs";
 import { Button } from "@/shared/ui/button";
 import { formatMoney } from "@/shared/money";
 import { QuoteActions } from "@/modules/quotes/quote-actions";
+const statuses: Record<string, string> = {
+  draft: "Borrador",
+  sent: "Enviada",
+  accepted: "Aceptada",
+  rejected: "Rechazada",
+  expired: "Vencida",
+};
 export default async function QuotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; deleted?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    page?: string;
+    archived?: string;
+    deleted?: string;
+    status?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   if (!canManageCommercial(ctx.membership.role))
@@ -18,7 +33,12 @@ export default async function QuotesPage({
       </p>
     );
   const filter = await searchParams;
+  const archived = filter.archived === "1";
   const q = typeof filter.q === "string" ? filter.q.slice(0, 120) : "";
+  const status =
+    filter.status && Object.hasOwn(statuses, filter.status)
+      ? filter.status
+      : "";
   const page = Math.max(
     1,
     Math.min(10000, Number.parseInt(filter.page || "1") || 1),
@@ -32,9 +52,14 @@ export default async function QuotesPage({
       },
     )
     .eq("organization_id", ctx.organization.id)
-    .is("deleted_at", null)
+
     .order("updated_at", { ascending: false })
+    .order("id")
     .range((page - 1) * 30, page * 30 - 1);
+  query = archived
+    ? query.not("deleted_at", "is", null)
+    : query.is("deleted_at", null);
+  if (status) query = query.eq("status", status);
   if (q) query = query.ilike("name", `%${q.replace(/[\\%_]/g, "\\$&")}%`);
   const { data, error, count } = await query;
   if (error) throw new Error("No se pudieron cargar las cotizaciones.");
@@ -61,6 +86,24 @@ export default async function QuotesPage({
             placeholder="Buscar por proyecto…"
             defaultValue={q}
           />
+          <label>
+            Estado
+            <select name="status" defaultValue={status}>
+              <option value="">Todos</option>
+              {Object.entries(statuses).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Mostrar
+            <select name="archived" defaultValue={archived ? "1" : "0"}>
+              <option value="0">Vigentes</option>
+              <option value="1">Archivadas</option>
+            </select>
+          </label>
           <Button variant="outline">Buscar</Button>
         </form>
         <Button asChild>
@@ -83,24 +126,20 @@ export default async function QuotesPage({
               {data.map((quote) => (
                 <tr key={quote.id}>
                   <td>
-                    <Link
-                      className="client-name"
-                      href={`/comercial/cotizaciones/${quote.id}`}
-                    >
-                      {quote.name}
-                    </Link>
+                    {archived ? (
+                      quote.name
+                    ) : (
+                      <Link
+                        className="client-name"
+                        href={`/comercial/cotizaciones/${quote.id}`}
+                      >
+                        {quote.name}
+                      </Link>
+                    )}
                   </td>
                   <td>
                     <span className="tag">
-                      {(
-                        {
-                          draft: "Borrador",
-                          sent: "Enviada",
-                          accepted: "Aceptada",
-                          rejected: "Rechazada",
-                          expired: "Vencida",
-                        } as Record<string, string>
-                      )[quote.status] || "Estado por revisar"}
+                      {statuses[quote.status] || "Estado por revisar"}
                     </span>
                   </td>
                   <td>{formatMoney(quote.total_cents, quote.currency)}</td>
@@ -111,12 +150,26 @@ export default async function QuotesPage({
                     }).format(new Date(quote.updated_at))}
                   </td>
                   <td>
-                    <QuoteActions
-                      id={quote.id}
-                      name={quote.name}
-                      version={quote.version}
-                      accepted={quote.status === "accepted"}
-                    />
+                    {archived ? (
+                      <RecordForm
+                        save={restoreQuote}
+                        id={quote.id}
+                        submitLabel="Restaurar"
+                      >
+                        <input
+                          type="hidden"
+                          name="version"
+                          value={quote.version}
+                        />
+                      </RecordForm>
+                    ) : (
+                      <QuoteActions
+                        id={quote.id}
+                        name={quote.name}
+                        version={quote.version}
+                        accepted={quote.status === "accepted"}
+                      />
+                    )}
                   </td>
                 </tr>
               ))}
@@ -125,7 +178,11 @@ export default async function QuotesPage({
         </div>
       ) : (
         <section className="panel empty-state">
-          <h2>Una propuesta para lo que viene</h2>
+          <h2>
+            {archived || q || status
+              ? "Sin cotizaciones para esta selección"
+              : "Una propuesta para lo que viene"}
+          </h2>
           <p>
             Comienza con un cliente y los servicios que necesita. Tus precios de
             catálogo se conservan al personalizar cada partida.
@@ -136,7 +193,7 @@ export default async function QuotesPage({
         {page > 1 && (
           <Button asChild variant="outline">
             <Link
-              href={`/comercial/cotizaciones?${new URLSearchParams({ q, page: String(page - 1) })}`}
+              href={`/comercial/cotizaciones?${new URLSearchParams({ q, status, ...(archived ? {archived:"1"} : {}), page: String(page - 1) })}`}
             >
               Anterior
             </Link>
@@ -148,7 +205,7 @@ export default async function QuotesPage({
         {page * 30 < (count || 0) && (
           <Button asChild variant="outline">
             <Link
-              href={`/comercial/cotizaciones?${new URLSearchParams({ q, page: String(page + 1) })}`}
+              href={`/comercial/cotizaciones?${new URLSearchParams({ q, status, ...(archived ? {archived:"1"} : {}), page: String(page + 1) })}`}
             >
               Siguiente
             </Link>
@@ -158,3 +215,5 @@ export default async function QuotesPage({
     </>
   );
 }
+
+export const metadata = { title: "Cotizaciones" };

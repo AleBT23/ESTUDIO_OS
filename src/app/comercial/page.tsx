@@ -230,3 +230,5 @@ export default async function CommercialPage({
     </>
   );
 }
+
+export const metadata = { title: "Comercial" };

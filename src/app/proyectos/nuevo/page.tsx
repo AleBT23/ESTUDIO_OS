@@ -49,3 +49,5 @@ export default async function NewProjectPage() {
       </p>
     );
 }
+
+export const metadata = { title: "Nuevo proyecto" };

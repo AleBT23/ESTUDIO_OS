@@ -3,20 +3,23 @@ import { useActionState, useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { formatMoney } from "@/shared/money";
 import { recordPayment, reversePayment } from "./actions";
-export function PaymentForm({
-  plans,
-  today,
-  requestId,
-}: {
+export type PaymentProps = {
   plans: {
     id: string;
     label: string;
-    balance_cents: number;
+    balance_text: string;
     project_name: string;
   }[];
   today: string;
   requestId: string;
-}) {
+};
+export type PackageOption = { id: string; name: string };
+export function PaymentForm({
+  plans,
+  today,
+  requestId,
+  packageOptions,
+}: PaymentProps & { packageOptions: Record<string, PackageOption[]> }) {
   const [fields, setFields] = useState({
     schedule: "",
     amount: "",
@@ -65,7 +68,18 @@ export function PaymentForm({
             {plans.map((plan) => (
               <option key={plan.id} value={plan.id}>
                 {plan.project_name} · {plan.label} · Pendiente{" "}
-                {formatMoney(plan.balance_cents)}
+                {formatMoney(BigInt(plan.balance_text))}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Paquete al que corresponde el cobro
+          <select key={fields.schedule} name="package_id" defaultValue="">
+            <option value="">Sin asignar a paquete</option>
+            {(packageOptions[fields.schedule] ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
               </option>
             ))}
           </select>

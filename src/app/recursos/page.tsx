@@ -11,9 +11,9 @@ export default function ResourcesPage() {
       <nav className="tabs" aria-label="Recursos">
         <span className="selected">Identidad gráfica</span>
         <Link href="/recursos/documentos">Documentos</Link>
-        <span className="planned">Plantillas · pendiente</span>
-        <span className="planned">Biblioteca · pendiente</span>
-        <span className="planned">Procedimientos · pendiente</span>
+        <Link href="/recursos/plantillas">Plantillas</Link>
+        <Link href="/recursos/biblioteca">Biblioteca técnica</Link>
+        <Link href="/recursos/procedimientos">Procedimientos</Link>
       </nav>
       <div className="settings-grid">
         <section className="panel padded">
@@ -55,3 +55,5 @@ export default function ResourcesPage() {
     </>
   );
 }
+
+export const metadata = { title: "Recursos del estudio" };

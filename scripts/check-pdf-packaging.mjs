@@ -16,8 +16,8 @@ assert(aliases.length, "PDFKit no declara las fuentes esperadas: revisar el cont
 const needed = aliases.map(key => requirePdfKit.resolve(key));
 const normalize = value => path.resolve(value).replaceAll(String.fromCharCode(92), "/");
 const traces = [];
-for (const route of ["cotizaciones", "documentos-estudio"]) {
-  const file = path.join(root, ".next/server/app/api", route, "[id]/preview/route.js.nft.json");
+for (const route of ["cotizaciones/[id]/preview", "documentos-estudio/[id]/preview", "recibos/[id]"]) {
+  const file = path.join(root, ".next/server/app/api", route, "route.js.nft.json");
   const trace = JSON.parse(await fs.readFile(file, "utf8"));
   const files = trace.files.map(name => path.resolve(path.dirname(file), name));
   const included = new Set(files.map(normalize));
@@ -55,7 +55,7 @@ try {
   document.end();
   await completed;
   assert.equal(Buffer.concat(chunks).subarray(0, 4).toString(), "%PDF");
-  console.log("Empaquetado PDF correcto: dos rutas, " + needed.length + " fuentes CJS y PDF sintético aislado válido.");
+  console.log("Empaquetado PDF correcto: tres rutas, " + needed.length + " fuentes CJS y PDF sintético aislado válido.");
 } finally {
   // Ruta temporal recién creada, verificada antes de retirar solo este ensayo.
   assert(path.dirname(temporary) === os.tmpdir() && path.basename(temporary).startsWith("estudio-pdf-package-"));

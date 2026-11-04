@@ -187,3 +187,5 @@ export default async function ConceptsPage({
     </>
   );
 }
+
+export const metadata = { title: "Conceptos" };

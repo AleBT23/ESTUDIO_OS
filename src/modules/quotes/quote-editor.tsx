@@ -10,6 +10,7 @@ import {
   fromCents,
   splitAdvance,
   estimateFees,
+  quoteLineCostCents,
 } from "@/shared/money";
 import { saveQuote } from "./actions";
 import {
@@ -19,10 +20,13 @@ import {
   type QuoteItem,
 } from "./schema";
 import { insertConcept } from "./concept-schema";
+import { mergePresetText } from "./preset-text";
 type Preset = {
   id: string;
   name: string;
   notes: string;
+  conditions: string;
+  document_layout?: QuoteHeader["document_layout"];
   items: { service_id: string; quantity: string }[];
 };
 export function QuoteEditor({
@@ -93,6 +97,7 @@ export function QuoteEditor({
       business_line_id: service.business_line_id,
       unit: service.unit,
       unitPrice: fromCents(service.price_cents),
+      unitCost: fromCents(service.estimated_cost_cents),
       quantity,
       discount: "0",
     };
@@ -114,15 +119,25 @@ export function QuoteEditor({
       setNotice("Una propuesta admite hasta 100 partidas.");
       return;
     }
+    const merged = mergePresetText(header, preset);
+    if (!merged) {
+      setNotice(
+        "Las notas o condiciones superan el límite. Acorta el texto antes de aplicar el preset.",
+      );
+      return;
+    }
     setItems([
       ...items,
       ...resolved.map((i) => itemFromService(i.service!, i.quantity)),
     ]);
-    if (preset.notes)
-      setHeader({
-        ...header,
-        notes: [header.notes, preset.notes].filter(Boolean).join("\n\n"),
-      });
+    setHeader({
+      ...header,
+      ...merged,
+      ...(preset.document_layout && {
+        document_layout: structuredClone(preset.document_layout),
+      }),
+    });
+    if (preset.conditions) setFull(true);
     setDirty(true);
     setNotice("Preset aplicado. Los textos y precios son copias editables.");
   }
@@ -136,6 +151,8 @@ export function QuoteEditor({
       totals.net,
       header.externalCost,
       header.estimated_hours,
+      header.hourlyCost,
+      items.reduce((n, i) => n + quoteLineCostCents(i), 0),
     );
   } catch {
     /* Mostrar estado incompleto durante captura; validación al guardar. */
@@ -372,6 +389,20 @@ export function QuoteEditor({
                     />
                   </label>
                   <label>
+                    {item.unit === "pct"
+                      ? "Costo directo fijo de la partida MXN"
+                      : "Costo directo por unidad MXN"}
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.unitCost ?? ""}
+                      onChange={(e) =>
+                        updateItem(index, "unitCost", e.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
                     Descuento %
                     <input
                       type="number"
@@ -460,6 +491,7 @@ export function QuoteEditor({
                     quantity: "1",
                     unit: "fixed",
                     unitPrice: "0.00",
+                    unitCost: "",
                     discount: "0",
                   },
                 ]);
@@ -505,7 +537,17 @@ export function QuoteEditor({
                 />
               </label>
               <label>
-                Costos externos previstos MXN
+                Costo interno por hora MXN (opcional)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={header.hourlyCost ?? ""}
+                  onChange={(e) => updateHeader("hourlyCost", e.target.value)}
+                />
+              </label>
+              <label>
+                Otros costos externos previstos MXN
                 <input
                   type="number"
                   inputMode="decimal"
@@ -523,11 +565,27 @@ export function QuoteEditor({
                 <dd>{totals ? formatMoney(totals.net) : "—"}</dd>
               </div>
               <div>
-                <dt>Resultado antes de costo de horas</dt>
+                <dt>Costo interno previsto de horas</dt>
+                <dd>
+                  {estimate?.laborCostCents != null
+                    ? formatMoney(estimate.laborCostCents)
+                    : "Sin tarifa asignada"}
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  {estimate?.laborCostCents != null
+                    ? "Resultado después de costos internos y externos"
+                    : "Resultado antes del costo de horas"}
+                </dt>
                 <dd>{estimate ? formatMoney(estimate.profitCents) : "—"}</dd>
               </div>
               <div>
-                <dt>Margen estimado</dt>
+                <dt>
+                  {estimate?.laborCostCents != null
+                    ? "Margen con costo de horas"
+                    : "Margen antes del costo de horas"}
+                </dt>
                 <dd>
                   {estimate?.marginPercent !== null &&
                   estimate?.marginPercent !== undefined
@@ -546,11 +604,11 @@ export function QuoteEditor({
               </div>
             </dl>
             <p className="caption">
-              Fórmulas: resultado = ingreso neto sin IVA menos costos externos;
-              margen = resultado / ingreso neto; ingreso por hora = ingreso neto
-              / horas. El costo imputado de horas se reportará por separado
-              cuando se definan tarifas. Esta estimación no representa cobros ni
-              utilidad real.
+              El resultado descuenta del ingreso sin IVA los costos directos de
+              las partidas, los otros costos externos y, cuando capturas una
+              tarifa interna, las horas previstas multiplicadas por esa tarifa.
+              El margen divide el resultado entre el ingreso sin IVA. El ingreso
+              por hora usa las horas previstas.
             </p>
           </section>
         </div>

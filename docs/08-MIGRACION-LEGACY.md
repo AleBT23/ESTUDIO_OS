@@ -21,3 +21,15 @@ El RAR contiene **código**, no necesariamente los datos actuales del LocalStora
 
 ## Pruebas de regresión
 Comparar folios, impuestos, descuentos, unidades, subtotales, totales, presets, caracteres especiales y composición de páginas. No afirmar equivalencia hasta verificarla.
+
+## Ensayo del directorio de clientes
+En una base aislada con la migración 068, el administrador de PostgreSQL habilita únicamente la organización de ensayo en private.legacy_staging_targets. La tabla se crea vacía y carece de permisos de escritura para los usuarios de la aplicación. La interfaz de Configuración requiere APP_ENV=staging y una cuenta propietaria. Primero revisa la huella y el informe local. Después selecciona el tipo de clientes del lote y envía el archivo al entorno de pruebas. Los clientes ya coincidentes por ID se cuentan sin modificación. Ante diferencias o coincidencias ambiguas se revierte el lote completo. Los campos anteriores sin tipo de persona o empresa requieren clasificar el lote antes del ensayo.
+
+## Ensayo de servicios y presets
+Con las migraciones 075 y 076, revisa la exportación en Configuración y consulta los identificadores en el informe local. Importa cada servicio a la línea elegida. El catálogo exige moneda MXN explícita y precios representables en centavos. Conserva las tarifas porcentuales y el estado de archivo. Después selecciona el preset por su identificador. Todos sus servicios deben estar activos en el destino de ensayo. El preset conserva el orden del legado y cantidad uno en cada partida. Una repetición coincidente conserva la versión existente.
+
+## Archivo histórico de propuestas
+En staging, el propietario puede abrir el archivo desde Configuración y seleccionar una propuesta por el identificador mostrado en el informe de conciliación. Se conserva el contenido JSON de la propuesta, su folio y la huella de la exportación. La moneda mostrada corresponde a la configuración de la exportación. El vínculo al cliente se establece solo por identificador original. Los importes históricos quedan disponibles para cotejo y la operación carece de efectos financieros. Una revisión distinta del mismo identificador requiere conciliación antes de cualquier nueva incorporación.
+
+## Conceptos reutilizables
+La migración 078 habilita la importación individual a la biblioteca comercial del estudio de ensayo. Localiza el ID en el informe de revisión y selecciona ese registro en Configuración. El texto conserva acentos, espacios y saltos de línea. Si un miembro ya editó el concepto, la discrepancia requiere revisión.

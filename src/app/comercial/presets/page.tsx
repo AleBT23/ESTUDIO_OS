@@ -3,6 +3,7 @@ import { requireContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
 import { CommercialTabs } from "@/shared/ui/commercial-tabs";
 import { Button } from "@/shared/ui/button";
+import { listLibraryImages } from "@/modules/documents/library-images";
 import { PresetForm } from "@/modules/quotes/preset-form";
 import type { Service } from "@/modules/quotes/schema";
 export default async function PresetsPage({
@@ -20,7 +21,7 @@ export default async function PresetsPage({
   const filter = await searchParams;
   const [presetsResult, servicesResult, itemsResult] = await Promise.all([
     ctx.db
-      .from("service_presets")
+      .from("preset_specs")
       .select("*")
       .eq("organization_id", ctx.organization.id)
       .is("deleted_at", null)
@@ -42,6 +43,10 @@ export default async function PresetsPage({
   ]);
   if (presetsResult.error || servicesResult.error || itemsResult.error)
     throw new Error("No se pudieron cargar presets y servicios.");
+  const images =
+    filter.new === "1" || filter.edit === "1"
+      ? await listLibraryImages(ctx)
+      : null;
   const presets = presetsResult.data || [];
   const selected = presets.find((p) => p.id === filter.selected);
   const services = (servicesResult.data || []) as Service[];
@@ -59,12 +64,16 @@ export default async function PresetsPage({
       {filter.new === "1" || (selected && filter.edit === "1") ? (
         <PresetForm
           services={services}
+          images={images?.data ?? []}
+          imageError={!!images?.error}
           preset={
             selected && filter.new !== "1"
               ? {
                   id: selected.id,
                   name: selected.name,
                   notes: selected.notes,
+                  conditions: selected.conditions,
+                  document_layout: selected.document_layout,
                   version: selected.version,
                   items: selectedItems,
                 }
@@ -82,6 +91,13 @@ export default async function PresetsPage({
             </Button>
           </div>
           <p className="muted">{selected.notes || "Sin notas adicionales"}</p>
+          {selected.conditions && (
+            <p style={{ whiteSpace: "pre-wrap" }}>
+              <strong>Condiciones comerciales</strong>
+              <br />
+              {selected.conditions}
+            </p>
+          )}
           {selectedItems.map((item, index) => (
             <p key={index}>
               {item.quantity} ×{" "}
@@ -129,3 +145,5 @@ export default async function PresetsPage({
     </>
   );
 }
+
+export const metadata = { title: "Presets de cotización" };

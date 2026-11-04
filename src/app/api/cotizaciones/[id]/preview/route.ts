@@ -1,5 +1,6 @@
 import { pdfFailureDetails } from "@/modules/documents/pdf-diagnostics";
 import { z } from "zod";
+import { loadLibraryImage } from "@/modules/documents/library-images";
 import { getContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
 import {
@@ -33,7 +34,19 @@ export async function GET(
     );
     const snapshot = await previewSnapshot(id, options);
     stage = "render";
-    const pdf = await new ReactPdfRenderer().render(snapshot);
+    const pdf = await new ReactPdfRenderer().render(
+      snapshot,
+      options.letterhead_revision
+        ? await loadLibraryImage(
+            {
+              ...ctx,
+              organization: ctx.organization,
+              membership: ctx.membership,
+            },
+            options.letterhead_revision,
+          )
+        : undefined,
+    );
     return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",

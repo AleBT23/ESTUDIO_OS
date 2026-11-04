@@ -1,3 +1,14 @@
+import {PackageForm} from "@/modules/projects/package-form";
+import {DossierNav} from "@/shared/ui/dossier-nav";
+import { DossierPanel } from "@/modules/documents/dossier-panel";
+import {ProjectDetails} from "@/modules/projects/project-details";
+import {ProjectPerformance} from "@/modules/projects/project-performance";
+import { PhasePanel } from "@/modules/projects/phase-panel";
+import { DeliveryPanel } from "@/modules/projects/delivery-panel";
+import { canManageCommercial } from "@/shared/permissions";
+import { TimePanel } from "@/modules/projects/time-panel";
+import { FeePanel } from "@/modules/finance/fee-panel";
+import { Changes } from "@/modules/projects/change-panel";
 import Link from "next/link";
 import { z } from "zod";
 import { notFound } from "next/navigation";
@@ -17,7 +28,21 @@ export default async function ProjectPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ notes?: string; visits?: string; payments?: string }>;
+  searchParams: Promise<{
+    archivos?: string; archivados?: string;
+    notes?: string;
+    visits?: string;
+    payments?: string;
+    planes?: string;
+    ampliacion?: string;
+    obligacion?: string;
+    tiempo?: string;
+    honorarios?: string;
+    cambios?: string;
+    entregas?: string;
+    entrega?: string;
+    revisiones?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   const { id } = await params;
@@ -28,22 +53,23 @@ export default async function ProjectPage({
   const [projectResult, packagesResult] = await Promise.all([
     ctx.db
       .from("projects")
-      .select("id,name,client_id,state,start_date,quote_version_id,version")
+      .select("id,name,client_id,state,start_date,quote_version_id,version,location,target_end,lead_id")
       .eq("organization_id", ctx.organization.id)
       .eq("id", id)
       .is("deleted_at", null)
       .maybeSingle(),
     ctx.db
       .from("project_service_packages")
-      .select("id,name,scope,business_line_id")
+      .select("id,name,scope,business_line_id,manual,version,execution_notes")
       .eq("organization_id", ctx.organization.id)
-      .eq("project_id", id)
+      .eq("project_id", id).is("deleted_at",null)
       .order("created_at"),
   ]);
   if (projectResult.error || packagesResult.error)
     throw new Error("No se pudo consultar el proyecto.");
   const project = projectResult.data;
   if (!project) notFound();
+  const editPackages=canManageCommercial(ctx.membership.role) && ["active","paused"].includes(project.state);
   const client = await ctx.db
     .from("clients")
     .select("name")
@@ -60,26 +86,29 @@ export default async function ProjectPage({
         <p className="eyebrow">EXPEDIENTE DEL PROYECTO</p>
         <h1>{project.name}</h1>
         <p>
-          {client.data.name} · Inicio {project.start_date} ·{" "}
-          {project.state === "active" ? "Activo" : project.state}
+          {client.data.name}
         </p>
       </div>
-      {packagesResult.data?.length ? (
+      <DossierNav scope="project" role={ctx.membership.role} packages={editPackages || !!packagesResult.data?.length}/>
+      <ProjectDetails project={project}/>
+      <DossierPanel scope="project" parent={id} inactive={project.state==="archived"} archived={filter.archivados==="1"} page={page(filter.archivos)}/>
+      {editPackages || packagesResult.data?.length ? (
         <>
           <div className="section-heading">
-            <h2>Paquetes de servicios</h2>
+            <h2 id="paquetes">Paquetes de servicios</h2>
             <span className="caption">
-              Un expediente · {packagesResult.data?.length || 0} líneas
-              contratadas
+              {packagesResult.data?.length || 0} paquetes
+              de trabajo
             </span>
           </div>
+          {editPackages && <PackageForm project={id} lines={ctx.lines}/>}
           <div className="settings-grid">
             {packagesResult.data?.map((pkg) => (
               <section key={pkg.id} className="panel padded">
                 <p className="eyebrow">
                   {ctx.lines.find((l) => l.id === pkg.business_line_id)?.name}
                 </p>
-                <h2>{pkg.name}</h2>
+                <h2>{pkg.name}</h2><p className="caption">{pkg.manual?"Paquete operativo":"Alcance de cotización aceptada"}</p>{pkg.execution_notes&&<p style={{whiteSpace:"pre-wrap"}}>{pkg.execution_notes}</p>}{editPackages&&<PackageForm project={id} lines={ctx.lines} existing={pkg}/>}
                 {scopeSchema.parse(pkg.scope).map((item, index) => (
                   <div className="activity-row" key={index}>
                     <strong>{item.name}</strong>
@@ -97,22 +126,48 @@ export default async function ProjectPage({
           </div>
         </>
       ) : null}
+      {canManageCommercial(ctx.membership.role) && (
+        <Link href={"/comercial/contratos?proyecto=" + id}>
+          Contratos del proyecto
+        </Link>
+      )}
+      <PhasePanel project={id} />
+      <DeliveryPanel
+        id={id}
+        page={page(filter.entregas)}
+        selected={filter.entrega}
+        historyPage={page(filter.revisiones)}
+      />
+      <Changes
+        project={id}
+        client={project.client_id}
+        page={page(filter.cambios)}
+      />
       <ProjectWorkspace
         project={id}
         notesPage={page(filter.notes)}
         visitsPage={page(filter.visits)}
       />
+      <FeePanel
+        project={id}
+        packages={packagesResult.data ?? []}
+        page={page(filter.honorarios)}
+      />
+      <ProjectPerformance project={id}/>
+      <TimePanel project={id} page={page(filter.tiempo)} />
       <ProjectFinance
         project={id}
         name={project.name}
         version={project.version}
         manual={!project.quote_version_id}
         page={page(filter.payments)}
+        schedule={z.uuid().safeParse(filter.obligacion).success ? filter.obligacion : undefined}
+        showPlans={!!filter.planes}
+        planPage={page(filter.planes)}
+        change={z.uuid().safeParse(filter.ampliacion).success ? filter.ampliacion : undefined}
       />
-      <p className="notice" style={{ marginTop: 24 }}>
-        Las notas y fotografías se comparten con el estudio. Fases, dependencias
-        y cambios de alcance formales se incorporarán en siguientes incrementos.
-      </p>
     </>
   );
 }
+
+export const metadata = { title: "Expediente del proyecto" };

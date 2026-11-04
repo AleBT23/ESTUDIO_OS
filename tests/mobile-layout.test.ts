@@ -26,6 +26,12 @@ vi.mock("@/modules/finance/actions", () => ({
 vi.mock("@/modules/quotes/archive-action", () => ({
   archiveQuote: async () => ({}),
 }));
+vi.mock("@/modules/documents/standalone-actions", () => ({
+  saveStudioDocument: async () => ({}),
+  issueStudioDocument: async () => ({}),
+}));
+import { StudioDocumentForm } from "@/modules/documents/standalone-form";
+import { defaultDocumentOptions } from "@/modules/documents/schema";
 import { Shell } from "@/shared/ui/shell";
 import { QuoteEditor } from "@/modules/quotes/quote-editor";
 import { NoteForm, NoteRow } from "@/modules/projects/forms";
@@ -100,11 +106,12 @@ it("prepara componentes reales para revisión responsive sin simular persistenci
       h(ObservationForm, { project: id, today: "2026-10-25", requestId: id }),
     ),
     h(PaymentForm, {
+      packageOptions: { [id]: [{ id, name: "Planos arquitectónicos" }] },
       plans: [
         {
           id,
           label: "Anticipo",
-          balance_cents: 250000,
+          balance_text: "250000",
           project_name: "Obra de prueba",
         },
       ],
@@ -132,6 +139,16 @@ it("prepara componentes reales para revisión responsive sin simular persistenci
     ["quote", quote],
     ["project", project],
     ["dialog", dialog],
+    ["template", h(StudioDocumentForm, {
+      clients: [{ id, name: "Cliente disponible" }],
+      projects: [],
+      template: {
+        kind: "letter",
+        title: "Carta de entrega de documentación técnica",
+        body: "Se entrega el expediente para revisión del proyecto.",
+        margins: defaultDocumentOptions.margins,
+      },
+    })],
   ] as const) {
     const html = renderToString(
       h(Shell, {

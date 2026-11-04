@@ -67,11 +67,13 @@ export function splitAdvance(total: number, percentage: string) {
     .toNumber();
   return { advance, balance: total - advance, collected: 0 };
 }
-export function formatMoney(cents: number, currency = "MXN") {
-  if (!Number.isSafeInteger(cents)) throw new Error("Importe fuera de rango");
+export function formatMoney(cents: number | bigint, currency = "MXN") {
+  if (typeof cents === "number" && !Number.isSafeInteger(cents))
+    throw new Error("Importe fuera de rango");
   // No dividir en coma flotante: en importes cercanos al máximo seguro,
   // cents/100 puede perder un centavo incluso antes del formateo.
-  const absolute = BigInt(Math.abs(cents));
+  const integer = BigInt(cents);
+  const absolute = integer < 0n ? -integer : integer;
   const whole = new Intl.NumberFormat("es-MX", {
     maximumFractionDigits: 0,
   }).format(absolute / 100n);
@@ -99,20 +101,47 @@ export function fromCents(value: number) {
   if (!Number.isSafeInteger(value)) throw new Error("Importe fuera de rango");
   return new D(value).div(100).toFixed(2);
 }
+export function marginOnRevenue(net: bigint, revenue: bigint): string | null {
+  if (revenue === 0n) return null;
+  return new D(net.toString()).div(revenue.toString()).mul(100).toFixed(2);
+}
+export function quoteLineCostCents(item: {
+  unit: string;
+  quantity: string;
+  unitCost?: string;
+}) {
+  if (!item.unitCost) return 0;
+  return cents(
+    positive(item.unitCost).mul(
+      item.unit === "pct" ? 1 : positive(item.quantity),
+    ),
+  );
+}
 export function estimateFees(
   netRevenueCents: number,
   externalCost: string,
   estimatedHours: string,
+  hourlyCost?: string,
+  itemCostCents = 0,
 ) {
   if (!Number.isSafeInteger(netRevenueCents) || netRevenueCents < 0)
     throw new Error("Ingreso inválido");
   const externalCostCents = toCents(externalCost);
   const hours = positive(estimatedHours);
-  const profitCents = netRevenueCents - externalCostCents;
-  const marginPercent =
-    netRevenueCents === 0
-      ? null
-      : new D(profitCents).div(netRevenueCents).mul(100).toFixed(2);
+  const laborCostCents = hourlyCost
+    ? cents(hours.mul(positive(hourlyCost)))
+    : null;
+  if (!Number.isSafeInteger(itemCostCents) || itemCostCents < 0)
+    throw Error("Costo de partidas inválido");
+  const totalCostCents =
+    itemCostCents + externalCostCents + (laborCostCents ?? 0);
+  if (!Number.isSafeInteger(totalCostCents))
+    throw Error("Costos fuera de rango");
+  const profitCents = netRevenueCents - totalCostCents;
+  const marginPercent = marginOnRevenue(
+    BigInt(profitCents),
+    BigInt(netRevenueCents),
+  );
   const hourly = hours.isZero()
     ? null
     : new D(netRevenueCents).div(hours).toDecimalPlaces(0);
@@ -120,6 +149,7 @@ export function estimateFees(
     throw new Error("La tarifa por hora supera el rango permitido.");
   return {
     externalCostCents,
+    laborCostCents,
     profitCents,
     marginPercent,
     effectiveHourlyCents: hourly?.toNumber() ?? null,

@@ -1,12 +1,11 @@
+import { SchedulePaymentForm } from "@/modules/finance/schedule-payment-form";
+import { ReplanForm } from "@/modules/finance/replan-form";
 import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { getContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
-import {
-  PaymentForm,
-  ReversePaymentForm,
-} from "@/modules/finance/payment-forms";
+import { ReversePaymentForm } from "@/modules/finance/payment-forms";
 export default async function FinancePage({
   searchParams,
 }: {
@@ -56,36 +55,45 @@ export default async function FinancePage({
         </p>
       </>
     );
-  const [plansResult, paymentsResult, projectsResult] = await Promise.all([
+  const [plansResult, paymentsResult] = await Promise.all([
     ctx.db
       .from("payment_schedule_balances")
-      .select("*", { count: "exact" })
+      .select(
+        "id,project_id,label,due_date,amount_text:amount_cents::text,balance_text:balance_cents::text,collected_text:collected_cents::text",
+        { count: "exact" },
+      )
       .eq("organization_id", ctx.organization.id)
       .order("due_date")
+      .order("id")
       .range((page - 1) * 30, page * 30 - 1),
     ctx.db
-      .from("payments")
+      .from("project_payment_history")
       .select(
-        "id,schedule_id,amount_cents,paid_on,reference,state,version,reversal_reason",
+        "id,schedule_id,amount_cents,paid_on,reference,state,version,reversal_reason,package_name",
         { count: "exact" },
       )
       .eq("organization_id", ctx.organization.id)
       .order("created_at", { ascending: false })
       .range((historyPage - 1) * 30, historyPage * 30 - 1),
-    ctx.db
-      .from("projects")
-      .select("id,name")
-      .eq("organization_id", ctx.organization.id)
-      .limit(1000),
   ]);
-  if (plansResult.error || paymentsResult.error || projectsResult.error)
+  if (plansResult.error || paymentsResult.error)
     throw new Error("No se pudo consultar el expediente de cobros.");
   const plans = plansResult.data || [];
+  const ids = [...new Set(plans.map((p) => p.project_id))];
+  const projectsResult = ids.length
+    ? await ctx.db
+        .from("projects")
+        .select("id,name")
+        .eq("organization_id", ctx.organization.id)
+        .in("id", ids)
+    : { data: [], error: null };
+  if (projectsResult.error)
+    throw new Error("No se pudieron consultar los proyectos del plan.");
   const projectName = (id: string) =>
     projectsResult.data?.find((p) => p.id === id)?.name ||
-    "Proyecto fuera del rango del listado";
+    "Proyecto no disponible";
   const pending = plans
-    .filter((p) => p.balance_cents > 0)
+    .filter((p) => BigInt(p.balance_text) > 0n)
     .map((p) => ({ ...p, project_name: projectName(p.project_id) }));
   const today = new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
@@ -98,13 +106,17 @@ export default async function FinancePage({
       {heading}
       <nav className="tabs" aria-label="Administración">
         <span className="selected">Planes y cobros</span>
-        <span className="planned">Gastos · pendiente</span>
-        <span className="planned">Colaboradores · pendiente</span>
-        <span className="planned">Tiempo · pendiente</span>
-        <span className="planned">Rentabilidad · pendiente</span>
+        <Link href="/administracion/cartera">Cartera por vencimiento</Link>
+        <Link href="/administracion/reportes">Reportes</Link>
+        <Link href="/administracion/operaciones">Operaciones por área</Link>
+        <Link href="/proyectos">Tiempo y honorarios por proyecto</Link>
       </nav>
       <section className="panel padded">
         <h2>Obligaciones de pago</h2>
+        <Link href="/administracion/reprogramaciones">
+          Historial de reprogramaciones
+        </Link>
+        <p><Link href="/administracion/cancelaciones">Historial de cancelaciones</Link></p>
         {plans.length ? (
           <div className="table-scroll">
             <table>
@@ -115,6 +127,7 @@ export default async function FinancePage({
                   <th>Programado</th>
                   <th>Cobrado</th>
                   <th>Pendiente</th>
+                  <th>Plan de cobro</th>
                 </tr>
               </thead>
               <tbody>
@@ -129,9 +142,14 @@ export default async function FinancePage({
                       </small>
                     </td>
                     <td>{plan.due_date}</td>
-                    <td>{formatMoney(plan.amount_cents)}</td>
-                    <td>{formatMoney(plan.collected_cents)}</td>
-                    <td>{formatMoney(plan.balance_cents)}</td>
+                    <td>{formatMoney(BigInt(plan.amount_text))}</td>
+                    <td>{formatMoney(BigInt(plan.collected_text))}</td>
+                    <td>{formatMoney(BigInt(plan.balance_text))}</td>
+                    <td>
+                      {BigInt(plan.balance_text) > 0n && (
+                        <ReplanForm plan={plan} />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -165,7 +183,7 @@ export default async function FinancePage({
         </div>
       </section>
       <div style={{ marginTop: 24 }}>
-        <PaymentForm
+        <SchedulePaymentForm
           plans={pending}
           today={today}
           requestId={crypto.randomUUID()}
@@ -181,8 +199,11 @@ export default async function FinancePage({
                 {payment.state === "posted" ? "Cobrado" : "Revertido"}
               </span>
               <p className="caption" style={{ marginTop: 7 }}>
-                {payment.paid_on} · {payment.reference || "Sin referencia"}
+                {payment.paid_on} · {payment.reference || "Sin referencia"} · {payment.package_name ?? "Sin paquete asignado"}
               </p>
+              <a href={"/api/recibos/" + payment.id + "?origen=proyecto"}>
+                Descargar recibo PDF
+              </a>
               {payment.reversal_reason && (
                 <p className="caption">Motivo: {payment.reversal_reason}</p>
               )}
@@ -220,9 +241,12 @@ export default async function FinancePage({
         </div>
       </section>
       <p className="notice" style={{ marginTop: 24 }}>
-        Gastos, repartos, tiempo, rentabilidad y reportes aún no están
-        implementados. Estos cobros no representan la utilidad del estudio.
+        Los saldos de este expediente corresponden a los planes de cobro del
+        proyecto. Consulta los pagos a colaboradores y los costos directos en
+        Operaciones por área.
       </p>
     </>
   );
 }
+
+export const metadata = { title: "Administración" };

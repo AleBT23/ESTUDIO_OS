@@ -6,6 +6,7 @@ import { QuoteEditor } from "@/modules/quotes/quote-editor";
 import { fromCents, formatMoney } from "@/shared/money";
 import { Button } from "@/shared/ui/button";
 import type { QuoteItem, QuoteHeader } from "@/modules/quotes/schema";
+import { listLibraryImages } from "@/modules/documents/library-images";
 import { DocumentPanel } from "@/modules/documents/document-panel";
 import { QuoteLifecyclePanel } from "@/modules/quotes/lifecycle-panel";
 import { QuoteActions } from "@/modules/quotes/quote-actions";
@@ -20,7 +21,7 @@ export default async function QuotePage({
   const { id } = await params;
   const { edit } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
-  const [quoteResult, itemsResult] = await Promise.all([
+  const [quoteResult, itemsResult, fees] = await Promise.all([
     ctx.db
       .from("quotes")
       .select("*")
@@ -34,6 +35,12 @@ export default async function QuotePage({
       .eq("organization_id", ctx.organization.id)
       .eq("quote_id", id)
       .order("position"),
+    ctx.db
+      .from("quote_fee_estimates")
+      .select("labor_cents,profit_cents,margin_pct,item_cost_cents")
+      .eq("organization_id", ctx.organization.id)
+      .eq("id", id)
+      .maybeSingle(),
   ]);
   if (quoteResult.error || itemsResult.error)
     throw new Error("No se pudo cargar la cotización.");
@@ -69,17 +76,33 @@ export default async function QuotePage({
     quantity: String(i.quantity),
     unit: i.unit,
     unitPrice: fromCents(i.unit_price_cents),
+    unitCost: i.unit_cost_cents == null ? "" : fromCents(i.unit_cost_cents),
     discount: String(i.discount_rate),
   }));
   const versions = await ctx.db
     .from("quote_versions")
-    .select("id,folio,state,draft_version,version_number,issued_at")
+    .select(
+      "id,folio,state,draft_version,version_number,issued_at,internal_estimate",
+    )
     .eq("organization_id", ctx.organization.id)
     .eq("quote_id", id)
     .order("version_number", { ascending: false });
   if (versions.error)
     throw new Error("No se pudieron consultar las versiones.");
+  const images =
+    quote.status === "draft" && edit !== "1"
+      ? await listLibraryImages(ctx)
+      : null;
+  const savedLayout = await ctx.db
+    .from("sales_document_layouts")
+    .select("options")
+    .eq("organization_id", ctx.organization.id)
+    .eq("quote_id", id)
+    .maybeSingle();
+  if (savedLayout.error)
+    throw Error("No se pudo cargar el diseño de la propuesta.");
   const header: QuoteHeader = {
+    document_layout: savedLayout.data?.options,
     client_id: quote.client_id,
     name: quote.name,
     vat_rate: String(quote.vat_rate),
@@ -90,6 +113,8 @@ export default async function QuotePage({
     conditions: quote.conditions,
     estimated_hours: String(quote.estimated_hours),
     externalCost: fromCents(quote.external_cost_cents),
+    hourlyCost:
+      quote.hourly_cost_cents == null ? "" : fromCents(quote.hourly_cost_cents),
   };
   return (
     <>
@@ -198,6 +223,35 @@ export default async function QuotePage({
               <dd>{formatMoney(quote.total_cents)}</dd>
             </div>
           </dl>
+          <details>
+            <summary>Rentabilidad interna prevista</summary>
+            {fees.error || !fees.data ? (
+              <p>Estimación no disponible.</p>
+            ) : (
+              <dl>
+                <dt>Costos directos de partidas</dt>
+                <dd>{formatMoney(BigInt(fees.data.item_cost_cents))}</dd>
+                <dt>Costo previsto de horas</dt>
+                <dd>
+                  {fees.data.labor_cents === null
+                    ? "Sin tarifa asignada"
+                    : formatMoney(BigInt(fees.data.labor_cents))}
+                </dd>
+                <dt>
+                  {fees.data.labor_cents === null
+                    ? "Resultado antes de costo de horas"
+                    : "Resultado después de costos"}
+                </dt>
+                <dd>{formatMoney(BigInt(fees.data.profit_cents))}</dd>
+                <dt>Margen previsto sobre ingreso sin IVA</dt>
+                <dd>
+                  {fees.data.margin_pct === null
+                    ? "Sin ingreso"
+                    : fees.data.margin_pct + " %"}
+                </dd>
+              </dl>
+            )}
+          </details>
           {quote.conditions && (
             <div style={{ whiteSpace: "pre-wrap" }}>
               <h3>Condiciones</h3>
@@ -223,6 +277,9 @@ export default async function QuotePage({
           version={quote.version}
           status={quote.status}
           versions={versions.data || []}
+          initialLayout={header.document_layout}
+          images={images?.data ?? []}
+          imageError={!!images?.error}
           today={new Intl.DateTimeFormat("en-CA", {
             year: "numeric",
             month: "2-digit",
@@ -266,3 +323,5 @@ export default async function QuotePage({
     </>
   );
 }
+
+export const metadata = { title: "Detalle de cotización" };

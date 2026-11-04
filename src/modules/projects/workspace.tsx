@@ -1,3 +1,7 @@
+import { saveDependency } from "./dependency-action";
+import { RecordForm } from "@/shared/ui/record-form";
+import { Subtasks } from "./subtasks";
+import { studioToday, weekThrough } from "./agenda-window";
 import Link from "next/link";
 import { requireContext, getContext } from "@/shared/auth/context";
 import { canWriteProject } from "@/shared/permissions";
@@ -5,7 +9,15 @@ import { NoteForm, NoteRow } from "./forms";
 import { ObservationForm } from "./observation-form";
 import type { ProjectNote } from "./schema";
 import { projectWorkspaceReady } from "./availability";
-export async function DashboardTasks({ page = 1 }: { page?: number }) {
+export async function DashboardTasks({
+  page = 1,
+  view,
+  date,
+}: {
+  page?: number;
+  view?: string;
+  date?: string;
+}) {
   const ctx = await getContext();
   if (!ctx?.organization || !ctx.membership) return null;
   if (!(await projectWorkspaceReady()))
@@ -15,16 +27,36 @@ export async function DashboardTasks({ page = 1 }: { page?: number }) {
         actualización.
       </p>
     );
-  const { data, error, count } = await ctx.db
+  const members = await ctx.db
+    .from("memberships")
+    .select("user_id")
+    .eq("organization_id", ctx.organization.id);
+  let query = ctx.db
     .from("project_notes_context")
     .select(
-      "id,project_id,project_name,kind,body,due_on,completed_at,version,created_at",
+      "id,project_id,project_name,kind,body,due_on,priority,repeat_days,assignee,completed_at,version,created_at",
       { count: "exact" },
     )
     .eq("organization_id", ctx.organization.id)
     .eq("kind", "task")
-    .is("completed_at", null)
-    .is("deleted_at", null)
+    .is("deleted_at", null);
+  const today = studioToday(ctx.organization.timezone);
+  query =
+    view === "completed"
+      ? query.not("completed_at", "is", null)
+      : query.is("completed_at", null);
+  if (view === "mine") query = query.eq("assignee", ctx.user.id);
+  if (view === "high") query = query.eq("priority", "high");
+  if (view === "today") query = query.eq("due_on", today);
+  if (view === "date" && date) query = query.eq("due_on", date);
+  if (view === "week")
+    query = query.gte("due_on", today).lte("due_on", weekThrough(today));
+  if (view === "overdue" || view === "lateTasks")
+    query = query.lt("due_on", today);
+  const pager = view
+    ? "/agenda?view=" + view + (date ? "&date=" + date : "") + "&page="
+    : "/?pendingPage=";
+  const { data, error, count } = await query
     .order("due_on", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range((page - 1) * 20, page * 20 - 1);
@@ -35,13 +67,18 @@ export async function DashboardTasks({ page = 1 }: { page?: number }) {
       <div className="section-heading">
         <div>
           <p className="eyebrow">PARA TENERLO PRESENTE</p>
-          <h2>Pendientes del estudio</h2>
+          <h2>
+            {view === "completed"
+              ? "Recordatorios completados"
+              : "Pendientes del estudio"}
+          </h2>
         </div>
-        <span className="tag">{count || 0} pendientes</span>
+        <span className="tag">{count || 0} registros</span>
       </div>
       {data?.length ? (
         data.map((note) => (
           <NoteRow
+            members={members.data ?? []}
             key={note.id + ":" + note.version}
             note={note as ProjectNote}
             writable={canWriteProject(ctx.membership!.role)}
@@ -58,19 +95,14 @@ export async function DashboardTasks({ page = 1 }: { page?: number }) {
         <Link className="text-link" href="/proyectos">
           Abrir proyectos →
         </Link>
+        {!view && <Link href="/agenda">Ver agenda</Link>}
         {page > 1 && (
-          <Link
-            className="button button-outline"
-            href={`/?pendingPage=${page - 1}`}
-          >
+          <Link className="button button-outline" href={pager + (page - 1)}>
             Anteriores
           </Link>
         )}
         {page * 20 < (count || 0) && (
-          <Link
-            className="button button-outline"
-            href={`/?pendingPage=${page + 1}`}
-          >
+          <Link className="button button-outline" href={pager + (page + 1)}>
             Más pendientes
           </Link>
         )}
@@ -96,11 +128,11 @@ export async function ProjectWorkspace({
       </p>
     );
   const writable = canWriteProject(ctx.membership.role);
-  const [notes, visits] = await Promise.all([
+  const [notes, visits, members] = await Promise.all([
     ctx.db
       .from("project_notes")
       .select(
-        "id,project_id,kind,body,due_on,completed_at,version,created_at",
+        "id,project_id,kind,body,due_on,priority,repeat_days,assignee,completed_at,version,created_at,predecessor_id,task_subtasks(id,label,done)",
         { count: "exact" },
       )
       .eq("organization_id", ctx.organization.id)
@@ -118,9 +150,31 @@ export async function ProjectWorkspace({
       .order("observed_on", { ascending: false })
       .order("created_at", { ascending: false })
       .range((visitsPage - 1) * 10, visitsPage * 10 - 1),
+    ctx.db
+      .from("memberships")
+      .select("user_id")
+      .eq("organization_id", ctx.organization.id),
   ]);
   if (notes.error || visits.error)
     throw new Error("No se pudo cargar la bitácora del proyecto.");
+  const taskOptions: { id: string; body: string }[] = [];
+  if (notes.data?.some((n) => n.kind === "task")) {
+    const batch = 200;
+    for (let offset = 0; ; offset += batch) {
+      const r = await ctx.db
+        .from("project_notes")
+        .select("id,body")
+        .eq("organization_id", ctx.organization.id)
+        .eq("project_id", project)
+        .eq("kind", "task")
+        .is("deleted_at", null)
+        .order("id")
+        .range(offset, offset + batch - 1);
+      if (r.error) throw Error("No se pudieron cargar las tareas previas.");
+      taskOptions.push(...r.data);
+      if (r.data.length < batch) break;
+    }
+  }
   const photos = visits.data?.length
     ? await ctx.db
         .from("project_photos")
@@ -145,15 +199,67 @@ export async function ProjectWorkspace({
           Correcciones de planos, actualizaciones y recordatorios. Los
           pendientes abiertos también aparecen en Inicio.
         </p>
-        {writable && <NoteForm project={project} />}
+        {writable && (
+          <NoteForm members={members.data ?? []} project={project} />
+        )}
         <div>
           {notes.data?.map((note) => (
-            <NoteRow
-              key={note.id + ":" + note.version}
-              note={note as ProjectNote}
-              writable={writable}
-            />
-          ))}
+            <article key={note.id + ":" + note.version}>
+              <NoteRow
+                members={members.data ?? []}
+                note={note as ProjectNote}
+                writable={writable}
+              />
+              {note.kind === "task" && (
+                <>
+                  {note.predecessor_id && (
+                    <p>
+                      Tarea previa ·{" "}
+                      {taskOptions.find((t) => t.id === note.predecessor_id)
+                        ?.body || "No disponible"}
+                    </p>
+                  )}
+                  {writable && !note.completed_at && taskOptions.length > 1 && (
+                    <details>
+                      <summary>Cambiar dependencia</summary>
+                      <RecordForm id={note.id} save={saveDependency}>
+                        <input type="hidden" name="project" value={project} />
+                        <input
+                          type="hidden"
+                          name="version"
+                          value={note.version}
+                        />
+                        <label>
+                          Tarea que debe completarse antes
+                          <select
+                            name="previous"
+                            defaultValue={note.predecessor_id || ""}
+                          >
+                            <option value="">Sin dependencia</option>
+                            {taskOptions
+                              .filter((t) => t.id !== note.id)
+                              .map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.body.slice(0, 160)}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                      </RecordForm>
+                    </details>
+                  )}
+                </>
+              )}
+              {note.kind === "task" && (
+                <Subtasks
+                  task={note.id}
+                  project={project}
+                  items={note.task_subtasks}
+                  writable={writable && !note.completed_at}
+                />
+              )}
+            </article>
+          ))}{" "}
           {!notes.data?.length && (
             <p className="muted">Todavía no hay notas en esta página.</p>
           )}

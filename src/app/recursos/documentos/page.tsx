@@ -1,3 +1,7 @@
+import { listLibraryImages } from "@/modules/documents/library-images";
+import { RecordForm } from "@/shared/ui/record-form";
+import { changeDocumentArchive } from "@/modules/documents/standalone-actions";
+import { TemplatePanel } from "@/modules/documents/template-panel";
 import Link from "next/link";
 import { z } from "zod";
 import { requireContext } from "@/shared/auth/context";
@@ -16,6 +20,8 @@ export default async function StudioDocumentsPage({
 }: {
   searchParams: Promise<{
     new?: string;
+    archivo?: string;
+    plantilla?: string;
     selected?: string;
     edit?: string;
     q?: string;
@@ -31,6 +37,7 @@ export default async function StudioDocumentsPage({
       </p>
     );
   const filter = await searchParams;
+  const archived = filter.archivo === "1";
   const q = typeof filter.q === "string" ? filter.q.trim().slice(0, 120) : "";
   const page = Math.max(
     1,
@@ -40,9 +47,12 @@ export default async function StudioDocumentsPage({
     .from("studio_documents")
     .select("id,title,kind,version,updated_at", { count: "exact" })
     .eq("organization_id", ctx.organization.id)
-    .is("deleted_at", null)
     .order("updated_at", { ascending: false })
+    .order("id")
     .range((page - 1) * 30, page * 30 - 1);
+  query = archived
+    ? query.not("deleted_at", "is", null)
+    : query.is("deleted_at", null);
   if (q) query = query.ilike("title", "%" + q.replace(/[\\%_]/g, "\\$&") + "%");
   const list = await query;
   if (list.error) throw new Error("No se pudieron cargar los documentos.");
@@ -58,8 +68,21 @@ export default async function StudioDocumentsPage({
     if (result.error) throw new Error("No se pudo cargar el documento.");
     selected = (result.data as StudioDocument) || undefined;
   }
+  const template =
+    filter.new === "1" && filter.plantilla
+      ? await ctx.db
+          .from("document_templates")
+          .select("title,kind,body,margins")
+          .eq("organization_id", ctx.organization.id)
+          .eq("id", filter.plantilla)
+          .maybeSingle()
+      : null;
+  if (template && (template.error || !template.data))
+    return (
+      <p className="notice">La versión de plantilla no está disponible.</p>
+    );
   const editing = filter.new === "1" || (selected && filter.edit === "1");
-  const [clients, projects] = editing
+  const [clients, projects, images, quotes] = editing
     ? await Promise.all([
         ctx.db
           .from("clients")
@@ -75,12 +98,21 @@ export default async function StudioDocumentsPage({
           .is("deleted_at", null)
           .order("name")
           .limit(500),
+        listLibraryImages(ctx),
+        ctx.db
+          .from("document_quote_context")
+          .select("id,folio,client_id,project_id")
+          .eq("organization_id", ctx.organization.id)
+          .is("deleted_at", null)
+          .order("folio", { ascending: false })
+          .limit(500),
       ])
     : [
         { data: [], error: null },
         { data: [], error: null },
+        { data: [], error: null },
       ];
-  if (clients.error || projects.error)
+  if (clients.error || projects.error || quotes?.error)
     throw new Error("No se pudieron consultar clientes y proyectos.");
   const versions =
     selected && !editing
@@ -95,7 +127,8 @@ export default async function StudioDocumentsPage({
   if (versions?.error)
     throw new Error("No se pudo consultar el historial documental.");
   const href = (n: number) =>
-    "/recursos/documentos?" + new URLSearchParams({ q, page: String(n) });
+    "/recursos/documentos?" +
+    new URLSearchParams({ q, archivo: archived ? "1" : "0", page: String(n) });
   return (
     <>
       <div className="page-heading">
@@ -108,16 +141,23 @@ export default async function StudioDocumentsPage({
         <Link href="/recursos/documentos" className="selected">
           Documentos
         </Link>
-        <span className="planned">Plantillas · pendiente</span>
-        <span className="planned">Biblioteca · pendiente</span>
-        <span className="planned">Procedimientos · pendiente</span>
+        <Link href="/recursos/plantillas">Plantillas</Link>
+        <Link href="/recursos/biblioteca">Biblioteca</Link>
+        <Link href="/recursos/procedimientos">Procedimientos</Link>
       </nav>
+      {selected && !editing && (
+        <TemplatePanel source={selected.id} version={selected.version} />
+      )}
       {editing ? (
         <StudioDocumentForm
-          key={filter.new === "1" ? "new" : selected?.id}
+          key={filter.new === "1" ? (filter.plantilla ?? "new") : selected?.id}
+          template={template?.data ?? undefined}
           document={filter.new === "1" ? undefined : selected}
           clients={clients.data || []}
           projects={projects.data || []}
+          quotes={quotes?.data || []}
+          images={images.data || []}
+          imageError={!!images.error}
         />
       ) : selected ? (
         <>
@@ -139,6 +179,21 @@ export default async function StudioDocumentsPage({
                 </Link>
               </Button>
             </div>
+            <details>
+              <summary>Archivar documento</summary>
+              <RecordForm
+                id={selected.id}
+                save={changeDocumentArchive}
+                submitLabel="Archivar documento"
+              >
+                <input type="hidden" name="version" value={selected.version} />
+                <input type="hidden" name="intent" value="archive" />
+                <p>
+                  Podrás recuperarlo desde Archivados. Sus versiones emitidas se
+                  conservan.
+                </p>
+              </RecordForm>
+            </details>
             <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
               {selected.body}
             </p>
@@ -196,6 +251,13 @@ export default async function StudioDocumentsPage({
         <>
           <div className="toolbar">
             <form className="search-form">
+              <label>
+                Mostrar
+                <select name="archivo" defaultValue={archived ? "1" : "0"}>
+                  <option value="0">Vigentes</option>
+                  <option value="1">Archivados</option>
+                </select>
+              </label>
               <input
                 type="search"
                 name="q"
@@ -211,24 +273,42 @@ export default async function StudioDocumentsPage({
           </div>
           {list.data?.length ? (
             <div className="overview-grid">
-              {list.data.map((doc) => (
-                <Link
-                  className="panel overview-card"
-                  key={doc.id}
-                  href={"/recursos/documentos?selected=" + doc.id}
-                >
-                  <p className="eyebrow">
-                    {documentKinds[doc.kind as keyof typeof documentKinds]}
-                  </p>
-                  <h3>{doc.title}</h3>
-                  <span className="card-action">Abrir documento →</span>
-                </Link>
-              ))}
+              {list.data.map((doc) =>
+                archived ? (
+                  <article className="panel padded" key={doc.id}>
+                    <h3>{doc.title}</h3>
+                    <RecordForm
+                      id={doc.id}
+                      save={changeDocumentArchive}
+                      submitLabel="Restaurar documento"
+                    >
+                      <input type="hidden" name="version" value={doc.version} />
+                      <input type="hidden" name="intent" value="restore" />
+                    </RecordForm>
+                  </article>
+                ) : (
+                  <Link
+                    className="panel overview-card"
+                    key={doc.id}
+                    href={"/recursos/documentos?selected=" + doc.id}
+                  >
+                    <p className="eyebrow">
+                      {documentKinds[doc.kind as keyof typeof documentKinds]}
+                    </p>
+                    <h3>{doc.title}</h3>
+                    <span className="card-action">Abrir documento →</span>
+                  </Link>
+                ),
+              )}
             </div>
           ) : (
             <section className="panel empty-state">
               <h2>
-                {q ? "Sin coincidencias" : "El siguiente acuerdo empieza aquí"}
+                {archived
+                  ? "Sin documentos archivados en esta selección"
+                  : q
+                    ? "Sin coincidencias"
+                    : "El siguiente acuerdo empieza aquí"}
               </h2>
               <p>
                 Prepara un documento independiente, con membrete y sin
@@ -256,3 +336,5 @@ export default async function StudioDocumentsPage({
     </>
   );
 }
+
+export const metadata = { title: "Documentos" };

@@ -4,12 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
+  Plus,
+  HardHat,
+  CalendarDays,
   Home,
   BriefcaseBusiness,
   Layers3,
   Wallet,
   BookOpen,
   Settings2,
+  Search,
+  Sun,
+  Moon,
   ArrowUpRight,
   Menu,
   X,
@@ -24,27 +30,71 @@ const navigation = [
   { href: "/administracion", label: "Administración", icon: Wallet },
   { href: "/recursos", label: "Recursos del estudio", icon: BookOpen },
 ];
+function routeLabel(segment = "") {
+  const labels: Record<string, string> = {
+    configuracion: "Configuración",
+    buscar: "Búsqueda",
+    catalogo: "Catálogo",
+    notificaciones: "Notificaciones",
+    pipeline: "Oportunidades",
+    nueva: "Nueva cotización",
+    nuevo: "Nuevo registro",
+    presets: "Presets",
+  };
+  return labels[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1);
+}
 export function Shell({
   children,
   organization,
   email,
+  compactMenu,
+  darkTheme,
+  writable,
+  finance,
 }: {
   children: React.ReactNode;
   organization?: string;
   email?: string;
+  darkTheme?: boolean;
+  compactMenu?: boolean;
+  writable?: boolean;
+  finance?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [compact, setCompact] = useState(!!compactMenu);
+  const [dark, setDark] = useState(!!darkTheme);
+  const searchLink = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "k" &&
+        searchLink.current
+      ) {
+        event.preventDefault();
+        searchLink.current.click();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const sidebar = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open) return;
+    const desktop = window.matchMedia("(min-width: 1025px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
     const previous = document.body.style.overflow;
     const button = menuButton.current;
+    const menu = sidebar.current;
     document.body.style.overflow = "hidden";
     const links = () =>
       Array.from(
-        sidebar.current?.querySelectorAll<HTMLElement>(
+        menu?.querySelectorAll<HTMLElement>(
           "a,button:not(:disabled)",
         ) || [],
       );
@@ -68,14 +118,37 @@ export function Shell({
     return () => {
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", keydown);
-      button?.focus();
+      desktop.removeEventListener("change", closeOnDesktop);
+      if (desktop.matches)
+        menu?.querySelector<HTMLElement>("a")?.focus();
+      else button?.focus();
     };
   }, [open]);
-  const current = navigation.find((n) =>
-    n.href === "/" ? pathname === "/" : pathname.startsWith(n.href),
-  );
+  if (pathname === "/portal")
+    return (
+      <main className="portal-main" id="contenido">
+        {children}
+      </main>
+    );
+  const parts = pathname.split("/").filter(Boolean);
+  const area =
+    navigation.find((n) => n.href === "/" + (parts[0] ?? ""))?.label ??
+    routeLabel(parts[0]);
+  const last = parts.at(-1) ?? "";
+  const section = /^[a-f\d-]{36}$/i.test(last)
+    ? ({
+        tiempo: "Registro de tiempo",
+        partidas: "Partida de obra",
+        comprobantes: "Comprobante",
+        cotizaciones: "Cotización",
+        proveedores: "Proveedor",
+        operaciones: "Operación",
+        clientes: "Cliente",
+        proyectos: "Expediente",
+      }[parts.at(-2) ?? ""] ?? "Detalle")
+    : routeLabel(last);
   return (
-    <div className="workspace">
+    <div className={compact ? "workspace compact-menu" : "workspace"}>
       <RefreshOnReturn />
       <a href="#contenido" className="skip-link">
         Saltar al contenido
@@ -100,6 +173,8 @@ export function Shell({
         <nav aria-label="Navegación principal">
           {navigation.map(({ href, label, icon: Icon }) => (
             <Link
+              title={label}
+              aria-label={label}
               key={href}
               href={href}
               onClick={() => setOpen(false)}
@@ -115,23 +190,66 @@ export function Shell({
             </Link>
           ))}
         </nav>
-        <div className="sidebar-note">
-          <span className="status-dot" />
-          Un estudio. Una visión.
-          <p>
-            Arquitectura y visualización,
-            <br />
-            conectadas en un solo lugar.
-          </p>
-        </div>
+        {organization && (
+          <nav aria-label="Herramientas del estudio" className="area-shortcuts">
+            {writable && (
+              <Link
+                href="/#crear"
+                title="Crear registro"
+                aria-label="Crear registro"
+                className="nav-link"
+                onClick={() => setOpen(false)}
+              >
+                <Plus size={18} />
+                <span>Crear registro</span>
+              </Link>
+            )}
+            <Link
+              href="/agenda"
+              title="Agenda"
+              aria-label="Agenda"
+              className="nav-link"
+              onClick={() => setOpen(false)}
+            >
+              <CalendarDays size={18} />
+              <span>Agenda</span>
+            </Link>
+            {finance && (
+              <Link
+                href="/obras"
+                aria-label="Obras"
+                title="Obras"
+                className="nav-link"
+                onClick={() => setOpen(false)}
+              >
+                <HardHat size={18} />
+                <span>Obras</span>
+              </Link>
+            )}
+            {finance && (
+              <Link
+                href="/administracion/operaciones"
+                title="Operaciones financieras"
+                aria-label="Operaciones financieras"
+                className="nav-link"
+                onClick={() => setOpen(false)}
+              >
+                <Wallet size={18} />
+                <span>Operaciones financieras</span>
+              </Link>
+            )}
+          </nav>
+        )}
         <div className="sidebar-bottom">
           <Link
+            aria-label="Configuración"
+            title="Configuración"
             href="/configuracion"
             className="nav-link"
             onClick={() => setOpen(false)}
           >
             <Settings2 size={18} />
-            Configuración
+            <span>Configuración</span>
           </Link>
           <div className="profile">
             <span className="avatar">AT</span>
@@ -168,18 +286,68 @@ export function Shell({
           >
             {open ? <X size={21} /> : <Menu size={21} />}
           </button>
-          <div className="breadcrumb">
-            <span>Mi estudio</span>
-            <span>/</span>
-            <strong>
-              {current?.label ||
-                (pathname === "/acceso" ? "Acceso" : "Configuración")}
+          <button
+            type="button"
+            className="icon-button compact-toggle"
+            aria-label={
+              compact ? "Expandir barra lateral" : "Contraer barra lateral"
+            }
+            aria-expanded={!compact}
+            aria-controls="studio-menu"
+            onClick={() => {
+              setCompact(!compact);
+              document.cookie =
+                "studio-menu-compact=" +
+                (compact ? "0" : "1") +
+                "; Path=/; SameSite=Lax; Max-Age=31536000";
+            }}
+          >
+            <Menu size={18} />
+          </button>
+          <nav aria-label="Ubicación actual" className="breadcrumb">
+            <Link href="/">Mi estudio</Link>
+            <span aria-hidden="true">/</span>
+            {parts.length > 1 && (
+              <>
+                <Link href={"/" + parts[0]}>{area}</Link>
+                <span aria-hidden="true">/</span>
+              </>
+            )}
+            <strong aria-current="page">
+              {parts.length > 1 ? section : area}
             </strong>
-          </div>
-          <Link className="topbar-link" href="/comercial">
-            Ir a Comercial
-            <ArrowUpRight size={15} />
-          </Link>
+          </nav>
+          <button
+            className="icon-button"
+            aria-label={dark ? "Activar modo claro" : "Activar modo oscuro"}
+            onClick={() => {
+              const theme = dark ? "light" : "dark";
+              document.documentElement.dataset.theme = theme;
+              document.cookie =
+                "studio-theme=" +
+                theme +
+                "; Path=/; SameSite=Lax; Max-Age=31536000";
+              setDark(!dark);
+            }}
+          >
+            {dark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          {organization ? (
+            <Link
+              href="/buscar"
+              ref={searchLink}
+              className="icon-button"
+              aria-label="Buscar en el estudio"
+              title="Buscar (Ctrl/⌘ K)"
+            >
+              <Search size={18} />
+            </Link>
+          ) : (
+            <Link className="topbar-link" href="/comercial">
+              Ir a Comercial
+              <ArrowUpRight size={15} />
+            </Link>
+          )}
         </header>
         <main id="contenido" tabIndex={-1}>
           {children}

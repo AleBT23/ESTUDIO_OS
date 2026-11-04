@@ -1,3 +1,9 @@
+import {ClientRecords} from "@/modules/crm/client-records";
+import {DossierNav} from "@/shared/ui/dossier-nav";
+import { DossierPanel } from "@/modules/documents/dossier-panel";
+import { ClientAgreements } from "@/modules/crm/client-agreements";
+import { Journal } from "@/modules/journal/panel";
+import { PortalAccess } from "@/modules/portal/manage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -12,11 +18,17 @@ export default async function ClientPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{
+    relacion?: string; vinculos?: string;
+    archivos?: string; archivados?: string;
+    edit?: string;
+    historial?: string;
+    acuerdos?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   const { id } = await params;
-  const { edit } = await searchParams;
+  const { edit, historial, acuerdos, archivos, archivados, relacion, vinculos } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const { data, error } = await ctx.db
     .from("clients")
@@ -69,13 +81,19 @@ export default async function ClientPage({
             "Ambas líneas / por definir"}
         </p>
       </div>
+      {edit !== "1" && <DossierNav scope="client" role={ctx.membership.role} archived={!!client.deleted_at}/>}
+      {canWrite && (
+        <Link href={"/comercial/contratos?cliente=" + id}>
+          Contratos del cliente
+        </Link>
+      )}
       {edit === "1" && canWrite && !client.deleted_at ? (
         <ClientForm client={client} lines={ctx.lines} />
       ) : (
         <div className="detail-layout">
           <section className="panel padded">
             <div className="section-heading">
-              <h2>Información del cliente</h2>
+              <h2 id="ficha">Información del cliente</h2>
               {canWrite && !client.deleted_at && (
                 <Button asChild variant="outline">
                   <Link href={`/comercial/clientes/${id}?edit=1`}>Editar</Link>
@@ -135,6 +153,27 @@ export default async function ClientPage({
           writable={canWrite && !client.deleted_at}
         />
       )}
+      {canWrite && edit !== "1" && (
+        <ClientAgreements
+          id={id}
+          page={Math.max(1, Math.min(10000, parseInt(acuerdos ?? "1") || 1))}
+        />
+      )}
+      {canWrite && edit !== "1" && (
+        <Journal
+          scope="client"
+          id={id}
+          writable={!client.deleted_at}
+          page={Math.max(1, Math.min(10000, parseInt(historial ?? "1") || 1))}
+        />
+      )}
+      {edit !== "1" && <ClientRecords id={id} selected={relacion} page={Math.max(1,Math.min(10000,parseInt(vinculos??"1")||1))}/>}
+      {edit !== "1" && <DossierPanel scope="client" parent={id} inactive={!!client.deleted_at} archived={archivados==="1"} page={Math.max(1, Math.min(10000,parseInt(archivos||"1")||1))}/>}
+      {canWrite && !client.deleted_at && edit !== "1" && (
+        <PortalAccess client={id} />
+      )}
     </>
   );
 }
+
+export const metadata = { title: "Expediente del cliente" };

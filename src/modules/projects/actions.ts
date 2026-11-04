@@ -8,6 +8,7 @@ import type { FormState } from "@/shared/auth/actions";
 import { noteSchema, projectSchema, cents } from "./schema";
 const refresh = (id: string) => {
   revalidatePath("/");
+  revalidatePath("/agenda");
   revalidatePath(`/proyectos/${id}`);
   revalidatePath("/proyectos");
 };
@@ -31,7 +32,13 @@ export async function saveProjectNote(
       return { error: "Referencia inválida. Recarga el expediente." };
     const { data, error } = await ctx.db
       .from("project_notes")
-      .update({ body: record.body, due_on: record.due_on })
+      .update({
+        body: record.body,
+        due_on: record.due_on,
+        priority: record.priority,
+        repeat_days: record.repeat_days,
+        assignee: record.assignee,
+      })
       .eq("organization_id", ctx.organization.id)
       .eq("project_id", project)
       .eq("id", identity.data.id)
@@ -88,7 +95,15 @@ export async function toggleProjectNote(
     .select("id")
     .maybeSingle();
   if (error || !data)
-    return { error: "El pendiente cambió. Recarga para ver su estado actual." };
+    return {
+      error: error?.message.includes("Completa las subtareas")
+        ? "Completa las subtareas pendientes desde el expediente antes de cerrar la tarea."
+        : error?.message.includes("Completa primero la tarea previa")
+          ? "Completa primero la tarea previa indicada en el expediente."
+          : error?.message.includes("Reabre primero las tareas dependientes")
+            ? "Reabre primero las tareas dependientes."
+            : "El pendiente cambió. Recarga para ver su estado actual.",
+    };
   refresh(input.data.project);
   return {
     success:

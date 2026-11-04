@@ -245,3 +245,35 @@ it("incrusta Poppins real y conserva conceptos extensos, claves, escalas y encab
   expect(body).toContain("continuación");
   await task.destroy();
 });
+it("una cotización conserva su membrete seleccionado y exige sus bytes para emitir", async () => {
+  const s = fixture();
+  s.options.letterhead_revision = "11111111-1111-4111-8111-111111111111";
+  s.options.sections = ["budget"];
+  await expect(new ReactPdfRenderer().render(s)).rejects.toThrow(
+    /membrete no disponible/,
+  );
+  const { default: sharp } = await import("sharp");
+  const jpg = await sharp({
+    create: { width: 306, height: 396, channels: 3, background: "#eaf8f4" },
+  })
+    .jpeg()
+    .toBuffer();
+  const bytes = await new ReactPdfRenderer().render(s, jpg);
+  const pdf = await PDFDocument.load(bytes);
+  const rasters = pdf.context
+    .enumerateIndirectObjects()
+    .map(([, obj]) => obj)
+    .filter(
+      (obj) =>
+        obj instanceof PDFRawStream &&
+        obj.dict.get(PDFName.of("Subtype")) === PDFName.of("Image"),
+    );
+  expect(
+    rasters.some(
+      (obj) =>
+        obj instanceof PDFRawStream &&
+        obj.dict.get(PDFName.of("Width"))?.toString() === "306" &&
+        obj.dict.get(PDFName.of("Height"))?.toString() === "396",
+    ),
+  ).toBe(true);
+});

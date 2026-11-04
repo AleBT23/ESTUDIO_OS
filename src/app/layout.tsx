@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { canReadFinance, canWriteProject } from "@/shared/permissions";
+import { cookies } from "next/headers";
 import { Shell } from "@/shared/ui/shell";
 import { getContext } from "@/shared/auth/context";
 import "./globals.css";
@@ -19,10 +21,20 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const ctx = await getContext();
+  const dark = (await cookies()).get("studio-theme")?.value === "dark";
   return (
-    <html lang="es">
+    <html lang="es" data-theme={dark ? "dark" : "light"}>
       <body>
-        <Shell organization={ctx?.organization?.name} email={ctx?.user.email}>
+        <Shell
+          darkTheme={dark}
+          compactMenu={
+            (await cookies()).get("studio-menu-compact")?.value === "1"
+          }
+          writable={!!ctx?.membership && canWriteProject(ctx.membership.role)}
+          finance={!!ctx?.membership && canReadFinance(ctx.membership.role)}
+          organization={ctx?.organization?.name}
+          email={ctx?.user.email}
+        >
           {children}
         </Shell>
       </body>

@@ -1,3 +1,7 @@
+import { PeriodIndicators } from "@/modules/dashboard/period-indicators";
+import { PeriodFlow } from "@/modules/dashboard/period-flow";
+import { QuickActions } from "@/modules/dashboard/quick-actions";
+import { RecentActivity } from "@/modules/dashboard/recent-activity";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -10,11 +14,19 @@ import {
 } from "lucide-react";
 import { getContext } from "@/shared/auth/context";
 import { isConfigured } from "@/shared/db/server";
+import { formatMoney } from "@/shared/money";
+import { canReadFinance } from "@/shared/permissions";
+import { AreaIndicators } from "@/modules/finance/area-indicators";
 import { DashboardTasks } from "@/modules/projects/workspace";
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ pendingPage?: string }>;
+  searchParams: Promise<{
+    pendingPage?: string;
+    activityPage?: string;
+    indicador?: string;
+    detalle?: string;
+  }>;
 }) {
   const ctx = await getContext();
   const filter = await searchParams;
@@ -22,6 +34,110 @@ export default async function HomePage({
     1,
     Math.min(10000, parseInt(filter.pendingPage || "1") || 1),
   );
+  if (ctx?.organization && ctx.membership) {
+    const org = ctx.organization.id;
+    const [balances, notifications] = await Promise.all([
+      canReadFinance(ctx.membership.role)
+        ? ctx.db
+            .from("project_financial_summary")
+            .select(
+              "project_id,collected_text:collected_cents::text,balance_text:balance_cents::text",
+            )
+            .eq("organization_id", org)
+            .gt("balance_cents", 0)
+            .order("balance_cents", { ascending: false })
+            .order("project_id")
+            .limit(5)
+        : null,
+      ctx.db
+        .from("agenda_notifications")
+        .select("id", { head: true, count: "exact" })
+        .eq("organization_id", org)
+        .is("read_at", null),
+    ]);
+    const ids = balances?.data?.map((row) => row.project_id) ?? [];
+    const names = ids.length
+      ? await ctx.db
+          .from("projects")
+          .select("id,name")
+          .eq("organization_id", org)
+          .in("id", ids)
+      : null;
+    const projectNames = new Map(names?.data?.map((row) => [row.id, row.name]));
+    return (
+      <>
+        <header className="page-heading">
+          <p className="eyebrow">{ctx.organization.name}</p>
+          <h1>Centro de operaciones</h1>
+        </header>
+        <PeriodIndicators
+          selected={filter.indicador}
+          page={Math.max(
+            1,
+            Math.min(10000, parseInt(filter.detalle || "1") || 1),
+          )}
+        />
+        <QuickActions role={ctx.membership.role} />
+        {balances && (
+          <section className="panel padded">
+            <h2>Proyectos con mayor saldo actual por cobrar</h2>
+            {balances.error || names?.error ? (
+              <p role="status">No se pudieron consultar los saldos.</p>
+            ) : balances.data?.length ? (
+              <div className="table-scroll">
+                <table>
+                  <caption>Los cinco mayores saldos pendientes en MXN</caption>
+                  <thead>
+                    <tr>
+                      <th>Proyecto</th>
+                      <th>Cobrado</th>
+                      <th>Pendiente</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {balances.data.map((row) => (
+                      <tr key={row.project_id}>
+                        <td>
+                          <Link href={"/proyectos/" + row.project_id}>
+                            {projectNames.get(row.project_id) ??
+                              "Abrir expediente"}
+                          </Link>
+                        </td>
+                        <td>{formatMoney(BigInt(row.collected_text))}</td>
+                        <td>{formatMoney(BigInt(row.balance_text))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p>No hay proyectos con saldo pendiente.</p>
+            )}
+          </section>
+        )}
+        <AreaIndicators />
+        <PeriodFlow />
+        <p>
+          <Link href="/agenda/notificaciones">
+            Notificaciones internas
+            {notifications.error
+              ? ""
+              : " · " + (notifications.count ?? 0) + " sin leer"}
+          </Link>
+        </p>
+        <p>
+          <Link href="/buscar?favorites=1">Mis favoritos</Link>
+        </p>
+        <RecentActivity
+          page={Math.max(
+            1,
+            Math.min(10000, parseInt(filter.activityPage || "1") || 1),
+          )}
+        />
+        <DashboardTasks page={pendingPage} />
+      </>
+    );
+  }
   return (
     <>
       <div className="page-heading home-heading">
@@ -39,15 +155,6 @@ export default async function HomePage({
           {ctx?.organization ? "Espacio conectado" : "Preparando tu espacio"}
         </span>
       </div>
-      {ctx?.organization && (
-        <>
-          <DashboardTasks page={pendingPage} />
-          <p className="sync-caption">
-            Tus datos se guardan en Supabase y se comparten entre teléfono y PC.
-            Al volver a esta pestaña se actualiza la vista.
-          </p>
-        </>
-      )}
       <section className="welcome-panel">
         <div className="welcome-copy">
           <p className="eyebrow">UNA VISIÓN COMPARTIDA</p>
@@ -146,3 +253,5 @@ export default async function HomePage({
     </>
   );
 }
+
+export const metadata = { title: {absolute: "Inicio · ESTUDIO OS"} };

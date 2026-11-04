@@ -12,7 +12,7 @@ export async function standalonePreview(id: string) {
     .maybeSingle();
   if (doc.error || !doc.data) throw new Error("Documento no disponible.");
   const input = doc.data;
-  const [client, project] = await Promise.all([
+  const [client, project, quote] = await Promise.all([
     input.client_id
       ? ctx.db
           .from("clients")
@@ -29,8 +29,16 @@ export async function standalonePreview(id: string) {
           .eq("id", input.project_id)
           .single()
       : Promise.resolve({ data: null, error: null }),
+    input.quote_version_id
+      ? ctx.db
+          .from("document_quote_context")
+          .select("context")
+          .eq("organization_id", ctx.organization.id)
+          .eq("id", input.quote_version_id)
+          .single()
+      : Promise.resolve({ data: null, error: null }),
   ]);
-  if (client.error || project.error)
+  if (client.error || project.error || quote.error)
     throw new Error("No se pudo consultar el contexto del documento.");
   return standaloneSnapshotSchema.parse({
     ...input,
@@ -44,5 +52,6 @@ export async function standalonePreview(id: string) {
     organization: { name: ctx.organization.name },
     client: client.data,
     project: project.data,
+    ...(quote.data && {quote:quote.data.context}),
   });
 }

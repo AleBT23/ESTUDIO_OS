@@ -1,3 +1,4 @@
+import { documentImageIds } from "./image-references";
 import { z } from "zod";
 import { defaultDocumentOptions } from "./schema";
 import { formatMoney, splitAdvance } from "@/shared/money";
@@ -57,11 +58,16 @@ export const standaloneInputSchema = z
     body: z.string().trim().min(1).max(40000),
     client_id: z.union([z.literal(""), z.uuid()]).transform((v) => v || null),
     project_id: z.union([z.literal(""), z.uuid()]).transform((v) => v || null),
+    quote_version_id: z
+      .union([z.literal(""), z.uuid()])
+      .optional()
+      .transform((v) => (v === undefined ? undefined : v || null)),
     margins: marginsSchema.default(defaultDocumentOptions.margins),
   })
   .superRefine((input, ctx) => {
     try {
       templateVariables(input.body);
+      documentImageIds(input.body);
     } catch (error) {
       ctx.addIssue({
         code: "custom",
@@ -75,6 +81,13 @@ export const standaloneSnapshotSchema = z.object({
   title: z.string(),
   kind: z.enum(["letter", "official", "minutes", "site_report"]),
   body: z.string(),
+  quote: z
+    .object({
+      folio: z.string(),
+      total_cents: z.coerce.number().int().safe().nonnegative(),
+      advance_rate: z.coerce.string(),
+    })
+    .nullish(),
   folio: z.string(),
   date: z.string(),
   organization: z.object({ name: z.string() }),
@@ -87,15 +100,18 @@ export type StudioDocument = z.output<typeof standaloneInputSchema> & {
   id: string;
   version: number;
 };
-export function resolveDocumentBody(snapshot: StandaloneSnapshot) {
-  return resolveVariables(snapshot.body, {
+export function resolveDocumentBody(
+  snapshot: StandaloneSnapshot,
+  body = snapshot.body,
+) {
+  return resolveVariables(body, {
+    ...(snapshot.quote ? quoteTemplateValues(snapshot.quote) : {}),
     "despacho.nombre": snapshot.organization.name,
     "cliente.nombre": snapshot.client?.name,
     "proyecto.nombre": snapshot.project?.name,
     fecha: snapshot.date,
   });
 }
-// Reservado para plantillas vinculadas a una versión de cotización; no inventa contexto.
 export function quoteTemplateValues(quote: {
   folio: string;
   total_cents: number;

@@ -3,6 +3,9 @@ import { calculateQuote, splitAdvance, formatMoney } from "@/shared/money";
 describe("Dinero exacto y planes", () => {
   it("formatea sin perder centavos en el máximo seguro y en negativos pequeños", () => {
     expect(formatMoney(Number.MAX_SAFE_INTEGER)).toBe("$90,071,992,547,409.91");
+    expect(formatMoney(BigInt("9007199254740993"))).toBe(
+      "$90,071,992,547,409.93",
+    );
     expect(formatMoney(-1)).toBe("-$0.01");
     expect(formatMoney(0)).toBe("$0.00");
   });

@@ -3,29 +3,48 @@ import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/shared/ui/button";
 import { useUnsavedChanges } from "@/shared/ui/use-unsaved-changes";
+import { splitLetterhead } from "./image-references";
 import { defaultDocumentOptions } from "./schema";
 import { documentKinds, type StudioDocument } from "./standalone-schema";
 import { saveStudioDocument, issueStudioDocument } from "./standalone-actions";
 export function StudioDocumentForm({
   document,
+  template,
   clients,
   projects,
+  quotes = [],
+  images = [],
+  imageError = false,
 }: {
   document?: StudioDocument;
+  template?: Pick<StudioDocument, "kind" | "margins" | "title" | "body">;
   clients: { id: string; name: string }[];
+  quotes?: {
+    id: string;
+    folio: string;
+    client_id: string;
+    project_id: string | null;
+  }[];
+  images?: { id: string; title: string; filename: string; version: number }[];
+  imageError?: boolean;
   projects: { id: string; name: string; client_id: string }[];
 }) {
   const [state, action, pending] = useActionState(saveStudioDocument, {});
   const [version] = useState(document?.version || 0);
   const [dirty, setDirty] = useState(false);
+  const source = splitLetterhead(document?.body || template?.body || "");
+  const [letterhead, setLetterhead] = useState(source.id);
   const [fields, setFields] = useState({
-    title: document?.title || "",
-    kind: document?.kind || "letter",
-    body: document?.body || "",
+    title: document?.title || template?.title || "",
+    kind: document?.kind || template?.kind || "letter",
+    body: source.content,
     client_id: document?.client_id || "",
     project_id: document?.project_id || "",
+    quote_version_id: document?.quote_version_id || "",
     margins:
-      document?.margins || structuredClone(defaultDocumentOptions.margins),
+      document?.margins ||
+      template?.margins ||
+      structuredClone(defaultDocumentOptions.margins),
   });
   const textArea = useRef<HTMLTextAreaElement>(null);
   useUnsavedChanges(dirty);
@@ -52,7 +71,16 @@ export function StudioDocumentForm({
     <form action={action} className="panel padded">
       <input type="hidden" name="id" value={document?.id || ""} />
       <input type="hidden" name="version" value={version} />
-      <input type="hidden" name="payload" value={JSON.stringify(fields)} />
+      <input
+        type="hidden"
+        name="payload"
+        value={JSON.stringify({
+          ...fields,
+          body: letterhead
+            ? "[[membrete:" + letterhead + "]]\n" + fields.body
+            : fields.body,
+        })}
+      />
       <h2>{document ? "Editar documento" : "Nuevo documento"}</h2>
       <div className="form-grid">
         <label className="full">
@@ -84,7 +112,15 @@ export function StudioDocumentForm({
           Cliente (opcional)
           <select
             value={fields.client_id}
-            onChange={(e) => update("client_id", e.target.value)}
+            onChange={(e) => {
+              setFields({
+                ...fields,
+                client_id: e.target.value,
+                project_id: "",
+                quote_version_id: "",
+              });
+              setDirty(true);
+            }}
           >
             <option value="">Sin cliente asociado</option>
             {clients.map((c) => (
@@ -103,6 +139,7 @@ export function StudioDocumentForm({
               setFields({
                 ...fields,
                 project_id: e.target.value,
+                quote_version_id: "",
                 client_id: project?.client_id || fields.client_id,
               });
               setDirty(true);
@@ -116,6 +153,40 @@ export function StudioDocumentForm({
             ))}
           </select>
         </label>
+        <label className="full">
+          Versión emitida de cotización (opcional)
+          <select
+            value={fields.quote_version_id}
+            onChange={(e) => {
+              const q = quotes.find((q) => q.id === e.target.value);
+              setFields({
+                ...fields,
+                quote_version_id: e.target.value,
+                client_id: q?.client_id ?? fields.client_id,
+              });
+              setDirty(true);
+            }}
+          >
+            <option value="">Sin cotización</option>
+            {fields.quote_version_id &&
+              !quotes.some((q) => q.id === fields.quote_version_id) && (
+                <option value={fields.quote_version_id}>
+                  Versión vinculada · {fields.quote_version_id.slice(0, 8)}
+                </option>
+              )}
+            {quotes
+              .filter(
+                (q) =>
+                  (!fields.client_id || q.client_id === fields.client_id) &&
+                  (!fields.project_id || q.project_id === fields.project_id),
+              )
+              .map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.folio}
+                </option>
+              ))}
+          </select>
+        </label>
         <div className="full">
           <p className="caption">Insertar en el texto</p>
           <div className="document-tools">
@@ -124,7 +195,14 @@ export function StudioDocumentForm({
               ["Estudio", "{{despacho.nombre}}"],
               ["Cliente", "{{cliente.nombre}}"],
               ["Proyecto", "{{proyecto.nombre}}"],
+              ["Folio de cotización", "{{cotizacion.folio}}"],
+              ["Total cotizado", "{{cotizacion.total}}"],
+              ["Anticipo cotizado", "{{cotizacion.anticipo}}"],
               ["Subtítulo", "\n## Título de sección\n"],
+              [
+                "Tabla",
+                "\n| Concepto | Detalle |\n| --- | --- |\n| Elemento | Descripción |\n",
+              ],
               ["Lista", "\n- Elemento\n"],
               ["Salto de página", "\n[[salto]]\n"],
             ].map(([label, value]) => (
@@ -140,6 +218,54 @@ export function StudioDocumentForm({
           </div>
         </div>
         <label className="full">
+          Membrete de todas las páginas
+          <select
+            value={letterhead}
+            onChange={(e) => {
+              setLetterhead(e.target.value);
+              setDirty(true);
+            }}
+          >
+            <option value="">Oficial del despacho</option>
+            {letterhead && !images.some((i) => i.id === letterhead) && (
+              <option value={letterhead}>
+                Revisión del documento · {letterhead.slice(0, 8)}
+              </option>
+            )}
+            {images.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.title} · v{i.version} · {i.filename}
+              </option>
+            ))}
+          </select>
+          <small>
+            Se ajusta a tamaño carta conservando su proporción. Comprueba los
+            márgenes en la vista previa.
+          </small>
+        </label>
+        <label className="full">
+          Insertar imagen de biblioteca
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value)
+                insert("\n[[imagen:" + e.target.value + "]]\n");
+            }}
+          >
+            <option value="">Seleccionar una versión PNG o JPEG</option>
+            {images.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.title} · v{i.version} · {i.filename}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p>
+          {imageError ? "No se pudo consultar la biblioteca. " : ""}También
+          puedes copiar la referencia de una versión anterior desde la
+          biblioteca.
+        </p>
+        <label className="full">
           Contenido *
           <textarea
             ref={textArea}
@@ -154,9 +280,9 @@ export function StudioDocumentForm({
       </div>
       <p className="caption">
         Las variables se completan con los datos asociados al documento. Si
-        falta un dato, la emisión se detendrá para que lo revises. Tablas,
-        imágenes y plantillas reutilizables se añadirán al editor en otro
-        incremento.
+        falta un dato, la emisión se detendrá para que lo revises. Para insertar
+        una tabla de dos a seis columnas, conserva la línea de guiones bajo los
+        encabezados y separa cada celda con una barra vertical.
       </p>
       <details>
         <summary className="text-link">Ajustar márgenes del membrete</summary>

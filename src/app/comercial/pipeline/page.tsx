@@ -1,3 +1,4 @@
+import { Interactions } from "@/modules/crm/interactions";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
@@ -8,7 +9,12 @@ import { stages, type Opportunity } from "@/modules/crm/pipeline-schema";
 export default async function PipelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ selected?: string; new?: string; line?: string }>;
+  searchParams: Promise<{
+    selected?: string;
+    new?: string;
+    line?: string;
+    historyPage?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   if (!canManageCommercial(ctx.membership.role))
@@ -40,7 +46,29 @@ export default async function PipelinePage({
   if (opps.error || clients.error)
     throw new Error("No se pudo cargar el pipeline.");
   const opportunities = (opps.data || []) as Opportunity[];
-  const selected = opportunities.find((o) => o.id === filter.selected);
+  let selected = opportunities.find((o) => o.id === filter.selected);
+  if (filter.selected && !selected) {
+    const result = await ctx.db
+      .from("opportunities")
+      .select("*")
+      .eq("organization_id", ctx.organization.id)
+      .eq("id", filter.selected)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (result.error || !result.data)
+      return <p className="notice">Oportunidad no disponible.</p>;
+    selected = result.data as Opportunity;
+  }
+  const choices = clients.data ?? [];
+  if (selected && !choices.some((c) => c.id === selected.client_id)) {
+    const linked = await ctx.db
+      .from("clients")
+      .select("id,name")
+      .eq("organization_id", ctx.organization.id)
+      .eq("id", selected.client_id)
+      .maybeSingle();
+    if (linked.data) choices.push(linked.data);
+  }
   const today = new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
     month: "2-digit",
@@ -62,11 +90,22 @@ export default async function PipelinePage({
       </div>
       <CommercialTabs active="/comercial/pipeline" />
       {selected || filter.new === "1" ? (
-        <OpportunityForm
-          opportunity={filter.new === "1" ? undefined : selected}
-          clients={clients.data || []}
-          lines={ctx.lines}
-        />
+        <>
+          <OpportunityForm
+            opportunity={filter.new === "1" ? undefined : selected}
+            clients={choices}
+            lines={ctx.lines}
+          />
+          {selected && filter.new !== "1" && (
+            <Interactions
+              id={selected.id}
+              page={Math.max(
+                1,
+                Math.min(10000, parseInt(filter.historyPage || "1") || 1),
+              )}
+            />
+          )}
+        </>
       ) : (
         <>
           <div className="toolbar">
@@ -149,3 +188,5 @@ export default async function PipelinePage({
     </>
   );
 }
+
+export const metadata = { title: "Oportunidades" };

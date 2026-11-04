@@ -16,6 +16,7 @@ export async function recordPayment(
   const input = z
     .object({
       schedule: z.uuid(),
+      package_id: z.union([z.uuid(), z.literal("")]).optional(),
       amount: moneyInput.refine((v) => Number(v) > 0),
       date: z.iso.date(),
       reference: z.string().trim().max(200),
@@ -27,19 +28,24 @@ export async function recordPayment(
       error:
         "Selecciona una obligación, un importe mayor a cero y la fecha del pago.",
     };
-  const { error } = await ctx.db.rpc("record_payment", {
-    org: ctx.organization.id,
-    schedule: input.data.schedule,
-    amount: toCents(input.data.amount),
-    payment_date: input.data.date,
-    payment_reference: input.data.reference,
-    request_id: input.data.request_id,
-  });
+  const { error } = await ctx.db.rpc(
+    input.data.package_id ? "record_package_payment" : "record_payment",
+    {
+      ...(input.data.package_id && { target_package: input.data.package_id }),
+      org: ctx.organization.id,
+      schedule: input.data.schedule,
+      amount: toCents(input.data.amount),
+      payment_date: input.data.date,
+      payment_reference: input.data.reference,
+      request_id: input.data.request_id,
+    },
+  );
   if (error)
     return {
       error:
         "No se registró el cobro. Revisa que no supere el saldo y que la fecha no sea futura. Si ya lo registraste, recarga la página.",
     };
+  revalidatePath("/");
   revalidatePath("/administracion");
   revalidatePath("/proyectos", "layout");
   return {
@@ -73,10 +79,92 @@ export async function reversePayment(
     return {
       error: "No se pudo revertir. Recarga si el movimiento ya cambió.",
     };
+  revalidatePath("/");
   revalidatePath("/administracion");
   revalidatePath("/proyectos", "layout");
   return {
     success:
       "Pago revertido con trazabilidad. El movimiento original se conserva.",
   };
+}
+
+export async function replanSchedule(
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const ctx = await requireContext();
+  if (!canReadFinance(ctx.membership.role))
+    return { error: "Permisos insuficientes." };
+  const input = z
+    .object({
+      id: z.uuid(),
+      schedule: z.uuid(),
+      expected_due: z.iso.date(),
+      expected_amount: z.string().regex(/^\d+$/),
+      expected_balance: z.string().regex(/^\d+$/),
+      amount: moneyInput,
+      new_due: z.iso.date(),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!input.success) return { error: "Revisa el importe y la fecha." };
+  const {
+    id,
+    schedule,
+    expected_due,
+    expected_amount,
+    expected_balance,
+    amount,
+    new_due,
+  } = input.data;
+  const { error } = await ctx.db.rpc("replan_schedule", {
+    org: ctx.organization.id,
+    schedule,
+    request_id: id,
+    expected_due,
+    expected_amount,
+    expected_balance,
+    portion: toCents(amount),
+    new_due,
+  });
+  if (error)
+    return {
+      error:
+        "Actualiza el saldo y elige una fecha distinta con un importe positivo dentro del pendiente.",
+    };
+  for (const path of ["/", "/administracion", "/agenda", "/proyectos"])
+    revalidatePath(path, "layout");
+  return { success: "Plan actualizado." };
+}
+export async function cancelScheduleBalance(
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const ctx = await requireContext();
+  if (!canReadFinance(ctx.membership.role))
+    return { error: "Permisos insuficientes." };
+  const input = z
+    .object({
+      id: z.uuid(),
+      schedule: z.uuid(),
+      expected_due: z.iso.date(),
+      expected_amount: z.string().regex(/^\d+$/),
+      expected_balance: z.string().regex(/^\d+$/),
+      reason: z.string().trim().min(3).max(1000),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!input.success) return { error: "Indica el motivo de la cancelación." };
+  const { id, ...args } = input.data;
+  const { error } = await ctx.db.rpc("cancel_schedule_balance", {
+    org: ctx.organization.id,
+    request_id: id,
+    ...args,
+  });
+  if (error)
+    return {
+      error:
+        "No se pudo cancelar. Actualiza la página para comprobar el saldo vigente.",
+    };
+  for (const path of ["/", "/administracion", "/agenda", "/proyectos"])
+    revalidatePath(path, "layout");
+  return { success: "Saldo cancelado." };
 }

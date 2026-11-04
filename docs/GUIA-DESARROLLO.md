@@ -71,3 +71,6 @@ Los selectores de documentos consultan hasta 500 clientes/proyectos. No represen
 
 Referencias: [Next.js oficial](https://nextjs.org/docs/app/getting-started/installation), [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client) y guías locales de versión instalada en node\_modules/next/dist/docs. Versiones fijadas en package-lock.json.
 
+
+## Prueba multiconexión aislada
+Ejecuta `npm run db:concurrency` desde la raíz con `ESTUDIO_PG_BIN` apuntando al directorio que contiene postgres, initdb y pg_ctl. En Windows también puedes instalar los binarios de prueba con `npm install --prefix .local/pg-validation --no-audit --no-fund embedded-postgres@18.6.0-beta.19`; esa ubicación es el valor predeterminado. El comando crea su propio clúster, contraseña aleatoria y puerto local, comprueba la ruta del servidor, aplica las migraciones y espera el bloqueo de un segundo escritor antes de confirmar el primero. Detiene el servidor y retira el clúster de esa ejecución. No requiere credenciales del estudio.

@@ -10,7 +10,7 @@ import {
   standaloneInputSchema,
   standaloneSnapshotSchema,
 } from "./standalone-schema";
-import { StandaloneRenderer } from "./standalone-renderer";
+import { renderStudioDocument } from "@/modules/documents/render-studio-document";
 export async function saveStudioDocument(
   _previous: FormState,
   form: FormData,
@@ -92,14 +92,15 @@ export async function issueStudioDocument(
     };
   let bytes: Buffer;
   try {
-    bytes = await new StandaloneRenderer().render(prepared.data.snapshot);
+    bytes = await renderStudioDocument(prepared.data.snapshot);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     return {
       error:
         message.startsWith("Faltan datos") ||
         message.startsWith("Variable no permitida") ||
-        message.startsWith("Hay una variable")
+        message.startsWith("Hay una variable") ||
+        message.startsWith("Imagen")
           ? message
           : "No se pudo generar el documento. Revisa el contenido y las variables.",
     };
@@ -133,4 +134,38 @@ export async function issueStudioDocument(
   return {
     success: "Documento emitido con membrete y conservado de forma inmutable.",
   };
+}
+
+export async function changeDocumentArchive(
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const ctx = await requireContext();
+  if (!canManageCommercial(ctx.membership.role))
+    return { error: "Permisos insuficientes." };
+  const input = z
+    .object({
+      id: z.uuid(),
+      version: z.coerce.number().int().positive(),
+      intent: z.enum(["archive", "restore"]),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!input.success) return { error: "Referencia de documento inválida." };
+  const { id, version, intent } = input.data;
+  const result = await ctx.db.rpc("set_studio_document_archived", {
+    org: ctx.organization.id,
+    document: id,
+    expected_version: version,
+    archive: intent === "archive",
+  });
+  if (result.error)
+    return {
+      error: "Actualiza la lista y comprueba la versión del documento.",
+    };
+  revalidatePath("/recursos/documentos");
+  redirect(
+    intent === "archive"
+      ? "/recursos/documentos?archivo=1"
+      : "/recursos/documentos?selected=" + id,
+  );
 }

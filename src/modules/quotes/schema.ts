@@ -1,3 +1,4 @@
+import { documentOptionsSchema } from "@/modules/documents/schema";
 import { z } from "zod";
 export const units = {
   m2: "Por m²",
@@ -65,6 +66,7 @@ export const quoteItemSchema = z
     ),
     unit: z.enum(["m2", "unit", "hour", "visit", "fixed", "pct"]),
     unitPrice: moneyInput,
+    unitCost: z.union([moneyInput, z.literal("")]).optional(),
     discount: percentage,
   })
   .refine(
@@ -72,6 +74,7 @@ export const quoteItemSchema = z
     "El porcentaje de obra no puede superar 100.",
   );
 export const quoteHeaderSchema = z.object({
+  document_layout: documentOptionsSchema.nullable().optional(),
   client_id: z.uuid("Selecciona un cliente."),
   name: z.string().trim().min(2, "Escribe el nombre del proyecto.").max(160),
   vat_rate: percentage,
@@ -82,6 +85,7 @@ export const quoteHeaderSchema = z.object({
   conditions: z.string().max(20000),
   estimated_hours: decimalInput,
   externalCost: moneyInput,
+  hourlyCost: z.union([moneyInput, z.literal("")]).optional(),
 });
 export const quoteSchema = z.object({
   header: quoteHeaderSchema,

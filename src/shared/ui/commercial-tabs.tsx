@@ -8,6 +8,7 @@ export function CommercialTabs({ active }: { active: string }) {
         ["Conceptos", "/comercial/conceptos"],
         ["Presets", "/comercial/presets"],
         ["Cotizaciones", "/comercial/cotizaciones"],
+        ["Contratos", "/comercial/contratos"],
       ].map(([label, href]) => (
         <Link
           key={href}
@@ -23,7 +24,12 @@ export function CommercialTabs({ active }: { active: string }) {
       >
         Pipeline
       </Link>
-      <span className="planned">Marketing · pendiente</span>
+      <Link
+        href="/comercial/marketing"
+        className={active === "/comercial/marketing" ? "selected" : ""}
+      >
+        Marketing
+      </Link>
     </nav>
   );
 }
