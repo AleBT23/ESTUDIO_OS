@@ -1,4 +1,5 @@
 "use server";
+import { expenseCategories } from "./expense-categories";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireContext } from "@/shared/auth/context";
@@ -56,6 +57,11 @@ const entryInput = z.object({
   id: z.uuid(),
   case_id: z.uuid(),
   direction: z.enum(["in", "out"]),
+  expense_category: z
+    .string()
+    .optional()
+    .transform((v) => v || null)
+    .refine((v) => v === null || Object.hasOwn(expenseCategories, v)),
   amount_cents: money.refine((v) => v > 0),
   paid_on: z.iso.date(),
   advance: z.literal("on").optional().transform(Boolean),

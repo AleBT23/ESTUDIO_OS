@@ -1,3 +1,4 @@
+import { expenseCsv } from "@/modules/finance/expense-categories";
 import { getContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import {
@@ -17,16 +18,26 @@ export async function GET(request: Request) {
     Object.fromEntries(new URL(request.url).searchParams),
   );
   if (!filters.success) return new Response(null, { status: 400, headers });
-  const result = await ctx.db.rpc("cash_productivity", {
-    org: ctx.organization.id,
-    ...filters.data,
-  });
-  if (result.error) return new Response(null, { status: 503, headers });
-  return new Response(reportCsv(result.data), {
-    headers: {
-      ...headers,
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="flujo-y-productividad.csv"',
+  const expenses =
+    new URL(request.url).searchParams.get("detalle") === "egresos";
+  const result = await ctx.db.rpc(
+    expenses ? "expense_breakdown" : "cash_productivity",
+    {
+      org: ctx.organization.id,
+      ...filters.data,
     },
-  });
+  );
+  if (result.error) return new Response(null, { status: 503, headers });
+  return new Response(
+    expenses ? expenseCsv(result.data) : reportCsv(result.data),
+    {
+      headers: {
+        ...headers,
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": expenses
+          ? 'attachment; filename="egresos-por-categoria.csv"'
+          : 'attachment; filename="flujo-y-productividad.csv"',
+      },
+    },
+  );
 }

@@ -1,3 +1,8 @@
+import {
+  expenseCategories,
+  financeAreas,
+  type ExpenseGroup,
+} from "@/modules/finance/expense-categories";
 import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
@@ -24,7 +29,7 @@ export default async function Reports({
     ["package", "Paquete", "project_service_packages"],
     ["line", "Línea", "business_lines"],
   ];
-  const [groups, result] = await Promise.all([
+  const [groups, result, expenses] = await Promise.all([
     Promise.all(
       sources.map(async ([name, label, table]) => ({
         name,
@@ -38,6 +43,9 @@ export default async function Reports({
     ),
     filters.success
       ? ctx.db.rpc("cash_productivity", { org, ...filters.data })
+      : null,
+    filters.success
+      ? ctx.db.rpc("expense_breakdown", { org, ...filters.data })
       : null,
   ]);
   const rows: ProductivityRow[] = result?.data ?? [];
@@ -138,10 +146,63 @@ export default async function Reports({
           )}
           <a
             className="button button-outline"
-            href={"/api/reportes/productividad?" + new URLSearchParams(raw)}
+            href={
+              "/api/reportes/productividad?" +
+              new URLSearchParams({ ...raw, detalle: "productividad" })
+            }
           >
             Exportar resultados CSV
           </a>
+        </section>
+      )}
+      {filters.success && (
+        <section className="panel padded">
+          <h2>Egresos por categoría</h2>
+          {!expenses?.error && (
+            <a
+              className="button button-outline"
+              href={
+                "/api/reportes/productividad?" +
+                new URLSearchParams({ ...raw, detalle: "egresos" })
+              }
+            >
+              Exportar egresos CSV
+            </a>
+          )}
+          {expenses?.error ? (
+            <p>No se pudo cargar el desglose de egresos.</p>
+          ) : expenses?.data?.length ? (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    {["Área", "Fondos", "Categoría", "Pagos", "Pagado"].map(
+                      (label) => (
+                        <th key={label}>{label}</th>
+                      ),
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(expenses.data as ExpenseGroup[]).map((r) => (
+                    <tr key={[r.area, r.managed, r.category].join("/")}>
+                      <td>{financeAreas[r.area]}</td>
+                      <td>{r.managed ? "Del cliente" : "Propios"}</td>
+                      <td>
+                        {r.category
+                          ? expenseCategories[r.category]
+                          : "Sin clasificar"}
+                      </td>
+                      <td>{r.movements}</td>
+                      <td>{formatMoney(BigInt(r.paid))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>Sin egresos efectivos en esta selección.</p>
+          )}
         </section>
       )}
     </>

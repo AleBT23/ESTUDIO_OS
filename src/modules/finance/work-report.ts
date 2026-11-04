@@ -21,7 +21,7 @@ export function workCsv(rows: WorkBalance[]) {
         ...workMetrics.map(([key]) => {
           const raw = row[key];
           if (raw === null) return "";
-          return decimal(raw);
+          return centsDecimal(raw);
         }),
       ]),
     ]
@@ -31,7 +31,7 @@ export function workCsv(rows: WorkBalance[]) {
   );
 }
 
-function decimal(raw: string) {
+export function centsDecimal(raw: string) {
   const cents = BigInt(raw),
     abs = cents < 0n ? -cents : cents;
   return (
@@ -69,7 +69,7 @@ export function workItemCsv(rows: WorkItemProgress[]) {
           r.quantity,
           r.measured,
           r.remaining,
-          ...[r.price, r.budget, r.earned, r.outstanding].map(decimal),
+          ...[r.price, r.budget, r.earned, r.outstanding].map(centsDecimal),
         ].join(","),
       ),
     ].join("\r\n") +

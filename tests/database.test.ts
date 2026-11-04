@@ -2490,3 +2490,22 @@ it("concilia costo, pagos y reversos por proveedor separando fondos administrado
  expect((await report()).rows).toEqual([{managed:false,cost:"840",paid:"40",payable:"800"},{managed:true,cost:"840",paid:"0",payable:"840"}]);
  await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(other);expect((await report()).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("desglosa pagos efectivos por área, categoría y fondos y concilia con el flujo",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Clasificación de egresos',current_date-1,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,project_id,name) values($1,$2,$3,'Obra de egresos')",[work,org,project]);
+ for(const managed of [true,false]){
+ const account=crypto.randomUUID();await db.query("insert into finance_cases(id,organization_id,work_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Suministros','construction',$4,900,900)",[account,org,work,managed]);
+ const entry=(direction:string,category:string|null)=>db.query<{id:string}>("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,expense_category,paid_on) values($1,$2,$3,$4,90,$5,current_date-1) returning id",[crypto.randomUUID(),org,account,direction,category]);
+ await entry("out","material");await entry("out",null);await entry("in",null);
+ await expect(entry("in","material")).rejects.toThrow();
+ const reversed=(await entry("out","external")).rows[0].id;await db.query("update finance_entries set reversal_reason='Duplicado en pago' where id=$1",[reversed]);
+ }
+ const report=()=>db.query<{managed:boolean;category:string|null;paid:string}>("select managed,category,paid from expense_breakdown($1,current_date-1,current_date-1,$2,$3,$4) order by managed,category",[org,client,project,work]);
+ const rows=(await report()).rows;
+ expect(rows).toEqual([false,true].flatMap(managed=>[{managed,category:"material",paid:"90"},{managed,category:null,paid:"90"}]));
+ expect((await db.query("select managed,paid from cash_productivity($1,current_date-1,current_date-1,$2,$3,$4) order by managed",[org,client,project,work])).rows).toEqual([{managed:false,paid:"180"},{managed:true,paid:"180"}]);
+ await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(other);expect((await report()).rows).toHaveLength(0);await asUser(owner);
+});

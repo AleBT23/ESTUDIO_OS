@@ -1,3 +1,7 @@
+import {
+  expenseCategories,
+  type ExpenseCategory,
+} from "@/modules/finance/expense-categories";
 import { RecordForm } from "@/shared/ui/record-form";
 import { saveAgreementDates } from "@/modules/finance/agreement-dates";
 import { CaseInvoices } from "@/modules/finance/case-invoices";
@@ -131,40 +135,60 @@ export default async function Operation({
       {(r.receivable_cents > 0 || r.payable_cents > 0) && (
         <>
           <h2>Registrar movimiento efectivo</h2>
-          <OperationForm kind="entry" id={crypto.randomUUID()}>
-            <input type="hidden" name="case_id" value={id} />
-            <label>
-              Movimiento
-              <select name="direction">
-                {r.receivable_cents > 0 && <option value="in">Cobro</option>}
-                {r.payable_cents > 0 && <option value="out">Pago</option>}
-              </select>
-            </label>
-            <label>
-              Importe MXN
-              <input
-                type="number"
-                min=".01"
-                step=".01"
-                name="amount_cents"
-                required
-              />
-            </label>
-            <label>
-              Fecha
-              <input
-                type="date"
-                name="paid_on"
-                max={today}
-                defaultValue={today}
-                required
-              />
-            </label>
-            <label>
-              <input type="checkbox" name="advance" />
-              Anticipo aplicado al acuerdo
-            </label>
-          </OperationForm>
+          {(["in", "out"] as const)
+            .filter((d) =>
+              d === "in" ? r.receivable_cents > 0 : r.payable_cents > 0,
+            )
+            .map((direction) => (
+              <details key={direction}>
+                <summary>
+                  {direction === "in" ? "Registrar cobro" : "Registrar pago"}
+                </summary>
+                <OperationForm kind="entry" id={crypto.randomUUID()}>
+                  <input type="hidden" name="case_id" value={id} />
+                  <input type="hidden" name="direction" value={direction} />
+                  {direction === "out" && (
+                    <label>
+                      Categoría del egreso
+                      <select name="expense_category">
+                        <option value="">Sin clasificar</option>
+                        {Object.entries(expenseCategories).map(
+                          ([key, label]) => (
+                            <option key={key} value={key}>
+                              {label}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                  )}
+                  <label>
+                    Importe MXN
+                    <input
+                      type="number"
+                      min=".01"
+                      step=".01"
+                      name="amount_cents"
+                      required
+                    />
+                  </label>
+                  <label>
+                    Fecha
+                    <input
+                      type="date"
+                      name="paid_on"
+                      max={today}
+                      defaultValue={today}
+                      required
+                    />
+                  </label>
+                  <label>
+                    <input type="checkbox" name="advance" />
+                    Anticipo aplicado al acuerdo
+                  </label>
+                </OperationForm>
+              </details>
+            ))}
         </>
       )}
       <section className="panel padded">
@@ -176,6 +200,13 @@ export default async function Operation({
                 {e.paid_on} · {e.direction === "in" ? "Cobro" : "Pago"}
                 {e.advance ? " anticipado" : ""} · {formatMoney(e.amount_cents)}
               </p>
+              {e.direction === "out" && (
+                <p>
+                  Categoría ·{" "}
+                  {expenseCategories[e.expense_category as ExpenseCategory] ??
+                    "Sin clasificar"}
+                </p>
+              )}
               <a href={"/api/recibos/" + e.id + "?origen=acuerdo"}>
                 Descargar recibo PDF
               </a>
