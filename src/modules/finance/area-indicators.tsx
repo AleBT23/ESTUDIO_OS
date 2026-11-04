@@ -34,6 +34,7 @@ export async function AreaIndicators() {
     <section className="panel padded">
       <div className="section-heading">
         <h2>Indicadores financieros</h2>
+        <Link href="/administracion/reportes">Filtrar y exportar</Link>
         <Link href="/administracion/operaciones">Ver operaciones</Link>
       </div>
       {error ? (

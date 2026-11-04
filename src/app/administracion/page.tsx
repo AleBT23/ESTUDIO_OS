@@ -98,10 +98,9 @@ export default async function FinancePage({
       {heading}
       <nav className="tabs" aria-label="Administración">
         <span className="selected">Planes y cobros</span>
+        <Link href="/administracion/reportes">Reportes</Link>
         <Link href="/administracion/operaciones">Operaciones por área</Link>
-        <span className="planned">Colaboradores · pendiente</span>
-        <span className="planned">Tiempo · pendiente</span>
-        <span className="planned">Rentabilidad · pendiente</span>
+        <Link href="/proyectos">Tiempo y honorarios por proyecto</Link>
       </nav>
       <section className="panel padded">
         <h2>Obligaciones de pago</h2>
@@ -220,8 +219,7 @@ export default async function FinancePage({
         </div>
       </section>
       <p className="notice" style={{ marginTop: 24 }}>
-        Gastos, repartos, tiempo, rentabilidad y reportes aún no están
-        implementados. Estos cobros no representan la utilidad del estudio.
+        Los saldos de este expediente corresponden a los planes de cobro del proyecto. Consulta los pagos a colaboradores y los costos directos en Operaciones por área.
       </p>
     </>
   );

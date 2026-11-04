@@ -2118,3 +2118,17 @@ it("el reparto compromete un único costo, limita los porcentajes y concilia pag
  expect((await db.query("select cost_cents::int,paid_cents::int,payable_cents::int from finance_case_balances where id=$1",[fee])).rows).toEqual([{cost_cents:5001,paid_cents:2000,payable_cents:3001}]);
  await asUser(reader);expect((await db.query("select * from collaborator_fees where id=$1",[fee])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el reporte por periodo separa cobros sin atribuir y concilia pagos y horas del paquete",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Productividad',current_date,10000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const pack=crypto.randomUUID();await db.exec("reset role");
+ await db.query("insert into project_service_packages(id,organization_id,project_id,business_line_id,name,scope) select $1,$2,$3,id,'Paquete','[]'::jsonb from business_lines where organization_id=$2 limit 1",[pack,org,project]);await asUser(owner);
+ const account=crypto.randomUUID();await db.query("insert into finance_cases(id,organization_id,project_id,package_id,name,area,revenue_cents,cost_cents) values($1,$2,$3,$4,'Extra','architecture',5000,1500)",[account,org,project,pack]);
+ await db.query("insert into project_time(id,organization_id,project_id,package_id,worked_on,minutes,description) values($1,$2,$3,$4,current_date-1,120,'Entrega')",[crypto.randomUUID(),org,project,pack]);
+ for(const [direction,amount] of [["in",5000],["out",1500]])await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,$4,$5,current_date-1)",[crypto.randomUUID(),org,account,direction,amount]);
+ await db.query("select record_payment($1,id,2000,current_date-1,'Parcial',$3) from payment_schedules where organization_id=$1 and project_id=$2",[org,project,crypto.randomUUID()]);
+ const report=(days:number)=>db.query("select line_id is null as unattributed,received,paid,minutes,net_hourly from cash_productivity($1,current_date-$3::integer,current_date,$2,$4)",[org,client,days,project]);
+ expect((await report(1)).rows).toEqual([{unattributed:false,received:"5000",paid:"1500",minutes:"120",net_hourly:"1750"},{unattributed:true,received:"2000",paid:"0",minutes:"0",net_hourly:null}]);
+ expect((await report(0)).rows).toHaveLength(0);
+ await asUser(reader);expect((await report(1)).rows).toHaveLength(0);await asUser(owner);
+});

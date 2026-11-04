@@ -52,31 +52,38 @@ export default async function Operations({
     .range((index - 1) * 30, index * 30 - 1);
   const selected = Object.hasOwn(areas, area ?? "") ? area : undefined;
   if (selected) query = query.eq("area", selected);
-  const [cases, clients, projects, works, suppliers] = await Promise.all([
-    query,
-    ctx.db
-      .from("clients")
-      .select("id,name")
-      .eq("organization_id", org)
-      .is("deleted_at", null)
-      .order("name"),
-    ctx.db
-      .from("projects")
-      .select("id,name")
-      .eq("organization_id", org)
-      .is("deleted_at", null)
-      .order("name"),
-    ctx.db
-      .from("works")
-      .select("id,name")
-      .eq("organization_id", org)
-      .order("name"),
-    ctx.db
-      .from("suppliers")
-      .select("id,name")
-      .eq("organization_id", org)
-      .order("name"),
-  ]);
+  const [cases, clients, projects, works, suppliers, packages] =
+    await Promise.all([
+      query,
+      ctx.db
+        .from("clients")
+        .select("id,name")
+        .eq("organization_id", org)
+        .is("deleted_at", null)
+        .order("name"),
+      ctx.db
+        .from("projects")
+        .select("id,name")
+        .eq("organization_id", org)
+        .is("deleted_at", null)
+        .order("name"),
+      ctx.db
+        .from("works")
+        .select("id,name")
+        .eq("organization_id", org)
+        .order("name"),
+      ctx.db
+        .from("suppliers")
+        .select("id,name")
+        .eq("organization_id", org)
+        .order("name"),
+      ctx.db
+        .from("project_service_packages")
+        .select("id,name,project_id")
+        .eq("organization_id", org)
+        .is("deleted_at", null)
+        .order("name"),
+    ]);
   if (cases.error || clients.error || projects.error || works.error)
     return (
       <section className="panel padded">
@@ -196,6 +203,20 @@ export default async function Operations({
             </select>
           </label>
           {associations}
+          {packages.data && (
+            <Association
+              name="package_id"
+              label="Paquete (selecciona también su proyecto)"
+              items={packages.data.map((p) => ({
+                id: p.id,
+                name:
+                  (projects.data.find((j) => j.id === p.project_id)?.name ??
+                    "Proyecto") +
+                  " · " +
+                  p.name,
+              }))}
+            />
+          )}
           {suppliers.data && (
             <Association
               name="supplier_id"

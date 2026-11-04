@@ -29,6 +29,7 @@ const caseInput = base
     area: z.enum(["architecture", "construction", "service"]),
     work_id: optionalId,
     supplier_id: optionalId.optional(),
+    package_id: optionalId.optional(),
     provider: z
       .string()
       .trim()

@@ -1,0 +1,142 @@
+import { requireContext } from "@/shared/auth/context";
+import { canReadFinance } from "@/shared/permissions";
+import { formatMoney } from "@/shared/money";
+import {
+  reportFilters,
+  type ProductivityRow,
+} from "@/modules/finance/productivity-report";
+export default async function Reports({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
+  const ctx = await requireContext();
+  if (!canReadFinance(ctx.membership.role))
+    return <p className="notice">Permisos insuficientes.</p>;
+  const raw = await searchParams,
+    filters = reportFilters.safeParse(raw),
+    org = ctx.organization.id;
+  const sources = [
+    ["customer", "Cliente", "clients"],
+    ["project", "Proyecto", "projects"],
+    ["work", "Obra", "works"],
+    ["package", "Paquete", "project_service_packages"],
+    ["line", "Línea", "business_lines"],
+  ];
+  const [groups, result] = await Promise.all([
+    Promise.all(
+      sources.map(async ([name, label, table]) => ({
+        name,
+        label,
+        options: await ctx.db
+          .from(table)
+          .select("id,name")
+          .eq("organization_id", org)
+          .order("name"),
+      })),
+    ),
+    filters.success
+      ? ctx.db.rpc("cash_productivity", { org, ...filters.data })
+      : null,
+  ]);
+  const rows: ProductivityRow[] = result?.data ?? [];
+  return (
+    <>
+      <header className="page-heading">
+        <p className="eyebrow">ADMINISTRACIÓN</p>
+        <h1>Flujo y productividad</h1>
+        <p>
+          El flujo por hora divide los cobros menos pagos efectivos entre las
+          horas registradas del periodo. Los fondos del cliente se presentan por
+          separado.
+        </p>
+      </header>
+      <form className="panel padded">
+        <div className="form-grid">
+          <label>
+            Desde
+            <input type="date" name="from_date" defaultValue={raw.from_date} />
+          </label>
+          <label>
+            Hasta
+            <input type="date" name="to_date" defaultValue={raw.to_date} />
+          </label>
+          {groups.map((g) => (
+            <label key={g.name}>
+              {g.label}
+              <select name={g.name} defaultValue={raw[g.name] ?? ""}>
+                <option value="">Todos</option>
+                {g.options.data?.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <button className="button button-primary">Aplicar filtros</button>
+      </form>
+      {groups.some((g) => g.options.error) && (
+        <p className="notice">
+          Algunas opciones de filtro no se pudieron cargar.
+        </p>
+      )}
+      {!filters.success ? (
+        <p className="notice">Revisa las fechas y los filtros seleccionados.</p>
+      ) : result?.error ? (
+        <p className="notice">No se pudo calcular el reporte.</p>
+      ) : (
+        <section className="panel padded">
+          <h2>Resultados por línea</h2>
+          {rows.length ? (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    {[
+                      "Línea",
+                      "Fondos",
+                      "Cobrado",
+                      "Pagado",
+                      "Flujo",
+                      "Tiempo",
+                      "Flujo por hora",
+                    ].map((k) => (
+                      <th key={k}>{k}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.line_name + String(r.managed)}>
+                      <th>{r.line_name}</th>
+                      <td>{r.managed ? "Del cliente" : "Propios"}</td>
+                      {[r.received, r.paid, r.net].map((v, i) => (
+                        <td key={i}>{formatMoney(BigInt(v))}</td>
+                      ))}
+                      <td>{r.minutes} min</td>
+                      <td>
+                        {r.net_hourly === null
+                          ? "—"
+                          : formatMoney(BigInt(r.net_hourly))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p>Sin movimientos ni tiempo en el periodo seleccionado.</p>
+          )}
+          <a
+            className="button button-outline"
+            href={"/api/reportes/productividad?" + new URLSearchParams(raw)}
+          >
+            Exportar resultados CSV
+          </a>
+        </section>
+      )}
+    </>
+  );
+}
