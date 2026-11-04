@@ -35,7 +35,9 @@ export async function ProjectFinance({
   const [summary, plans, payments] = await Promise.all([
     ctx.db
       .from("project_financial_summary")
-      .select("amount_cents,collected_cents,balance_cents,schedule_count")
+      .select(
+        "amount_cents::text,collected_cents::text,balance_cents::text,schedule_count",
+      )
       .eq("organization_id", ctx.organization.id)
       .eq("project_id", project)
       .maybeSingle(),
@@ -76,19 +78,19 @@ export async function ProjectFinance({
             <dt>Importe acordado MXN</dt>
             <dd>
               {summary.data
-                ? formatMoney(summary.data.amount_cents)
+                ? formatMoney(BigInt(summary.data.amount_cents))
                 : "Sin definir"}
             </dd>
           </div>
           <div>
             <dt>Recibido MXN</dt>
-            <dd>{formatMoney(summary.data?.collected_cents || 0)}</dd>
+            <dd>{formatMoney(BigInt(summary.data?.collected_cents ?? 0))}</dd>
           </div>
           <div>
             <dt>Saldo por recibir MXN</dt>
             <dd>
               {summary.data
-                ? formatMoney(summary.data.balance_cents)
+                ? formatMoney(BigInt(summary.data.balance_cents))
                 : "Sin definir"}
             </dd>
           </div>

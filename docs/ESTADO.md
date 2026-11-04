@@ -396,3 +396,6 @@ El directorio consulta 30 expedientes por página con total exacto y orden estab
 
 ### Consulta de cotizaciones por estado
 Inicio → Cotizaciones enviadas abre las propuestas enviadas del mismo estudio. En Comercial se puede combinar estado con búsqueda por nombre y conservar ambos al paginar. Orden estable por actualización e identificador. La prueba del componente verificó el filtro, rango y enlace de página con datos simulados. Pasaron 164 pruebas, TypeScript y ESLint. Pendiente validación autenticada en preview.
+
+### Precisión del resumen financiero por proyecto
+Inicio y el expediente solicitan como texto los totales en centavos de project_financial_summary y los formatean con BigInt. La clasificación de saldos sigue usando la columna numérica en PostgreSQL. La regresión de formato verifica un total superior al rango entero seguro de JavaScript. Pasaron 164 pruebas, TypeScript, ESLint y compilación. Pendiente comprobar las consultas PostgREST con una sesión autenticada en preview.

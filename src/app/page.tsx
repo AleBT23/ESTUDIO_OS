@@ -58,7 +58,9 @@ export default async function HomePage({
         canReadFinance(ctx.membership.role)
           ? ctx.db
               .from("project_financial_summary")
-              .select("project_id,collected_cents,balance_cents")
+              .select(
+                "project_id,collected_text:collected_cents::text,balance_text:balance_cents::text",
+              )
               .eq("organization_id", org)
               .gt("balance_cents", 0)
               .order("balance_cents", { ascending: false })
@@ -147,8 +149,8 @@ export default async function HomePage({
                               "Abrir expediente"}
                           </Link>
                         </td>
-                        <td>{formatMoney(row.collected_cents)}</td>
-                        <td>{formatMoney(row.balance_cents)}</td>
+                        <td>{formatMoney(BigInt(row.collected_text))}</td>
+                        <td>{formatMoney(BigInt(row.balance_text))}</td>
                       </tr>
                     ))}
                   </tbody>
