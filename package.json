@@ -14,6 +14,7 @@
     "db:restore-test": "node scripts/check-postgres-concurrency.mjs --restore",
     "db:concurrency": "node scripts/check-postgres-concurrency.mjs",
     "db:verify": "vitest run tests/database.test.ts",
+    "db:plan": "node scripts/migrate.mjs --plan",
     "db:migrate": "node scripts/migrate.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "audit:legacy": "node scripts/audit-legacy.mjs",

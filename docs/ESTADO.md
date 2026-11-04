@@ -474,3 +474,6 @@ Comercial → Cotizaciones permite filtrar archivadas por nombre y estado y rest
 
 ### Cancelación del saldo de planes de proyecto
 Administración permite cancelar exclusivamente lo pendiente, con motivo obligatorio. El historial conserva importe anterior, saldo cancelado, actor y fecha. La cartera y la agenda se actualizan y los pagos efectivos permanecen. La prueba multiconexión enfrentó cancelación y cobro sobre la misma obligación. Pasaron 190 pruebas, TypeScript, ESLint, build, nueve recorridos Playwright (uno omitido) y restauración con 63 migraciones. Pendientes validación autenticada y migración de producción.
+
+### Inventario de migraciones en modo de solo lectura
+npm run db:plan abre una transacción PostgreSQL de solo lectura y contrasta el historial registrado con los hashes SHA-256 locales. Detecta versiones desconocidas, cambios y huecos de secuencia. El 4 de noviembre la conexión configurada verificó las primeras 10 migraciones, sin diferencias en ese historial. De las 63 entonces existentes, 53 estaban pendientes, comenzando por 011. El inventario no certifica el respaldo, las políticas reales ni la compatibilidad de los registros. Pasaron 192 pruebas, lint, TypeScript y revisión de publicación.
