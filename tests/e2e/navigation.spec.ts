@@ -97,6 +97,7 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
   for (const path of [
     "/buscar",
     "/configuracion/equipo",
+    "/configuracion/equipo/invitaciones",
     "/agenda?view=board",
     "/agenda/notificaciones",
     "/agenda/recordatorios",
@@ -174,4 +175,26 @@ test("portal público separa el acceso del cliente de la navegación del despach
       page.getByText("El portal está pendiente de conexión."),
     ).toBeVisible();
   }
+});
+
+test("la invitación ofrece acceso y registro de cuenta sin crear membresías al abrirla", async ({
+  page,
+}) => {
+  await page.goto("/invitaciones");
+  if (
+    await page.getByRole("heading", { name: "Acceder con invitación" }).count()
+  ) {
+    await expect(
+      page.getByRole("button", { name: "Entrar al estudio" }),
+    ).toBeVisible();
+    await page
+      .getByText("Crear cuenta para aceptar una invitación", { exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Crear cuenta", exact: true }),
+    ).toBeVisible();
+  } else
+    await expect(
+      page.getByText("Las invitaciones requieren conexión con el estudio."),
+    ).toBeVisible();
 });

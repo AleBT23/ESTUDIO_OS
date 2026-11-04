@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { database } from "@/shared/db/server";
 import type { RecordState } from "@/shared/ui/record-form";
-export async function requestPortalAccount(
+export async function requestAccount(
   _state: RecordState,
   form: FormData,
 ): Promise<RecordState> {
@@ -26,6 +26,6 @@ export async function requestPortalAccount(
     };
   return {
     success:
-      "Si tu cuenta requiere confirmación, revisa tu correo. Después entra al portal para obtener tu identificador.",
+      "Si tu cuenta requiere confirmación, revisa tu correo. Después inicia sesión con ese correo.",
   };
 }

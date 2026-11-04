@@ -60,6 +60,7 @@ export default async function Team({
         </p>
       </header>
       <nav className="tabs">
+        <Link href="/configuracion/equipo/invitaciones">Invitaciones</Link>
         <Link href="?history=0">Miembros</Link>
         <Link href="?history=1">Historial de cambios</Link>
       </nav>

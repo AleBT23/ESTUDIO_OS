@@ -1,5 +1,4 @@
-import { RecordForm } from "@/shared/ui/record-form";
-import { requestPortalAccount } from "@/modules/portal/signup-action";
+import { SignupForm } from "@/shared/ui/signup-form";
 import Link from "next/link";
 import { database, isConfigured } from "@/shared/db/server";
 import { LoginForm } from "@/shared/ui/auth-forms";
@@ -26,23 +25,7 @@ export default async function Portal({
         <LoginForm portal />
         <details>
           <summary>Crear cuenta de cliente</summary>
-          <RecordForm id={crypto.randomUUID()} save={requestPortalAccount}>
-            <label>
-              Correo electrónico
-              <input type="email" autoComplete="email" required name="email" />
-            </label>
-            <label>
-              Contraseña de al menos 12 caracteres
-              <input
-                type="password"
-                name="password"
-                minLength={12}
-                maxLength={128}
-                autoComplete="new-password"
-                required
-              />
-            </label>
-          </RecordForm>
+          <SignupForm />
         </details>
       </section>
     );

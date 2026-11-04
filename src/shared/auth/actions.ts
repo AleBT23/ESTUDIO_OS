@@ -21,7 +21,14 @@ export async function signIn(
       error:
         "No se pudo iniciar sesión. Revisa tus datos o inténtalo más tarde.",
     };
-  redirect(form.get("destination") === "portal" ? "/portal" : "/");
+  const destination = form.get("destination");
+  redirect(
+    destination === "invitation"
+      ? "/invitaciones"
+      : destination === "portal"
+        ? "/portal"
+        : "/",
+  );
 }
 export async function signOut() {
   const db = await database();

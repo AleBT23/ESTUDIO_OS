@@ -2,10 +2,16 @@
 import { useActionState } from "react";
 import { signIn, createWorkspace } from "@/shared/auth/actions";
 import { Button } from "./button";
-export function LoginForm({ portal = false }: { portal?: boolean } = {}) {
+export function LoginForm({
+  portal = false,
+  invitation = false,
+}: { portal?: boolean; invitation?: boolean } = {}) {
   const [state, action, pending] = useActionState(signIn, {});
   return (
     <form action={action} className="form-stack">
+      {invitation && (
+        <input type="hidden" name="destination" value="invitation" />
+      )}
       {portal && <input type="hidden" name="destination" value="portal" />}
       <label>
         Correo electrónico

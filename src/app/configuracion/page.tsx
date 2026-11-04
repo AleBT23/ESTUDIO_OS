@@ -52,7 +52,10 @@ export default async function SettingsPage() {
               <ArrowUpRight size={16} />
             </Link>
           ) : !ctx.organization ? (
-            <WorkspaceForm />
+            <>
+              <Link href="/invitaciones">Consultar mis invitaciones</Link>
+              <WorkspaceForm />
+            </>
           ) : (
             <div className="notice success">
               <strong>{ctx.organization.name}</strong>

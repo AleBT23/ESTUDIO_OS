@@ -145,6 +145,25 @@ try {
       if (pending) await pending;
     }
   }
+  const guest = randomUUID(),
+    invitation = randomUUID(),
+    email = guest + "@example.test";
+  await admin`insert into auth.users(id,email,email_confirmed_at) values(${guest},${email},now())`;
+  await first`insert into studio_invitations(id,organization_id,email,role) values(${invitation},${org},${email},'reader')`;
+  for (const db of [first, second])
+    await db`select set_config('request.jwt.claim.sub',${guest},false)`;
+  await race(
+    (db) => db`select accept_studio_invitation(${invitation})`,
+    (db) => db`select create_workspace('Otro estudio simultáneo')`,
+  );
+  const memberships =
+    await first`select organization_id,role from memberships where user_id=${guest}`;
+  assert.deepEqual(
+    memberships.map((r) => ({ ...r })),
+    [{ organization_id: org, role: "reader" }],
+  );
+  for (const db of [first, second])
+    await db`select set_config('request.jwt.claim.sub',${owner},false)`;
   const reminder = randomUUID();
   await first`insert into personal_reminders(id,organization_id,label,due_on,repeat_days) values(${reminder},${org},'Revisar licencias',current_date,7)`;
   await race(
@@ -307,6 +326,7 @@ try {
               "restauración SQL sintética, saldos, documentos, RLS y auditoría 046",
             ]
           : []),
+        "aceptación simultánea a creación de estudio",
         "cobros concurrentes",
         "estimaciones concurrentes",
         "repartos concurrentes",

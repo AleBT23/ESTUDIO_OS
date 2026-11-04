@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(22);
+  expect(rows).toHaveLength(25);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2539,4 +2539,23 @@ it("solo el propietario cambia roles no propietarios y el cambio se aplica a los
  await asUser(owner);await change(reader,"admin","reader");
  expect((await history()).rows).toEqual([{old_role:"reader",new_role:"admin",actor_id:owner},{old_role:"admin",new_role:"reader",actor_id:owner}]);
  await asUser(reader);expect((await financial()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("solo una cuenta con el correo confirmado acepta la invitación y no puede elevar ni duplicar su membresía",async()=>{
+ const guest=crypto.randomUUID(),orgId=org,email=guest+"@example.test";
+ await db.exec("reset role");await db.query("insert into auth.users(id,email) values($1,$2)",[guest,email]);await asUser(owner);
+ const issue=async()=>{const id=crypto.randomUUID();await db.query("insert into studio_invitations(id,organization_id,email,role) values($1,$2,$3,'collaborator')",[id,orgId,email]);return id;};
+ const accept=(id:string)=>db.query("select accept_studio_invitation($1) org",[id]);
+ const inbox=()=>db.query("select id from my_studio_invitations()");
+ const revoked=await issue();await db.query("select revoke_studio_invitation($1,$2)",[org,revoked]);const id=await issue();
+ await asUser(guest);expect((await inbox()).rows).toEqual([]);await expect(accept(id)).rejects.toThrow();
+ await db.exec("reset role");await db.query("update auth.users set email_confirmed_at=now() where id=$1",[guest]);await asUser(other);
+ await expect(accept(id)).rejects.toThrow();await asUser(guest);expect((await inbox()).rows).toEqual([{id}]);await expect(accept(revoked)).rejects.toThrow();
+ expect((await accept(id)).rows).toEqual([{org}]);expect((await accept(id)).rows).toEqual([{org}]);
+ expect((await db.query("select role from memberships where user_id=$1",[guest])).rows).toEqual([{role:"collaborator"}]);
+ await expect(issue()).rejects.toThrow();expect((await inbox()).rows).toEqual([]);
+ await asUser(owner);const expired=await issue();await db.exec("reset role");
+ await db.query("update studio_invitations set expires_at=now()-interval '1 minute' where id=$1",[expired]);
+ await asUser(guest);await expect(accept(expired)).rejects.toThrow(/no disponible/);expect((await inbox()).rows).toEqual([]);
+ await asUser(owner);await db.query("select revoke_studio_invitation($1,$2)",[org,expired]);const second=await issue();await asUser(guest);await expect(accept(second)).rejects.toThrow(/perteneces/);await asUser(owner);
 });

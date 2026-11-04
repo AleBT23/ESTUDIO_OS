@@ -21,7 +21,12 @@ export default async function LoginPage() {
         Entra para continuar con el trabajo de tu estudio.
       </p>
       {isConfigured() ? (
-        <LoginForm />
+        <>
+          <LoginForm />
+          <Link href="/invitaciones">
+            Entrar con una invitación del estudio
+          </Link>
+        </>
       ) : (
         <div className="notice">
           El estudio aún no está conectado.{" "}
