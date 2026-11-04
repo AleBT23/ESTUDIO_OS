@@ -14,6 +14,7 @@ export function PresetForm({
     id: string;
     name: string;
     notes: string;
+    conditions: string;
     version: number;
     items: { service_id: string; quantity: string }[];
   };
@@ -49,6 +50,14 @@ export function PresetForm({
             name="notes"
             defaultValue={preset?.notes || ""}
             maxLength={10000}
+          />
+        </label>
+        <label className="full">
+          Condiciones comerciales
+          <textarea
+            name="conditions"
+            defaultValue={preset?.conditions || ""}
+            maxLength={20000}
           />
         </label>
       </div>

@@ -465,3 +465,6 @@ Ubicación, responsable, fechas y estado se editan con control de versión. La a
 
 ### Archivos de clientes y proyectos
 Cada expediente admite enlaces y archivos privados de hasta 2 MiB. Los permisos separan documentación comercial y técnica. Se probaron aislamiento entre estudios, escritura por rol, recuperación del archivo con sus bytes originales y rechazo de descargas sin sesión. Pasaron 186 pruebas, TypeScript, ESLint, build, 9 recorridos Playwright (uno omitido) y restauración con 60 migraciones. Pendiente recorrido con dos cuentas de prueba en preview.
+
+### Condiciones reutilizables en las cotizaciones
+Los presets guardan condiciones junto a partidas y notas. Al aplicarlos se conservan las cláusulas del borrador. Si el texto combinado excede el límite, el editor conserva el borrador completo. La API anterior mantiene las condiciones cuando edita el mismo preset. Pasaron 188 pruebas, lint, TypeScript, build, 9 recorridos Playwright y restauración local con 61 migraciones. Pendiente validación en preview.

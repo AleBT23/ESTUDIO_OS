@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(26);
+  expect(rows).toHaveLength(27);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2591,4 +2591,15 @@ it("protege adjuntos comerciales y restaura los bytes originales con control de 
   await asUser(reader);
   expect((await db.query("select encode(attachment,'hex') bytes from dossier_files where deleted_at is null")).rows).toEqual([{bytes:"25504446"}]);
   await asUser(owner);
+});
+it("un cliente anterior puede editar el preset sin perder sus condiciones", async () => {
+  await asUser(owner);
+  const {service} = await commercialFixture();
+  const items=JSON.stringify([{service_id:service,quantity:"1"}]);
+  const id=(await db.query<{id:string}>("select save_preset_terms($1,null,0,'Vivienda','',$2::jsonb,'50% al inicio') id",[org,items])).rows[0].id;
+  await db.query("select save_preset($1,$2,1,'Vivienda ampliada','',$3::jsonb)",[org,id,items]);
+  await expect(db.query("select save_preset_terms($1,$2,1,'Obsoleta','',$3::jsonb,'Otro')",[org,id,items])).rejects.toThrow("Conflicto");
+  expect((await db.query("select conditions,version from service_presets where id=$1",[id])).rows).toEqual([{conditions:"50% al inicio",version:2}]);
+  await db.query("select save_preset_terms($1,$2,2,'Vivienda','',$3::jsonb,'')",[org,id,items]);
+  expect((await db.query("select conditions from service_presets where id=$1",[id])).rows).toEqual([{conditions:""}]);
 });

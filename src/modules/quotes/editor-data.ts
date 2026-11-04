@@ -30,7 +30,7 @@ export async function getEditorData() {
       .limit(500),
     ctx.db
       .from("service_presets")
-      .select("id,name,notes")
+      .select("id,name,notes,conditions")
       .eq("organization_id", ctx.organization.id)
       .is("deleted_at", null)
       .order("name")

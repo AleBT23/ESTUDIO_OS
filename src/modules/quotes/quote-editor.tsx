@@ -19,10 +19,12 @@ import {
   type QuoteItem,
 } from "./schema";
 import { insertConcept } from "./concept-schema";
+import { mergePresetText } from "./preset-text";
 type Preset = {
   id: string;
   name: string;
   notes: string;
+  conditions: string;
   items: { service_id: string; quantity: string }[];
 };
 export function QuoteEditor({
@@ -114,15 +116,19 @@ export function QuoteEditor({
       setNotice("Una propuesta admite hasta 100 partidas.");
       return;
     }
+    const merged = mergePresetText(header, preset);
+    if (!merged) {
+      setNotice(
+        "Las notas o condiciones superan el límite. Acorta el texto antes de aplicar el preset.",
+      );
+      return;
+    }
     setItems([
       ...items,
       ...resolved.map((i) => itemFromService(i.service!, i.quantity)),
     ]);
-    if (preset.notes)
-      setHeader({
-        ...header,
-        notes: [header.notes, preset.notes].filter(Boolean).join("\n\n"),
-      });
+    setHeader({ ...header, ...merged });
+    if (preset.conditions) setFull(true);
     setDirty(true);
     setNotice("Preset aplicado. Los textos y precios son copias editables.");
   }

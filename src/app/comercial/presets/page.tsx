@@ -65,6 +65,7 @@ export default async function PresetsPage({
                   id: selected.id,
                   name: selected.name,
                   notes: selected.notes,
+                  conditions: selected.conditions,
                   version: selected.version,
                   items: selectedItems,
                 }
@@ -82,6 +83,13 @@ export default async function PresetsPage({
             </Button>
           </div>
           <p className="muted">{selected.notes || "Sin notas adicionales"}</p>
+          {selected.conditions && (
+            <p style={{ whiteSpace: "pre-wrap" }}>
+              <strong>Condiciones comerciales</strong>
+              <br />
+              {selected.conditions}
+            </p>
+          )}
           {selectedItems.map((item, index) => (
             <p key={index}>
               {item.quantity} ×{" "}

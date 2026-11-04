@@ -124,6 +124,7 @@ export async function savePreset(
     .object({
       name: z.string().trim().min(2).max(160),
       notes: z.string().max(10000),
+      conditions: z.string().max(20000).default(''),
       items: z
         .array(
           z.object({
@@ -146,12 +147,13 @@ export async function savePreset(
         "Escribe un nombre y selecciona de 1 a 100 servicios con cantidades mayores a cero.",
     };
   const input = parsed.data;
-  const { data, error } = await ctx.db.rpc("save_preset", {
+  const { data, error } = await ctx.db.rpc("save_preset_terms", {
     org: ctx.organization.id,
     preset: input.id || null,
     expected_version: input.version,
     preset_name: input.name,
     preset_notes: input.notes,
+    preset_conditions: input.conditions,
     items: input.items,
   });
   if (error)
