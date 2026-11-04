@@ -1948,3 +1948,15 @@ it("un reverso conserva el importe y el actor y libera el saldo una sola vez",as
  expect((await db.query("select payable_cents::int,paid_cents::int from finance_case_balances where id=$1",[id])).rows[0]).toEqual({payable_cents:12345,paid_cents:0});
  await pay(crypto.randomUUID());
 });
+
+it("presupuesta cantidades fraccionarias redondeadas por partida sin registrar pagos",async()=>{
+ await asUser(owner);const work=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,name) values($1,$2,'Obra presupuestada')",[work,org]);
+ const add=()=>db.query("insert into work_budget_items(id,organization_id,work_id,chapter,description,unit,quantity,unit_price_cents) values($1,$2,$3,'Materiales','Acabado','m2',1.125,100)",[crypto.randomUUID(),org,work]);
+ await add();await add();
+ const sum=()=>db.query("select base_cents from work_budget_totals where work_id=$1",[work]);
+ expect((await sum()).rows).toEqual([{base_cents:"226"}]);
+ expect((await db.query("select * from work_balances where work_id=$1",[work])).rows).toHaveLength(0);
+ await asUser(reader);expect((await sum()).rows).toHaveLength(0);await expect(add()).rejects.toThrow();
+ await asUser(owner);
+});

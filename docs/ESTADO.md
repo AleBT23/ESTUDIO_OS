@@ -267,3 +267,6 @@ La ruta Obras lista expedientes y presenta saldos por origen del dinero, con exp
 
 ### Reversos del nuevo registro financiero
 Migración 015 probada localmente. Cada movimiento se puede revertir una vez indicando el motivo; PostgreSQL conserva importe, actor y fecha del reverso, recalcula saldos y permite registrar la corrección. No se conceden permisos para editar importes ni borrar movimientos. Pruebas de regresión verifican reverso único, aislamiento y liberación del saldo. Typecheck, ESLint, 123 pruebas y build correctos. Las migraciones 012–015 están pendientes de validación sobre una copia Supabase aislada y respaldo.
+
+### Presupuesto base por obra
+Migración 016. El expediente permite capturar capítulos y partidas con cantidad decimal, unidad y precio unitario. PostgreSQL redondea por partida y totaliza el presupuesto completo, incluso con paginación. La presupuestación no registra ningún movimiento efectivo. Comprobados redondeo, permisos, aislamiento del libro de movimientos, 124 pruebas, lint, tipos y build.

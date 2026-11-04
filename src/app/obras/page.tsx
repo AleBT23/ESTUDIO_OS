@@ -3,11 +3,12 @@ import { z } from "zod";
 import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
+import { WorkBudget } from "@/modules/finance/work-budget";
 import { workMetrics } from "@/modules/finance/work-report";
 export default async function Works({
   searchParams,
 }: {
-  searchParams: Promise<{ obra?: string; page?: string }>;
+  searchParams: Promise<{ obra?: string; page?: string; partidas?: string }>;
 }) {
   const ctx = await requireContext();
   if (!canReadFinance(ctx.membership.role))
@@ -113,6 +114,12 @@ export default async function Works({
             Exportar balance CSV
           </a>
         </section>
+      )}
+      {id && current?.data && (
+        <WorkBudget
+          id={id}
+          page={Math.max(1, Math.min(10000, parseInt(q.partidas ?? "1") || 1))}
+        />
       )}
     </>
   );

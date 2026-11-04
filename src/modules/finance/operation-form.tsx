@@ -1,4 +1,5 @@
 "use client";
+import { saveBudgetItem } from "./budget-action";
 import { useActionState } from "react";
 import {
   reverseEntry,
@@ -10,12 +11,12 @@ export function OperationForm({
   id,
   children,
 }: {
-  kind: "work" | "case" | "entry";
+  kind: "work" | "case" | "entry" | "budget";
   id: string;
   children: React.ReactNode;
 }) {
   const [state, action, pending] = useActionState(
-    saveOperation.bind(null, kind),
+    kind === "budget" ? saveBudgetItem : saveOperation.bind(null, kind),
     {} as OperationState,
   );
   return (
