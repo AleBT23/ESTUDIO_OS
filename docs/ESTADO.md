@@ -246,3 +246,7 @@ Solicitud de arquitectura híbrida recibida. Inspección del estado actual y pre
 - Comprobación HTTP real: /acceso y /recursos 200 con logo-ab; logo y membrete 200 con SHA-256 idéntico a los recursos nuevos. Repetición del lanzador -NoBrowser correcta sobre el servidor activo. Build, lint y TypeScript correctos; se mantienen las 119 pruebas y 42 verificaciones del incremento previo.
 - Servidor de revisión activo en 3001. Los procesos iniciados por Start-Process desde el entorno restringido no persistieron al terminar la llamada; la comprobación final usa una sesión Node persistente. El acceso directo mantiene el mecanismo de inicio normal bajo la sesión Windows del propietario.
 - No hubo despliegue web ni cambios de Supabase. Ejecución local sigue necesitando Internet para autenticación y datos de Supabase.
+
+## ESTUDIO OS 2.0 · 3 de noviembre de 2026
+
+Rama local feature/estudio-os-v2. Inicio autenticado con conteos exactos de proyectos activos y cotizaciones enviadas por organización, acciones comerciales según rol y pendientes existentes. Los errores de consulta se distinguen de un conteo cero. La última verificación documentada de producción sitúa la migración 011 pendiente. Typecheck, ESLint, 119 pruebas Vitest y compilación productiva con verificación de PDF correctos. Pendiente validar el nuevo inicio con sesión en preview.

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { getContext } from "@/shared/auth/context";
 import { isConfigured } from "@/shared/db/server";
+import { canManageCommercial } from "@/shared/permissions";
 import { DashboardTasks } from "@/modules/projects/workspace";
 export default async function HomePage({
   searchParams,
@@ -22,6 +23,70 @@ export default async function HomePage({
     1,
     Math.min(10000, parseInt(filter.pendingPage || "1") || 1),
   );
+  if (ctx?.organization && ctx.membership) {
+    const org = ctx.organization.id;
+    const commercial = canManageCommercial(ctx.membership.role);
+    const [projects, quotes] = await Promise.all([
+      ctx.db
+        .from("projects")
+        .select("id", { head: true, count: "exact" })
+        .eq("organization_id", org)
+        .eq("state", "active")
+        .is("deleted_at", null),
+      commercial
+        ? ctx.db
+            .from("quotes")
+            .select("id", { head: true, count: "exact" })
+            .eq("organization_id", org)
+            .eq("status", "sent")
+            .is("deleted_at", null)
+        : null,
+    ]);
+    return (
+      <>
+        <header className="page-heading">
+          <p className="eyebrow">{ctx.organization.name}</p>
+          <h1>Centro de operaciones</h1>
+        </header>
+        <div className="overview-grid">
+          <Link href="/proyectos" className="panel overview-card">
+            <h2>Proyectos activos</h2>
+            <strong>
+              {projects.error ? "Consulta no disponible" : projects.count}
+            </strong>
+          </Link>
+          {quotes && (
+            <Link
+              href="/comercial/cotizaciones"
+              className="panel overview-card"
+            >
+              <h2>Cotizaciones enviadas</h2>
+              <strong>
+                {quotes.error ? "Consulta no disponible" : quotes.count}
+              </strong>
+            </Link>
+          )}
+        </div>
+        {commercial && (
+          <nav aria-label="Acciones rápidas" className="form-actions">
+            <Link
+              className="button button-primary"
+              href="/comercial/cotizaciones/nueva"
+            >
+              Nueva cotización
+            </Link>
+            <Link className="button button-outline" href="/proyectos/nuevo">
+              Nuevo proyecto
+            </Link>
+            <Link className="button button-outline" href="/administracion">
+              Consultar cobros
+            </Link>
+          </nav>
+        )}
+        <DashboardTasks page={pendingPage} />
+      </>
+    );
+  }
   return (
     <>
       <div className="page-heading home-heading">
@@ -39,15 +104,6 @@ export default async function HomePage({
           {ctx?.organization ? "Espacio conectado" : "Preparando tu espacio"}
         </span>
       </div>
-      {ctx?.organization && (
-        <>
-          <DashboardTasks page={pendingPage} />
-          <p className="sync-caption">
-            Tus datos se guardan en Supabase y se comparten entre teléfono y PC.
-            Al volver a esta pestaña se actualiza la vista.
-          </p>
-        </>
-      )}
       <section className="welcome-panel">
         <div className="welcome-copy">
           <p className="eyebrow">UNA VISIÓN COMPARTIDA</p>
