@@ -137,3 +137,25 @@ test("el modo oscuro conserva la preferencia y el contraste de superficie al nav
   await page.getByRole("button", { name: "Activar modo claro" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });
+
+test("portal público separa el acceso del cliente de la navegación del despacho", async ({
+  page,
+}) => {
+  await page.goto("/portal");
+  await expect(
+    page.getByRole("navigation", { name: "Navegación principal" }),
+  ).toHaveCount(0);
+  if (await page.getByRole("heading", { name: "Portal de clientes" }).count()) {
+    await expect(
+      page.getByRole("button", { name: "Entrar al portal" }),
+    ).toBeVisible();
+    await page.getByText("Crear cuenta de cliente", { exact: true }).click();
+    await expect(
+      page.getByLabel("Contraseña de al menos 12 caracteres"),
+    ).toBeVisible();
+  } else {
+    await expect(
+      page.getByText("El portal está pendiente de conexión."),
+    ).toBeVisible();
+  }
+});

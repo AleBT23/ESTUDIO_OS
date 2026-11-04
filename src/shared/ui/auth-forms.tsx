@@ -2,10 +2,11 @@
 import { useActionState } from "react";
 import { signIn, createWorkspace } from "@/shared/auth/actions";
 import { Button } from "./button";
-export function LoginForm() {
+export function LoginForm({ portal = false }: { portal?: boolean } = {}) {
   const [state, action, pending] = useActionState(signIn, {});
   return (
     <form action={action} className="form-stack">
+      {portal && <input type="hidden" name="destination" value="portal" />}
       <label>
         Correo electrónico
         <input
@@ -33,7 +34,11 @@ export function LoginForm() {
         </p>
       )}
       <Button disabled={pending}>
-        {pending ? "Entrando…" : "Entrar al estudio"}
+        {pending
+          ? "Entrando…"
+          : portal
+            ? "Entrar al portal"
+            : "Entrar al estudio"}
       </Button>
     </form>
   );

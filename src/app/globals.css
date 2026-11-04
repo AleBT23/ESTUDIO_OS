@@ -1668,3 +1668,7 @@ dialog {
 .calendar-day { min-height:44px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; border:1px solid var(--line); border-radius:6px; }
 .calendar-day:hover,.calendar-day[aria-current=date] { background:var(--soft); border-color:var(--accent); }
 .calendar-day small { color:var(--accent); font-weight:700; }
+
+.portal-main { max-width:54rem; margin:0 auto; padding:clamp(16px,4vw,48px); }
+.portal-main .activity-row a { display:block; text-decoration:underline; }
+.portal-main code { overflow-wrap:anywhere; }

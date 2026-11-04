@@ -1,3 +1,4 @@
+import { PublishDelivery } from "@/modules/portal/manage";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canWriteProject, canManageCommercial } from "@/shared/permissions";
@@ -146,6 +147,9 @@ export async function DeliveryPanel({
       )}
       {current && (
         <>
+          {current.state === "approved" && (
+            <PublishDelivery project={id} delivery={current.id} />
+          )}
           <h3>{current.name} · Historial de revisiones</h3>
           {history?.error ? (
             <p>No se pudo cargar el historial.</p>

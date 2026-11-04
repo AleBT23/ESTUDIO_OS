@@ -1,4 +1,5 @@
 import { Journal } from "@/modules/journal/panel";
+import { PortalAccess } from "@/modules/portal/manage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -148,6 +149,9 @@ export default async function ClientPage({
           writable={!client.deleted_at}
           page={Math.max(1, Math.min(10000, parseInt(historial ?? "1") || 1))}
         />
+      )}
+      {canWrite && !client.deleted_at && edit !== "1" && (
+        <PortalAccess client={id} />
       )}
     </>
   );

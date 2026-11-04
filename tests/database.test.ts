@@ -2077,3 +2077,16 @@ it("el contrato firmado conserva el cliente del proyecto y no duplica sus cobros
  for(const user of [reader,other]){await asUser(user);expect((await db.query("select id from contracts where project_id=$1",[proj])).rows).toHaveLength(0);await expect(create(client,"CT-C")).rejects.toThrow();}
  await asUser(owner);
 });
+
+it("el cliente solo consulta entregas aprobadas y publicadas hasta que se revoca su acceso",async()=>{
+ const external=crypto.randomUUID();await db.exec("reset role");await db.query("insert into auth.users(id) values($1)",[external]);await asUser(owner);
+ const project=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Portal privado',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const delivery=crypto.randomUUID();
+ await db.query("insert into project_deliverables(id,organization_id,project_id,stage,name,due_on) values($1,$2,$3,'Planos','Entrega autorizada',current_date)",[delivery,org,project]);
+ const publish=()=>db.query("insert into portal_deliveries(id,organization_id,project_id,deliverable_id,resource_url) values($1,$2,$3,$4,'https://example.test/plano')",[crypto.randomUUID(),org,project,delivery]);
+ await expect(publish()).rejects.toThrow();for(const [rev,state] of [[1,"review"],[2,"approved"]])await db.query("insert into deliverable_revisions(id,organization_id,project_id,deliverable_id,revision,state,notes) values($1,$2,$3,$4,$5,$6,'Nota interna')",[crypto.randomUUID(),org,project,delivery,rev,state]);await publish();
+ const list=()=>db.query("select title from my_portal_deliveries");await asUser(external);expect((await list()).rows).toHaveLength(0);await asUser(owner);
+ await db.query("insert into client_portal_access(organization_id,client_id,user_id) values($1,$2,$3)",[org,client,external]);await asUser(external);expect((await list()).rows).toEqual([{title:"Entrega autorizada"}]);expect((await db.query("select * from deliverable_revisions where deliverable_id=$1",[delivery])).rows).toHaveLength(0);
+ await asUser(owner);await db.query("update portal_deliveries set visible=false where deliverable_id=$1",[delivery]);await asUser(external);expect((await list()).rows).toHaveLength(0);
+ await asUser(owner);await db.query("update portal_deliveries set visible=true where deliverable_id=$1",[delivery]);await db.query("update client_portal_access set enabled=false where user_id=$1",[external]);await asUser(external);expect((await list()).rows).toHaveLength(0);await asUser(owner);
+});

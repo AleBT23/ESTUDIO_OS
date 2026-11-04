@@ -99,6 +99,12 @@ export function Shell({
       button?.focus();
     };
   }, [open]);
+  if (pathname === "/portal")
+    return (
+      <main className="portal-main" id="contenido">
+        {children}
+      </main>
+    );
   const current = navigation.find((n) =>
     n.href === "/" ? pathname === "/" : pathname.startsWith(n.href),
   );
