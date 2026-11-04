@@ -1,3 +1,4 @@
+import { LegacyReviewPanel } from "@/modules/crm/legacy-review-panel";
 import { Check, Circle, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { getContext } from "@/shared/auth/context";
@@ -98,6 +99,7 @@ export default async function SettingsPage() {
           </p>
         </section>
       </div>
+      {ctx?.membership?.role === "owner" && <LegacyReviewPanel />}
     </>
   );
 }

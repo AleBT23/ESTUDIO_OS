@@ -45,3 +45,51 @@ it("rechaza conteos falsos incluso con checksum recalculado", async () => {
     .digest("hex");
   await expect(verifyLegacyBackup(file)).rejects.toThrow("Conteo");
 });
+it("concilia por partida y detecta porcentajes históricos, duplicados y enlaces sin resolver", async () => {
+  const { reviewLegacyBackup } = await import("@/shared/db/legacy-review");
+  const file = backup();
+  const good = {
+    id: "prop1",
+    proposalNumber: "F01",
+    clientId: "c1",
+    subtotal: 200,
+    discount: 20,
+    vat: 28.8,
+    grandTotal: 208.8,
+    items: [{ unit: "unit", quantity: 2, unitPrice: 100, discount: 10 }],
+  };
+  const data: Record<string, unknown[]> = {
+    archiquote_clients: [
+      { id: "c1", name: "Casa" },
+      { id: "c2", name: "CASA" },
+    ],
+    archiquote_presets: [{ id: "preset", serviceIds: ["ausente"] }],
+    archiquote_proposals: [
+      good,
+      {
+        ...good,
+        id: "prop2",
+        clientId: null,
+        items: [{ unit: "pct", quantity: 2, unitPrice: 100, discount: 10 }],
+      },
+    ],
+  };
+  for (const [key, rows] of Object.entries(data)) {
+    Object.assign(file.payload.entries, { [key]: JSON.stringify(rows) });
+    file.payload.counts[key] = rows.length;
+  }
+  file.checksum.value = createHash("sha256")
+    .update(JSON.stringify(file.payload))
+    .digest("hex");
+  const report = await reviewLegacyBackup(file);
+  expect(report).toMatchObject({
+    matched: 1,
+    different: 1,
+    unreadable: 0,
+    counts: { clients: 2, proposals: 2 },
+  });
+  expect(report.issues.join(" ")).toMatch(/nombre repetido/);
+  expect(report.issues.join(" ")).toMatch(/Folios repetidos/);
+  expect(report.issues.join(" ")).toMatch(/referencias de servicios/);
+  expect(report.issues.join(" ")).toMatch(/base histórica/);
+});

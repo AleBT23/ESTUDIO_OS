@@ -498,3 +498,6 @@ Administración → Cartera reúne las obligaciones vigentes de planes y acuerdo
 
 ### Membretes privados por revisión
 Documentos, plantillas y cotizaciones admiten un membrete alternativo desde Biblioteca. La selección conserva el ID de la revisión y se usa en vista previa y emisión. El membrete oficial sigue disponible. Se reabrieron un PDF independiente de dos páginas y una cotización para comprobar que incorporan el recurso elegido. Se verificaron dimensiones carta y rechazo de revisiones faltantes. Pasaron 201 pruebas, TypeScript, lint, build con verificación del paquete PDF y nueve recorridos Playwright. Pendiente inspección visual con membretes de prueba en sesión autenticada.
+
+### Revisión local del respaldo del tabulador
+El propietario puede seleccionar la exportación JSON en Configuración. El navegador verifica su SHA-256, los conteos, IDs y referencias de presets y clientes. Compara importes de propuestas con la aritmética actual usando el IVA guardado, identifica porcentajes históricos y señala homónimos y folios repetidos. Se probó una propuesta conciliada y otra con diferencias. Pasaron 202 pruebas, TypeScript, lint, build y nueve recorridos Playwright. La revisión se hizo con datos sintéticos.
