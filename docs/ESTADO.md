@@ -369,3 +369,6 @@ Cada pendiente del expediente admite pasos individuales con avance visible. El c
 
 ### Dependencias simples entre tareas
 Desde el expediente se puede elegir, sustituir o quitar una tarea previa del mismo proyecto. PostgreSQL rechaza ciclos y cierres fuera de orden, incluso al completar desde Agenda o Inicio. Para reabrir un requisito finalizado primero se reabren las tareas terminadas que dependan de él. Se verificaron cadenas, ciclos, cruce de proyectos y liberación del vínculo. Pasaron 156 pruebas, TypeScript, lint, build y 42 migraciones locales. Pendientes el tablero Kanban y la validación autenticada en preview.
+
+### Tablero de tareas
+Agenda → Tablero Kanban presenta pendientes, tareas en curso y completadas con paginación independiente. Los cambios de columna actualizan la misma tarea, sujetos a versión, permisos, subtareas, dependencias y reglas de recurrencia. Se probó el estado inicial, avance, cierre desde otra vista, escritura obsoleta y aislamiento. Pasaron 157 pruebas, TypeScript, lint, build y 43 migraciones locales. Pendientes la preview autenticada y la migración de producción.

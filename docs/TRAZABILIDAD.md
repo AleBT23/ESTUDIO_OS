@@ -18,7 +18,7 @@
 | PRJ-01 | Parcial: expediente con cliente, fecha de inicio, estado y vínculo a versión | Edición de ubicación/fechas/responsables, documentos y enlaces |
 | PRJ-02 | Parcial: paquetes mixtos de una cotización, alcance y presupuesto neto por línea segregado | Edición de paquetes y continuidad completa |
 | PRJ-03 | Implementado localmente | Plantillas editables por línea o servicio y planes por proyecto. Arquitectura y visualización tienen fases iniciales distintas. Preview autenticada pendiente. |
-| TASK-01 | Pendiente | Tareas/subtareas, responsables, prioridades, dependencias y tres vistas |
+| TASK-01 | Implementado localmente | Tareas con responsables, prioridades, fechas, recurrencias, subtareas y dependencia previa. Lista, calendario y tablero en Agenda. Pendiente preview autenticada. |
 | DEL-01 | Pendiente | Entregables, archivos, revisiones y aprobaciones |
 | CHG-01 | Pendiente | Impacto, aprobación, extra y alcance trazable |
 | FIN-01 | Parcial: obligaciones, pago efectivo, saldo, idempotencia, no sobrepago, reverso auditado; SQL y UI | Editor de planes/parcialidades/cancelaciones, recibos y E2E |

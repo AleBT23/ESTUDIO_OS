@@ -2302,3 +2302,18 @@ it("una dependencia no puede cerrar en desorden, formar ciclos ni cruzar proyect
  await db.query("update project_notes set completed_at=null where id=$1",[b]);await db.query("update project_notes set predecessor_id=null where id=$1",[b]);
  await db.query("update project_notes set completed_at=null where id=$1",[a]);
 });
+
+it("el tablero refleja el cierre compartido y rechaza movimientos con una versión anterior",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Tablero',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body) values($1,$2,'task','Revisar plantas') returning id",[org,project])).rows[0].id;
+ const board=()=>db.query("select lane,version from project_task_board where id=$1",[id]);
+ expect((await board()).rows).toEqual([{lane:"pending",version:1}]);
+ await db.query("update project_notes set in_progress=true where id=$1 and version=1",[id]);
+ expect((await board()).rows).toEqual([{lane:"working",version:2}]);
+ expect((await db.query("update project_notes set completed_at=now() where id=$1 and version=1 returning id",[id])).rows).toHaveLength(0);
+ await db.query("update project_notes set completed_at=now() where id=$1 and version=2",[id]);
+ expect((await board()).rows).toEqual([{lane:"done",version:3}]);
+ await asUser(reader);expect((await board()).rows).toHaveLength(1);expect((await db.query("update project_notes set completed_at=null where id=$1 returning id",[id])).rows).toHaveLength(0);
+ await asUser(other);expect((await board()).rows).toHaveLength(0);await asUser(owner);
+});
