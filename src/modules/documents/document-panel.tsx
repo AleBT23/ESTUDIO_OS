@@ -1,5 +1,9 @@
 "use client";
 import { useActionState, useState } from "react";
+import {
+  HistoricalEstimate,
+  type VersionEstimate,
+} from "@/modules/quotes/version-estimate";
 import { FileDown } from "lucide-react";
 import { LayoutEditor } from "./layout-editor";
 import { Button } from "@/shared/ui/button";
@@ -12,6 +16,7 @@ type Version = {
   draft_version: number;
   version_number: number;
   issued_at: string | null;
+  internal_estimate: VersionEstimate | null;
 };
 export function DocumentPanel({
   id,
@@ -139,6 +144,7 @@ export function DocumentPanel({
               <FileDown size={15} />
               Descargar PDF
             </a>
+            <HistoricalEstimate value={v.internal_estimate} />
           </div>
         ))}
       {!versions.some((v) => v.state === "issued") && (

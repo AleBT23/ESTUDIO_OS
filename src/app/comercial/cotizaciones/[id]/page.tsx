@@ -81,7 +81,9 @@ export default async function QuotePage({
   }));
   const versions = await ctx.db
     .from("quote_versions")
-    .select("id,folio,state,draft_version,version_number,issued_at")
+    .select(
+      "id,folio,state,draft_version,version_number,issued_at,internal_estimate",
+    )
     .eq("organization_id", ctx.organization.id)
     .eq("quote_id", id)
     .order("version_number", { ascending: false });

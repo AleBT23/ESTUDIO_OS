@@ -2925,3 +2925,16 @@ it("conserva el costo copiado, redondea por partida y mantiene el costo porcentu
  const snapshot=(await db.query<{snapshot:string}>("select (prepare_quote_version($1,$2,$3,$4::jsonb)->'snapshot')::text snapshot",[org,quote,saved.version,JSON.stringify(defaultDocumentOptions)])).rows[0].snapshot;
  expect(snapshot).not.toMatch(/unit_cost|direct_cost/);
 });
+it("congela el desglose interno asociado al folio y lo aísla del PDF y de lectores",async()=>{
+ const {line}=await commercialFixture(),item={business_line_id:line,name:"Topografía",unit:"visit",quantity:"2",unit_price_cents:100000,unit_cost_cents:14000,discount_rate:"0"};
+ const quote=await draft([item]);
+ const version=(await db.query<{version:number}>("select version from quotes where id=$1",[quote])).rows[0].version;
+ const issued=(await db.query<{data:{id:string;snapshot:object}}>("select prepare_quote_version($1,$2,$3,$4::jsonb) data",[org,quote,version,JSON.stringify(defaultDocumentOptions)])).rows[0].data;
+ const read=()=>db.query<{internal_estimate:{direct:string;items:{unit_cost:string}[]}}>("select internal_estimate from quote_versions where id=$1",[issued.id]);
+ expect(JSON.stringify(issued.snapshot)).not.toMatch(/internal_estimate|unit_cost|total_cost/);
+ await draft([{...item,unit_cost_cents:65000}],quote,version);
+ const old=(await read()).rows[0].internal_estimate;
+ expect(old.direct).toBe("28000");expect(old.items[0].unit_cost).toBe("14000");
+ expect((await db.query("select direct_cost_cents::int amount from quotes where id=$1",[quote])).rows).toEqual([{amount:130000}]);
+ await asUser(reader);expect((await read()).rows).toEqual([]);await asUser(owner);
+});

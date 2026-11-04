@@ -566,3 +566,6 @@ Pasaron 224 pruebas Vitest, ESLint y TypeScript; el build validó el empaquetado
 
 ### Costos directos por partida
 La cotización copia el costo del servicio al agregarlo y permite modificarlo para esa propuesta. PostgreSQL calcula y redondea cada partida al centavo antes de sumar. En las partidas porcentuales la cantidad representa un presupuesto de obra, por lo que el campo de costo es un importe fijo en MXN. Los descuentos y el IVA siguen afectando únicamente los importes de venta. Una edición de catálogo no altera la copia. Los formularios anteriores conservan costos cuando la correspondencia de partidas es reconocible y se rechaza una edición ambigua. Pasaron 226 pruebas y la restauración sintética con 83 migraciones.
+
+### Estimación interna histórica por versión documental
+Al preparar una versión se guarda por separado el desglose de costos, horas, tarifas y resultado previsto. Comercial puede inspeccionarlo junto al folio emitido. Las versiones antiguas sin estimación se identifican expresamente. La prueba cambia un costo en el borrador y comprueba tanto la conservación de la estimación anterior como su exclusión del contenido para el cliente. Pasaron 227 pruebas y la restauración sintética con 84 migraciones.
