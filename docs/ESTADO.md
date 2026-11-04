@@ -572,3 +572,6 @@ Al preparar una versión se guarda por separado el desglose de costos, horas, ta
 
 ### Margen consolidado del proyecto
 El expediente suma los honorarios sin IVA y los costos directos, externos y de horas del contrato base y sus ampliaciones aceptadas. Advierte de horas pendientes de tarifa y de propuestas anteriores al historial privado. Pasaron 227 pruebas y la restauración con 85 migraciones en PostgreSQL 17.
+
+### Ejecución por paquete en el expediente
+Cada paquete muestra su presupuesto sin IVA, cobros, pagos y minutos, con acceso al reporte filtrado. Los movimientos generales permanecen en una fila separada. El flujo propio excluye los fondos de clientes para obra, visibles en sus propias columnas. Las pruebas verifican atribución por obra, anticipos generales, minutos, separación de fondos y permisos de lector. Pasaron 227 pruebas, ESLint, compilación, TypeScript y nueve recorridos Playwright con uno omitido. PostgreSQL 17 restauró las 86 migraciones en una base sintética. El plan de solo lectura registra diez aplicadas y 76 pendientes, sin divergencias.

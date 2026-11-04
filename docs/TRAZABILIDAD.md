@@ -42,13 +42,13 @@
 ## Hitos
 - A: PDF con PNG real probado con fixture sintético; **presets reales no migrados**. No aceptado.
 - B: prueba SQL correcta de propuesta emitida/enviada/aceptada → proyecto mixto → obligaciones sin cobro automático. Falta flujo UI real y aceptación.
-- C: presupuesto neto de paquetes atribuido a líneas; gastos/horas/ingresos reales por paquete pendientes.
+- C. El expediente muestra por paquete el presupuesto, los cobros, los gastos y los minutos trabajados. El reporte por línea permite filtrar el periodo. Los pagos generales quedan sin asignar (086). Pendiente conciliación autenticada.
 - D, E: pendientes.
 - F: minuta independiente de 1 página y reporte de visita de 3 páginas generados, reabiertos y revisados visualmente con PNG real; persistencia/versiones/Storage verificadas en PostgreSQL de pruebas. Falta E2E remoto/aceptación.
 
 ## Secuencia para retomar
 1. Contrastar el historial mediante `npm run db:plan` y repetir la restauración en una copia aislada actualizada, incluidos los objetos de Storage.
 2. Ejecutar los recorridos autenticados del anticipo, del lector y de emisión PDF y aceptación de una propuesta con `npm run test:e2e:auth`. Completar la verificación de portal, expedientes, cotizaciones y obras con identidades separadas.
-3. Continuar las funcionalidades abiertas en la matriz, incluidos los costos internos previstos de cotización y el cotejo con muestras reales del archivo histórico y los conceptos (077 y 078), y contrastar importes y PDFs antes de preparar la publicación.
+3. Continuar las funcionalidades abiertas en la matriz, incluido el cotejo con muestras reales del archivo histórico y los conceptos (077 y 078), y contrastar importes y PDFs antes de preparar la publicación.
 
 FIN · Estimación del proyecto y ampliaciones aceptadas con costos privados por versión, horas sin tarifa identificadas y prueba de conciliación (085).

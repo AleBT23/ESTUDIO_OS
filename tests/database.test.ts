@@ -2133,6 +2133,9 @@ it("el reporte por periodo separa cobros sin atribuir y concilia pagos y horas d
  const report=(days:number)=>db.query("select line_id is null as unattributed,received,paid,minutes,net_hourly from cash_productivity($1,current_date-$3::integer,current_date,$2,$4)",[org,client,days,project]);
  expect((await report(1)).rows).toEqual([{unattributed:false,received:"5000",paid:"1500",minutes:"120",net_hourly:"1750"},{unattributed:true,received:"2000",paid:"0",minutes:"0",net_hourly:null}]);
  expect((await report(0)).rows).toHaveLength(0);
+ const packages=()=>db.query("select package_id,received,paid,minutes from project_package_execution($1,$2)",[org,project]);
+ expect((await packages()).rows).toEqual([{package_id:pack,received:"5000",paid:"1500",minutes:"120"},{package_id:null,received:"2000",paid:"0",minutes:"0"}]);
+ await asUser(reader);expect((await packages()).rows).toHaveLength(0);await asUser(owner);
  await asUser(reader);expect((await report(1)).rows).toHaveLength(0);await asUser(owner);
 });
 
@@ -2345,6 +2348,7 @@ it("el reporte atribuye acuerdos de una obra al proyecto y cliente sin mezclar s
  await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',$4,current_date)",[crypto.randomUUID(),org,account,amount]);
  }
  const report=(customer:string|null,proj:string|null)=>db.query("select managed,received from cash_productivity($1,current_date,current_date,$2,$3,$4) order by managed",[org,customer,proj,work]);
+ expect((await db.query("select package_id,received,managed_received from project_package_execution($1,$2)",[org,project])).rows).toEqual([{package_id:null,received:"1250",managed_received:"3000"}]);
  const expected=[{managed:false,received:"1250"},{managed:true,received:"3000"}];
  expect((await report(null,null)).rows).toEqual(expected);expect((await report(client,project)).rows).toEqual(expected);
  expect((await report(client,crypto.randomUUID())).rows).toHaveLength(0);
