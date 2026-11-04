@@ -492,3 +492,6 @@ Administración puede activar una plantilla general por línea desde Fases del p
 
 ### Expedientes asociados al cliente
 Desde el cliente se consultan proyectos, cotizaciones y obras con paginación y filtro por tipo. Una obra vinculada solo al proyecto se muestra en el cliente correspondiente. El lector accede a proyectos; las cotizaciones y obras están reservadas a administración. Las pruebas verificaron esta diferencia, el aislamiento y la exclusión de propuestas archivadas. Pasaron 198 pruebas, TypeScript, ESLint, build, nueve recorridos Playwright y restauración con 66 migraciones.
+
+### Cartera por vencimiento
+Administración → Cartera reúne las obligaciones vigentes de planes y acuerdos con enlace a su origen. Filtra por área, fondos, sentido y antigüedad en la zona horaria del estudio. Los cobros parciales reducen el saldo y los liquidados salen de la lista. Se verificaron los límites de 30 y 60 días, obligaciones sin fecha, aislamiento por estudio y rol. Pasaron 199 pruebas, TypeScript, ESLint, build, nueve recorridos Playwright y restauración con 67 migraciones.

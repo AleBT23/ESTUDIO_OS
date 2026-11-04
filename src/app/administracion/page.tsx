@@ -108,6 +108,7 @@ export default async function FinancePage({
       {heading}
       <nav className="tabs" aria-label="Administración">
         <span className="selected">Planes y cobros</span>
+        <Link href="/administracion/cartera">Cartera por vencimiento</Link>
         <Link href="/administracion/reportes">Reportes</Link>
         <Link href="/administracion/operaciones">Operaciones por área</Link>
         <Link href="/proyectos">Tiempo y honorarios por proyecto</Link>

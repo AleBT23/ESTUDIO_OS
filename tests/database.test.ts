@@ -2674,3 +2674,18 @@ it("el expediente vincula proyectos y obras indirectas y restringe documentos co
  await asUser(reader);expect((await list()).rows).toEqual([{id:project,kind:"project"}]);await asUser(other);expect((await list()).rows).toEqual([]);
  await asUser(owner);await db.query("select archive_quote($1,$2,$3)",[org,quote,version]);expect((await list()).rows).toHaveLength(2);
 });
+it("la cartera clasifica vencimientos y saldo real por dirección y custodia",async()=>{
+ await asUser(owner);
+ const id=crypto.randomUUID(),scheduleProject=(await db.query<{id:string}>("select create_project_record($1,$2,'Cartera de prueba',current_date-7,200,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const today="(now() at time zone (select timezone from organizations where id=$2))::date";
+ await db.query("insert into finance_cases(id,organization_id,project_id,name,area,managed,revenue_cents,cost_cents,collect_on) values($1,$2,$3,'Antigüedad obra','construction',true,1000,800,"+today+"-31)",[id,org,scheduleProject]);
+ const list=()=>db.query("select source,direction,managed,balance_cents,age_group from open_obligations where project_id=$1 order by source,direction",[scheduleProject]);
+ const pay=(direction:string,amount:number)=>db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,$4,$5,current_date-1)",[crypto.randomUUID(),org,id,direction,amount]);
+ await pay("in",250);
+ expect((await list()).rows).toEqual([{source:"agreement",direction:"in",managed:true,balance_cents:"750",age_group:"late_60"},{source:"agreement",direction:"out",managed:true,balance_cents:"800",age_group:"undated"},{source:"schedule",direction:"in",managed:false,balance_cents:"200",age_group:"late_30"}]);
+ for(const [days,group] of [[-61,"late_over_60"],[-60,"late_60"],[-30,"late_30"],[0,"today"],[1,"upcoming"]] as const){
+  await db.query("update finance_cases set pay_on="+today+"+$3::int where id=$1",[id,org,days]);expect((await list()).rows[1]).toMatchObject({age_group:group});
+ }
+ await pay("out",800);expect((await list()).rows).toHaveLength(2);
+ await asUser(reader);expect((await list()).rows).toHaveLength(0);await asUser(other);expect((await list()).rows).toHaveLength(0);await asUser(owner);
+});
