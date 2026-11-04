@@ -447,3 +447,6 @@ Administración → Reportes y el expediente muestran costo imputado y minutos s
 
 ### Margen de caja sobre cobros
 El expediente del proyecto, el reporte por línea y su CSV calculan (cobros propios − pagos efectivos propios) ÷ cobros propios × 100, antes de imputar horas. El margen queda vacío para dinero administrado y cuando no hay cobros. La misma aritmética decimal se usa para el margen previsto sobre honorarios, con su base de cálculo separada. Se probaron margen negativo, denominador cero y exclusión de fondos del cliente. Pasaron 179 pruebas, TypeScript, ESLint, compilación y siete recorridos Playwright (uno omitido).
+
+### Gestión de roles de miembros existentes
+Configuración → Equipo permite al propietario cambiar entre administrador, colaborador y lector. La base comprueba el rol previo, protege al propietario y registra el cambio con fecha y actor. La prueba SQL comprobó el acceso a finanzas antes y después de asignar y retirar el rol administrativo, el rechazo a cambios obsoletos y la privacidad del historial. Pasaron 180 pruebas, TypeScript, ESLint, build y siete recorridos Playwright (uno omitido). PostgreSQL local restauró datos sintéticos con las 57 migraciones. Pendientes invitaciones, recorrido autenticado con dos usuarios y aplicación de las migraciones en producción tras validar la copia real.

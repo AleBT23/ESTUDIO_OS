@@ -61,6 +61,11 @@ export default async function SettingsPage() {
                 {ctx.organization.timezone}
               </p>
               <p>Rol: {ctx.membership?.role}</p>
+              {ctx.membership?.role === "owner" && (
+                <Link href="/configuracion/equipo">
+                  Administrar equipo y permisos
+                </Link>
+              )}
             </div>
           )}
         </section>

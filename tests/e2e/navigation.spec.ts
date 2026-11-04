@@ -96,6 +96,7 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
     expect((await request.get(path)).status()).toBe(403);
   for (const path of [
     "/buscar",
+    "/configuracion/equipo",
     "/agenda?view=board",
     "/agenda/notificaciones",
     "/agenda/recordatorios",

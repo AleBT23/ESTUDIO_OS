@@ -22,18 +22,18 @@
 | DEL-01 | Pendiente | Entregables, archivos, revisiones y aprobaciones |
 | CHG-01 | Pendiente | Impacto, aprobación, extra y alcance trazable |
 | FIN-01 | Planes, saldos, pagos efectivos, reversos y reprogramación total o por parcialidades. Recibos PDF por movimiento de proyecto o acuerdo. Pruebas SQL de conservación y concurrencia, permisos y lectura del PDF. | Cancelaciones de obligaciones y E2E autenticado en preview. |
-| FIN-02 | Acuerdos y movimientos por área y origen de fondos, comprobantes privados, padrón de proveedores y estado de cuenta vinculado con pagos, reversos y saldo pendiente. | Revisar cobertura de categorías de gasto y verificar el flujo completo con sesión aislada. |
+| FIN-02 | Acuerdos y movimientos por área y origen de fondos, comprobantes privados, padrón de proveedores y estado de cuenta vinculado con pagos, reversos y saldo pendiente. | Categorías y pagos conciliados con flujo en 055. Falta verificar captura y exportación con sesión aislada. |
 | FIN-03 | Pendiente | Colaboradores/reglas/repartos y pagos |
 | TIME-01 | Implementado localmente | Captura y corrección versionada por usuario, proyecto, paquete y tarea. Historial paginado en expediente. Pendiente recorrido autenticado en preview. |
-| PROF-01 | Pendiente | Estimación y rentabilidad real con fórmulas/costo horas separado |
-| REP-01 | Pendiente | Reportes filtrables y CSV |
+| PROF-01 | Presupuesto aceptado, margen previsto, cobrado y flujo por hora, margen sobre cobros propios. Las horas usan tarifa vigente por miembro y reportan minutos sin tarifa por separado (056). | Validar datos de referencia, indirectos y aceptación del reporte en preview. |
+| REP-01 | Reportes de flujo y egresos por categoría con filtros de periodo, cliente, proyecto, obra, paquete y línea. CSV con centavos exactos. | Recorrido autenticado, descarga y conciliación con datos representativos. |
 | DOC-01 | Parcial: motor de variables con lista blanca, sintaxis/missing-data y sustitución no recursiva probados; documentos con párrafos/subtítulos/listas/saltos | Plantillas reutilizables versionadas, tablas/imágenes y contexto de cotización integrado en editor |
 | DOC-02 | Parcial: PNG real carta, proporción preservada, márgenes seguros y preview PDF | Membretes múltiples privados/carga, aviso de proporción/ajuste y guías visuales |
 | DOC-03 | Parcial: seis secciones opcionales/reordenables, presupuesto obligatorio; Unicode, 1/12 páginas, encabezado repetido y firmas; pdf.test | Personalización de textos/plantillas/anexos y escenarios extremos de contenido |
 | DOC-04 | Cartas, oficios, minutas y reportes con borradores, contexto, emisión y versiones privadas. Recursos permite archivar y recuperar documentos con auditoría y versión optimista (051). | E2E autenticado y alcance de tablas, imágenes y adjuntos en el cuerpo. |
 | LIB-01 | Implementado localmente | Biblioteca buscable, etiquetas, vínculos, revisiones inmutables y adjuntos privados de hasta 2 MiB por versión. Pendiente preview autenticada. |
 | SOP-01 | Implementado localmente | Procedimientos reutilizables, ejecuciones independientes por proyecto y pasos reversibles. Preview autenticada pendiente. |
-| CORE-01 | Parcial: Supabase SSR, roles, RLS y autorización servidor probados SQL | Credenciales y E2E Auth, invitaciones/roles editables, revisión de acceso por proyecto |
+| CORE-01 | Supabase SSR, roles, RLS y cambio de rol auditado de miembros existentes por el propietario (057). Prueba de concesión y retiro de acceso financiero en SQL. | Invitaciones, alcance por proyecto y validación autenticada con usuarios de prueba. |
 | CORE-02 | Parcial: auditoría, versiones, archivo de clientes/contactos/servicios, reversos de cobro | Completar recuperación en restantes entidades |
 | CORE-03 | Exportador legado con SHA-256, migraciones con checksums y respaldo real hasta 010. db:restore-test restaura en base vacía la estructura actual con datos sintéticos y comprueba saldos, documentos y RLS. | Importación staging, conciliación completa, exportación general y validación de la copia real actual con archivos de Storage. |
 | CORE-04 | Agenda y avisos internos por usuario. Incluye seguimientos, vencimientos de acuerdos según saldo y recordatorios privados sin proyecto, con reprogramación y recurrencia (038, 048 y 049). | Verificación autenticada de punta a punta y evaluación del proveedor de notificaciones externas. |

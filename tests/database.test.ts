@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(21);
+  expect(rows).toHaveLength(22);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2523,4 +2523,20 @@ it("valora minutos por tarifa vigente, distingue cero de falta de tarifa y prote
  expect((await report("2026-01-04")).rows).toEqual([{rated_minutes:"60",unrated_minutes:"0",estimated_cost:"240"}]);
  await expect(rate("2026-01-04",1000)).rejects.toThrow();
  await asUser(other);expect((await report(null)).rows).toHaveLength(0);await asUser(reader);expect((await report(null)).rows).toHaveLength(0);await expect(rate("2026-01-05",99)).rejects.toThrow();await asUser(owner);
+});
+
+it("solo el propietario cambia roles no propietarios y el cambio se aplica a los permisos financieros",async()=>{
+ await asUser(owner);
+ const change=(member:string,expected:string,desired:string)=>db.query("select change_studio_member_role($1,$2,$3,$4)",[org,member,expected,desired]);
+ const history=()=>db.query("select old_role,new_role,actor_id from member_role_changes where organization_id=$1 and member_id=$2 order by changed_at",[org,reader]);
+ const financial=()=>db.query("select id from finance_cases where organization_id=$1 limit 1",[org]);
+ await asUser(reader);expect((await financial()).rows).toHaveLength(0);await expect(change(reader,"reader","admin")).rejects.toThrow();
+ await asUser(other);await expect(change(reader,"reader","admin")).rejects.toThrow();
+ await asUser(owner);await expect(change(owner,"owner","reader")).rejects.toThrow();await expect(change(reader,"reader","owner")).rejects.toThrow();
+ await change(reader,"reader","admin");await expect(change(reader,"reader","collaborator")).rejects.toThrow();
+ await asUser(reader);expect((await financial()).rows).toHaveLength(1);expect((await history()).rows).toHaveLength(0);
+ await expect(change(reader,"admin","reader")).rejects.toThrow();
+ await asUser(owner);await change(reader,"admin","reader");
+ expect((await history()).rows).toEqual([{old_role:"reader",new_role:"admin",actor_id:owner},{old_role:"admin",new_role:"reader",actor_id:owner}]);
+ await asUser(reader);expect((await financial()).rows).toHaveLength(0);await asUser(owner);
 });
