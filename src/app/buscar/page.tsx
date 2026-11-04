@@ -1,135 +1,146 @@
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
+import { changeFavorite } from "./favorite-action";
 import { canManageCommercial, canReadFinance } from "@/shared/permissions";
 export default async function Search({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; favorites?: string; page?: string }>;
 }) {
-  const ctx = await requireContext();
-  const input = (await searchParams).q,
-    term = typeof input === "string" ? input.trim().slice(0, 120) : "";
+  const ctx = await requireContext(),
+    q = await searchParams,
+    term = typeof q.q === "string" ? q.q.trim().slice(0, 120) : "",
+    favorites = q.favorites === "1",
+    page = Math.min(10000, Math.max(1, parseInt(q.page || "1") || 1));
   const sources = [
-    {
-      label: "Proyectos",
-      table: "projects",
-      field: "name",
-      active: true,
-      path: "/proyectos/",
-    },
-    {
-      label: "Clientes",
-      table: "clients",
-      field: "name",
-      active: true,
-      path: "/comercial/clientes/",
-    },
+    ["projects", "Proyectos", "/proyectos/"],
+    ["clients", "Clientes", "/comercial/clientes/"],
+    ["library", "Biblioteca técnica", "/recursos/biblioteca?resource="],
     ...(canManageCommercial(ctx.membership.role)
       ? [
-          {
-            label: "Cotizaciones",
-            table: "quotes",
-            field: "name",
-            active: true,
-            path: "/comercial/cotizaciones/",
-          },
-          {
-            label: "Documentos del estudio",
-            table: "studio_documents",
-            field: "title",
-            active: true,
-            path: "/recursos/documentos?selected=",
-          },
+          ["quotes", "Cotizaciones", "/comercial/cotizaciones/"],
+          [
+            "studio_documents",
+            "Documentos del estudio",
+            "/recursos/documentos?selected=",
+          ],
+          ["opportunities", "Oportunidades", "/comercial/pipeline?selected="],
+          [
+            "editorial_items",
+            "Calendario editorial",
+            "/comercial/marketing?edit=",
+          ],
         ]
       : []),
     ...(canReadFinance(ctx.membership.role)
       ? [
-          {
-            label: "Obras",
-            table: "works",
-            field: "name",
-            active: false,
-            path: "/obras?obra=",
-          },
-          {
-            label: "Acuerdos financieros",
-            table: "finance_cases",
-            field: "name",
-            active: false,
-            path: "/administracion/operaciones/",
-          },
+          ["works", "Obras", "/obras?obra="],
+          [
+            "finance_cases",
+            "Acuerdos financieros",
+            "/administracion/operaciones/",
+          ],
         ]
       : []),
   ];
   const groups =
-    term.length < 2
+    !favorites && term.length < 2
       ? []
       : await Promise.all(
-          sources.map(async (source) => {
+          sources.map(async ([source, label, path]) => {
             let query = ctx.db
-              .from(source.table)
-              .select("id,label:" + source.field)
+              .from("personal_search_results")
+              .select("id,label,favorite", { count: "exact" })
               .eq("organization_id", ctx.organization.id)
-              .ilike(source.field, "%" + term.replace(/[\\%_]/g, "\\$&") + "%")
-              .order(source.field)
+              .eq("source", source);
+            if (term)
+              query = query.ilike(
+                "label",
+                "%" + term.replace(/[\\%_]/g, "\\$&") + "%",
+              );
+            if (favorites) query = query.eq("favorite", true);
+            const r = await query
+              .order("label")
               .order("id")
-              .limit(10);
-            if (source.active) query = query.is("deleted_at", null);
-            const { data, error } = await query;
-            return {
-              ...source,
-              error,
-              rows: (data ?? []) as unknown as { id: string; label: string }[],
-            };
+              .range((page - 1) * 10, page * 10 - 1);
+            return { source, label, path, ...r };
           }),
         );
+  const href = (n: number) =>
+    "/buscar?" +
+    new URLSearchParams({
+      q: term,
+      favorites: favorites ? "1" : "0",
+      page: String(n),
+    });
   return (
     <>
       <header className="page-heading">
         <p className="eyebrow">ESTUDIO</p>
-        <h1>Búsqueda global</h1>
+        <h1>{favorites ? "Mis favoritos" : "Búsqueda global"}</h1>
       </header>
+      <nav className="tabs">
+        <Link href="/buscar">Buscar registros</Link>
+        <Link href="/buscar?favorites=1">Mis favoritos</Link>
+      </nav>
       <form className="search-form">
+        {favorites && <input type="hidden" name="favorites" value="1" />}
         <label>
-          Buscar en el estudio
+          {favorites ? "Filtrar favoritos" : "Buscar en el estudio"}
           <input
             type="search"
             name="q"
-            minLength={2}
+            minLength={favorites ? 1 : 2}
             maxLength={120}
             defaultValue={term}
-            required
+            required={!favorites}
           />
         </label>
         <button className="button button-primary">Buscar</button>
       </form>
-      {!groups.length ? (
-        <p>Escribe al menos dos caracteres.</p>
-      ) : (
-        <>
-          <p>Hasta diez coincidencias por área.</p>
-          {groups
-            .filter((g) => g.error || g.rows.length)
-            .map((g) => (
-              <section key={g.table} className="panel padded">
-                <h2>{g.label}</h2>
-                {g.error ? (
-                  <p>Consulta no disponible.</p>
-                ) : (
-                  <ul>
-                    {g.rows.map((r) => (
-                      <li key={r.id}>
-                        <Link href={g.path + r.id}>{r.label}</Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))}
-          {groups.every((g) => !g.error && !g.rows.length) && (
-            <p>No se encontraron coincidencias.</p>
-          )}
-        </>
+      {!groups.length && <p>Escribe al menos dos caracteres.</p>}
+      {groups
+        .filter((g) => g.error || g.data?.length)
+        .map((g) => (
+          <section key={g.source} className="panel padded">
+            <h2>{g.label}</h2>
+            {g.error ? (
+              <p>Consulta no disponible.</p>
+            ) : (
+              <ul>
+                {g.data?.map((r) => (
+                  <li key={r.id}>
+                    <Link href={g.path + r.id}>{r.label}</Link>
+                    <form action={changeFavorite}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <input type="hidden" name="source" value={g.source} />
+                      <button
+                        className="button button-outline"
+                        name="intent"
+                        value={r.favorite ? "remove" : "add"}
+                      >
+                        {r.favorite
+                          ? "Quitar de favoritos"
+                          : "Guardar en favoritos"}
+                      </button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
+      {groups.length > 0 &&
+        groups.every((g) => !g.error && !g.data?.length) && (
+          <p>
+            {favorites
+              ? "Sin favoritos en esta selección."
+              : "No se encontraron coincidencias."}
+          </p>
+        )}
+      {page > 1 && <Link href={href(page - 1)}>Anterior </Link>}
+      {groups.some((g) => (g.count || 0) > page * 10) && (
+        <Link href={href(page + 1)}>Siguiente</Link>
       )}
     </>
   );

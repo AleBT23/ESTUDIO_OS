@@ -2248,3 +2248,17 @@ it("leer un aviso es personal y una reprogramación genera un aviso sin leer",as
  await db.query("update project_notes set due_on=current_date-1 where id=$1",[id]);expect((await inbox()).rows).toEqual([{seen:false}]);
  await db.query("update project_notes set due_on=current_date+2 where id=$1",[id]);expect((await inbox()).rows).toHaveLength(0);await expect(mark()).rejects.toThrow();
 });
+
+it("los favoritos siguen los permisos y nombres actuales del registro",async()=>{
+ await asUser(owner);
+ const id=(await db.query<{id:string}>("insert into clients(organization_id,name) values($1,'Cliente favorito') returning id",[org])).rows[0].id;
+ const mark=()=>db.query("insert into studio_favorites(organization_id,source,record_id) values($1,'clients',$2)",[org,id]);
+ const result=()=>db.query("select label,favorite from personal_search_results where organization_id=$1 and source='clients' and id=$2",[org,id]);
+ await mark();await db.query("update clients set name='Cliente actualizado' where id=$1",[id]);
+ expect((await result()).rows).toEqual([{label:"Cliente actualizado",favorite:true}]);
+ await asUser(reader);expect((await result()).rows).toEqual([{label:"Cliente actualizado",favorite:false}]);await mark();
+ await db.query("delete from studio_favorites where record_id=$1",[id]);
+ await asUser(other);expect((await result()).rows).toHaveLength(0);await expect(mark()).rejects.toThrow();
+ await asUser(owner);expect((await result()).rows[0]).toMatchObject({favorite:true});
+ await db.query("update clients set deleted_at=now() where id=$1",[id]);expect((await result()).rows).toHaveLength(0);
+});

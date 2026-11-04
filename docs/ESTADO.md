@@ -345,3 +345,6 @@ La agenda incorpora seguimientos activos del pipeline y publicaciones programada
 
 ### Notificaciones personales de agenda
 Inicio muestra el número de avisos sin leer y Agenda abre la bandeja individual. Los vencimientos de hoy y atrasados reutilizan los permisos de sus eventos y la zona horaria del estudio. Marcar leído o sin leer no cambia la tarea ni el cobro. Cambiar a otra fecha pendiente produce un aviso para esa fecha. Verificados aislamiento entre usuarios, reprogramación y exclusión de eventos futuros. Pasaron 148 pruebas, lint, TypeScript, build y 38 migraciones locales. La migración 038 y el recorrido autenticado en preview siguen pendientes.
+
+### Favoritos personales y búsqueda ampliada
+Inicio → Mis favoritos reúne registros guardados desde la búsqueda global. Se suman oportunidades, publicaciones y recursos técnicos. Cada usuario administra su lista, con paginación y filtro por nombre. Los resultados usan el registro vigente y sus permisos. Se probaron renombrado, archivo, aislamiento personal y entre organizaciones. 149 pruebas, TypeScript, ESLint, build y 39 migraciones locales correctos. La migración 039 y la validación autenticada en preview siguen pendientes.

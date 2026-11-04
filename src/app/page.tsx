@@ -155,6 +155,9 @@ export default async function HomePage({
               : " · " + (notifications.count ?? 0) + " sin leer"}
           </Link>
         </p>
+        <p>
+          <Link href="/buscar?favorites=1">Mis favoritos</Link>
+        </p>
         <DashboardTasks page={pendingPage} />
       </>
     );
