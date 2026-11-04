@@ -378,3 +378,6 @@ El expediente expone las versiones previas del registro de horas con fecha, minu
 
 ### Estimación y ejecución en el expediente
 El proyecto reúne las cotizaciones aceptadas y extras aprobados una sola vez, con honorarios netos sin IVA, costos externos previstos, utilidad y margen previstos antes de horas internas, horas estimadas y tarifa por hora estimada. Se contrastan con cobros, pagos efectivos propios y minutos registrados del reporte financiero. Probado con dos propuestas de dos paquetes y control de lectura. Pasaron 159 pruebas, TypeScript, ESLint, build y 44 migraciones en PostgreSQL local. Migración 044 pendiente de producción y recorrido autenticado pendiente.
+
+### Atribución del flujo por obra
+Si un acuerdo identifica únicamente la obra, el reporte usa el proyecto asociado a ella y resuelve el cliente desde los vínculos existentes. Las asociaciones explícitas conservan prioridad. La corrección beneficia al expediente, al reporte y al CSV, sin reescribir acuerdos. Se probó la conciliación por obra frente a obra + proyecto + cliente con fondos propios y administrados separados. Pasaron 160 pruebas, TypeScript, lint y 45 migraciones en PostgreSQL local. La migración 045 queda pendiente de producción.

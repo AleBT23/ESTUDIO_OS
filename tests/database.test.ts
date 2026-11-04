@@ -2331,3 +2331,19 @@ it("el presupuesto del proyecto cuenta cada cotización aceptada una sola vez au
  expect((await report()).rows).toEqual([{quote_count:2,net_cents:"5000000",external_cost_cents:"5000",expected_profit_cents:"4995000",margin_percent:"99.90",estimated_hours:"24.0000",estimated_hourly_cents:"208333"}]);
  await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el reporte atribuye acuerdos de una obra al proyecto y cliente sin mezclar sus fondos",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto con ejecución',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const work=crypto.randomUUID();await db.query("insert into works(id,organization_id,name,project_id) values($1,$2,'Obra vinculada',$3)",[work,org,project]);
+ for(const [managed,amount] of [[false,1250],[true,3000]] as const){
+ const account=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,work_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Acuerdo por obra','construction',$4,$5,0)",[account,org,work,managed,amount]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',$4,current_date)",[crypto.randomUUID(),org,account,amount]);
+ }
+ const report=(customer:string|null,proj:string|null)=>db.query("select managed,received from cash_productivity($1,current_date,current_date,$2,$3,$4) order by managed",[org,customer,proj,work]);
+ const expected=[{managed:false,received:"1250"},{managed:true,received:"3000"}];
+ expect((await report(null,null)).rows).toEqual(expected);expect((await report(client,project)).rows).toEqual(expected);
+ expect((await report(client,crypto.randomUUID())).rows).toHaveLength(0);
+ await asUser(reader);expect((await report(client,project)).rows).toHaveLength(0);await asUser(owner);
+});
