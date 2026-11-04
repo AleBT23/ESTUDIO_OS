@@ -327,3 +327,6 @@ Migración 031. El expediente registra el alcance solicitado y su impacto en dí
 ### Plantillas documentales versionadas
 Migración 032 pendiente de producción. Recursos permite guardar un documento como plantilla, publicar revisiones y generar documentos independientes desde versiones anteriores. Se conserva el contenido sin copiar la asociación al cliente o proyecto. Las 142 pruebas automatizadas pasaron localmente.
 El editor inicializado desde plantilla se incorporó a la prueba de composición. Se corrigieron siete botones de inserción demasiado bajos en pantallas táctiles. Chromium y WebKit aprobaron 56 combinaciones de vista y tamaño con datos locales.
+
+### Calendario editorial y portafolio
+Migración 033 pendiente de producción. Comercial → Marketing permite registrar ideas sin fecha, programar y publicar por canal, capturar enlaces y resultados, y filtrar el portafolio asociado a proyectos y oportunidades. Acceso de propietario y administrador, aislamiento por organización y control de versión. Se verificaron TypeScript, ESLint, 143 pruebas, las 33 migraciones en PostgreSQL local y el build con empaquetado PDF. Pendiente la prueba autenticada en preview.

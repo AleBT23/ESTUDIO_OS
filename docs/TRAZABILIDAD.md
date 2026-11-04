@@ -14,7 +14,7 @@
 | QUO-04 | Parcial: borrador, emisión/snapshot/PDF, envío manual, aceptación, rechazo/vencimiento y revisión con motivo e historial; snapshots anteriores inmutables | E2E remoto y aceptación del usuario |
 | QUO-05 | Parcial: aceptación crea proyecto/paquetes/plan atómicamente; prueba 25,000/50%/cobrado cero | Fases/tareas desde plantillas al convertir; E2E remoto |
 | QUO-06 | Parcial: seis unidades, porcentaje corregido, horas/costos externos previstos, resultado/margen e ingreso por hora exactos y fórmulas visibles | Atribución completa de costos por partida, tarifas para costo imputado de horas y E2E |
-| MKT-01 | Pendiente | Ideas, calendario, canales, publicaciones/resultados y portafolio |
+| MKT-01 | Implementado localmente | Comercial → Marketing. Ideas, agenda por mes, canal, publicación, enlace, resultados y portafolio asociado a proyecto y oportunidad. Pendiente el recorrido autenticado en preview. |
 | PRJ-01 | Parcial: expediente con cliente, fecha de inicio, estado y vínculo a versión | Edición de ubicación/fechas/responsables, documentos y enlaces |
 | PRJ-02 | Parcial: paquetes mixtos de una cotización, alcance y presupuesto neto por línea segregado | Edición de paquetes y continuidad completa |
 | PRJ-03 | Pendiente | Plantillas editables/fases y aplicación a proyectos |

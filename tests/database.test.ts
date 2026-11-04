@@ -2160,3 +2160,20 @@ it("las versiones de plantilla conservan su texto al editar el documento de orig
  expect((await db.query("select version from latest_document_templates where organization_id=$1 and name='Carta base'",[org])).rows).toEqual([{version:2}]);
  await asUser(other);expect((await db.query("select * from document_templates where source_id=$1",[source])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el calendario editorial protege la organización, las fechas y las ediciones concurrentes", async () => {
+  await asUser(owner);
+  const id = crypto.randomUUID();
+  const create = (status: string) => db.query("insert into editorial_items(id,organization_id,title,channel,status,portfolio) values($1,$2,'Expediente de entrega','Web',$3,true)", [id,org,status]);
+  await expect(create("scheduled")).rejects.toThrow();
+  await create("idea");
+  const publish = () => db.query("update editorial_items set status='published',publication_on=current_date,url='https://example.org/obra',results='Tres consultas' where id=$1 and version=1 returning version", [id]);
+  expect((await publish()).rows).toEqual([{ version: 2 }]);
+  expect((await publish()).rows).toHaveLength(0);
+  await expect(db.query("update editorial_items set url='javascript:alert(1)' where id=$1",[id])).rejects.toThrow();
+  await asUser(other);
+  expect((await db.query("select id from editorial_items where id=$1",[id])).rows).toHaveLength(0);
+  await asUser(reader);
+  expect((await db.query("update editorial_items set title='Modificado' where id=$1 returning id",[id])).rows).toHaveLength(0);
+  await asUser(owner);
+});
