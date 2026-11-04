@@ -46,4 +46,3 @@ select c.*, coalesce(t.received,0) received_cents,coalesce(t.paid,0) paid_cents,
  case when not c.managed then c.revenue_cents-c.cost_cents end expected_margin_cents,
  coalesce(t.received,0)-coalesce(t.paid,0) cash_cents
 from public.finance_cases c left join totals t on c.organization_id=t.organization_id and c.id=t.case_id;
-

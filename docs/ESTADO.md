@@ -270,3 +270,5 @@ Migración 015 probada localmente. Cada movimiento se puede revertir una vez ind
 
 ### Presupuesto base por obra
 Migración 016. El expediente permite capturar capítulos y partidas con cantidad decimal, unidad y precio unitario. PostgreSQL redondea por partida y totaliza el presupuesto completo, incluso con paginación. La presupuestación no registra ningún movimiento efectivo. Comprobados redondeo, permisos, aislamiento del libro de movimientos, 124 pruebas, lint, tipos y build.
+
+Verificación final sobre el build con presupuesto de obra: Playwright Chromium, cinco casos correctos y uno omitido por requerir instalación sin credenciales. La prueba autenticada en un Supabase de desarrollo, la ejecución con conexiones concurrentes y la verificación de respaldo siguen pendientes. Próximo incremento financiero: registro de facturas vinculado al acuerdo, con separación entre facturado y cobrado. En obra siguen estimaciones, comprobantes y padrón de proveedores; en agenda, responsables, categorías y recurrencias. Mantener las migraciones de producción pendientes.
