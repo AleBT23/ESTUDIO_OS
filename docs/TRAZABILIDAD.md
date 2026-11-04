@@ -4,7 +4,7 @@
 
 | Requisito | Estado y evidencia | Pendiente |
 | --- | --- | --- |
-| DASH-01, DASH-02 | Inicio muestra cartera, flujo por periodo y línea, pendientes vencidos y entregas próximas | Filtro global persistente y conciliación autenticada |
+| DASH-01, DASH-02 | Inicio muestra cartera, flujo por periodo y línea, pendientes vencidos y entregas próximas | Filtro persistente de periodo y línea compartido entre indicadores y flujo, con detalle sin duplicados (082). Pendiente conciliación autenticada |
 | DASH-03 | Implementado localmente | Búsqueda global, favoritos personales (039), actividad reciente (040) y captura desde el menú por rol. Pendiente preview autenticada. |
 | CRM-01 | Parcial: clientes/contactos/notas/origen, búsqueda/paginación, archivo y auditoría; src/modules/crm, database.test | Adjuntos y enlaces (060), proyectos, propuestas y obras relacionados (066). Pendiente recorrido autenticado del expediente |
 | CRM-02 | Parcial: pipeline seis etapas, notas y fecha de seguimiento, señales vencidas; pipeline-schema y database.test | Historial paginado de interacciones (072). Pendiente validar seguimiento y notificaciones con sesión aislada |

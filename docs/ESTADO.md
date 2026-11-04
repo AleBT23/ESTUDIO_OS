@@ -556,3 +556,6 @@ Los administradores pueden agregar paquetes operativos a proyectos activos o pau
 
 ### Tarifa interna prevista en cotizaciones
 El editor permite guardar un costo horario opcional y distingue una tarifa de cero de una tarifa pendiente. El costo imputado se redondea al centavo tras multiplicar horas por tarifa, se descuenta una sola vez y se mantiene fuera del PDF para el cliente. La ficha muestra el margen interno sobre el ingreso sin IVA. Se probaron pérdidas, compatibilidad con borradores anteriores, rechazo de importes fuera de rango y conservación de la versión tras un fallo. Pasaron 222 pruebas y la restauración sintética con 81 migraciones.
+
+### Indicadores operativos por periodo y línea
+Inicio aplica la selección persistente del usuario al conteo y detalle de proyectos activos, propuestas enviadas, pendientes vencidos, entregas de los próximos siete días y flujo. Los cortes se realizan sobre inicio, envío, vencimiento o fecha efectiva según el indicador. El detalle paginado abre el registro correspondiente. Un proyecto con dos paquetes de la misma línea se cuenta una sola vez. Se verificaron aislamiento, visibilidad del lector, selección de fechas y navegación a la segunda página. La cartera acumulada conserva su fecha de corte actual. Restauración sintética con 82 migraciones.

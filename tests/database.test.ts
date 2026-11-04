@@ -2898,3 +2898,15 @@ it("conserva tarifa interna entre clientes de distintas versiones y la excluye d
  const prepared=(await db.query<{snap:string}>("select (prepare_quote_version($1,$2,$3,$4::jsonb)->'snapshot')::text snap",[org,quote,row.version,JSON.stringify(defaultDocumentOptions)])).rows[0].snap;
  expect(prepared).not.toMatch(/hourly_cost|external_cost|estimated_hours/);
 });
+it("filtra proyectos y agenda por la misma línea y periodo sin duplicar un proyecto con dos paquetes",async()=>{
+ const {line}=await commercialFixture(),project=(await db.query<{id:string}>("select create_project_record($1,$2,'Panel filtrado',current_date-10,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ for(const name of ["Fase norte","Fase sur"]) await db.query("select save_work_package($1,$2,$3,0,$4,$5,'')",[org,project,crypto.randomUUID(),line,name]);
+ const task=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body,due_on) values($1,$2,'task','Tarea con línea',current_date-2) returning id",[org,project])).rows[0].id;
+ const items=(sql:string,l=line)=>db.query("select kind from dashboard_period_items($1,"+sql+",$2) where id in ($3,$4) order by kind",[org,l,project,task]);
+ expect((await items("current_date-12,current_date")).rows).toEqual([{kind:"project"},{kind:"task"}]);
+ expect((await items("current_date-3,current_date")).rows).toEqual([{kind:"task"}]);
+ expect((await items("null,null",crypto.randomUUID())).rows).toEqual([]);
+ await asUser(other);expect((await items("null,null")).rows).toEqual([]);
+ await asUser(reader);expect((await db.query("select id from dashboard_period_items($1) where kind='quote'",[org])).rows).toEqual([]);
+ await asUser(owner);
+});
