@@ -2481,6 +2481,20 @@ it("reprograma un recordatorio privado y genera una sola recurrencia al cerrarlo
   await asUser(owner);
 });
 
+it("el recordatorio mensual conserva el día de la serie y la prioridad tras febrero bisiesto",async()=>{
+  await asUser(owner);
+  const id=crypto.randomUUID(),label="Cierre mensual "+id;
+  await db.query("insert into personal_reminders(id,organization_id,label,due_on,repeat_months,priority) values($1,$2,$3,'2028-01-31',1,'high')",[id,org,label]);
+  const pending=()=>db.query<{due_on:string;anchor_day:number;priority:string}>("select due_on::text,anchor_day,priority from personal_reminders where organization_id=$1 and label=$2 and not completed",[org,label]);
+  const close=()=>db.query("update personal_reminders set completed=true where organization_id=$1 and label=$2 and not completed",[org,label]);
+  await close();expect((await pending()).rows).toEqual([{due_on:"2028-02-29",anchor_day:31,priority:"high"}]);
+  await close();expect((await pending()).rows).toEqual([{due_on:"2028-03-31",anchor_day:31,priority:"high"}]);
+  await db.query("update personal_reminders set due_on='2028-03-15',priority='low' where label=$1 and not completed",[label]);
+  await close();expect((await pending()).rows).toEqual([{due_on:"2028-04-15",anchor_day:15,priority:"low"}]);
+  await expect(db.query("update personal_reminders set repeat_days=7 where label=$1 and not completed",[label])).rejects.toThrow();
+  await asUser(other);expect((await pending()).rows).toEqual([]);await asUser(owner);
+});
+
 it("el expediente atribuye los acuerdos sin duplicar al cliente de la obra o del proyecto", async () => {
  await asUser(owner);
  const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Casa del cliente',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;

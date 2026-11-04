@@ -5,15 +5,26 @@ import { requireContext } from "@/shared/auth/context";
 import { canWriteProject } from "@/shared/permissions";
 import type { RecordState } from "@/shared/ui/record-form";
 
-const fields = z.object({
-  label: z.string().trim().min(2).max(240),
-  due_on: z.iso.date(),
-  repeat_days: z
-    .string()
-    .regex(/^\d{1,3}$/)
-    .transform(Number)
-    .pipe(z.number().max(365)),
-});
+const fields = z
+  .object({
+    label: z.string().trim().min(2).max(240),
+    due_on: z.iso.date(),
+    priority: z.enum(["low", "normal", "high"]).optional(),
+    unit: z.enum(["days", "months"]).default("days"),
+    repeat_days: z
+      .string()
+      .regex(/^\d{1,3}$/)
+      .transform(Number)
+      .pipe(z.number().max(365)),
+  })
+  .refine(
+    (v) => v.unit === "days" || (v.repeat_days >= 1 && v.repeat_days <= 12),
+  )
+  .transform(({ unit, repeat_days, ...rest }) => ({
+    ...rest,
+    repeat_days: unit === "days" ? repeat_days : 0,
+    repeat_months: unit === "months" ? repeat_days : 0,
+  }));
 export async function saveReminder(
   _previous: RecordState,
   form: FormData,
@@ -35,7 +46,8 @@ export async function saveReminder(
   const data = fields.safeParse(raw);
   if (intent === "save" && !data.success)
     return {
-      error: "Revisa el asunto, la fecha y el intervalo (0 a 365 días).",
+      error:
+        "Revisa el asunto, la fecha y el intervalo. Selecciona de 0 a 365 días o de 1 a 12 meses.",
     };
   const org = ctx.organization.id;
   const result =
