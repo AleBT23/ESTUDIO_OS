@@ -122,12 +122,12 @@ try {
     await first`select public.create_workspace('Prueba de concurrencia') id`;
   const [{ pid }] = await second`select pg_backend_pid() pid`;
   // El segundo escritor debe estar bloqueado antes de confirmar el primero.
-  async function race(write) {
+  async function race(write, competingWrite = write) {
     let pending;
     try {
       await first.begin(async (tx) => {
         await write(tx);
-        pending = write(second).then(
+        pending = competingWrite(second).then(
           () => null,
           (e) => e,
         );
@@ -178,6 +178,22 @@ try {
     await first`insert into clients(organization_id,name) values(${org},'Cliente de concurrencia') returning id`;
   const [project] =
     await first`select create_project_record(${org},${customer.id},'Reparto concurrente',current_date,0,${randomUUID()}) id`;
+  const [{ id: planProject }] =
+    await first`select create_project_record(${org},${customer.id},'Cambio de fecha concurrente',current_date-1,1000,${randomUUID()}) id`;
+  const [{ id: schedule }] =
+    await first`select id from payment_schedules where project_id=${planProject}`;
+  await race(
+    (db) =>
+      db`select record_payment(${org},${schedule},600,current_date-1,'Abono concurrente',${randomUUID()})`,
+    (db) =>
+      db`select replan_schedule(${org},${schedule},${randomUUID()},current_date-1,1000,1000,700,current_date+5)`,
+  );
+  const [plan] =
+    await first`select amount_cents::int scheduled,collected_cents::int collected,balance_cents::int pending from payment_schedule_balances where id=${schedule}`;
+  assert.deepEqual(
+    { ...plan },
+    { scheduled: 1000, collected: 600, pending: 400 },
+  );
   const pack = randomUUID();
   await admin`insert into project_service_packages(id,organization_id,project_id,business_line_id,name,scope) select ${pack},${org},${project.id},id,'Paquete','[]'::jsonb from business_lines where organization_id=${org} limit 1`;
   await admin`insert into package_financials(organization_id,package_id,contracted_net_cents) values(${org},${pack},10001)`;
@@ -294,6 +310,7 @@ try {
         "cobros concurrentes",
         "estimaciones concurrentes",
         "repartos concurrentes",
+        "reprogramación simultánea a un cobro",
         "cierre simultáneo de recordatorios",
       ],
     }),

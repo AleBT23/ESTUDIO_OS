@@ -110,7 +110,7 @@ it("prepara componentes reales para revisión responsive sin simular persistenci
         {
           id,
           label: "Anticipo",
-          balance_cents: 250000,
+          balance_text: "250000",
           project_name: "Obra de prueba",
         },
       ],

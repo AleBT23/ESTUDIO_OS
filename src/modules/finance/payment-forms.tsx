@@ -11,7 +11,7 @@ export function PaymentForm({
   plans: {
     id: string;
     label: string;
-    balance_cents: number;
+    balance_text: string;
     project_name: string;
   }[];
   today: string;
@@ -65,7 +65,7 @@ export function PaymentForm({
             {plans.map((plan) => (
               <option key={plan.id} value={plan.id}>
                 {plan.project_name} · {plan.label} · Pendiente{" "}
-                {formatMoney(plan.balance_cents)}
+                {formatMoney(BigInt(plan.balance_text))}
               </option>
             ))}
           </select>

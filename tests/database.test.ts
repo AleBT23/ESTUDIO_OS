@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(20);
+  expect(rows).toHaveLength(21);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2436,4 +2436,26 @@ it("archiva y recupera el documento con control de versión, permisos y auditor�
  await change(2,false);
  expect((await db.query("select title,body,version,deleted_at from studio_documents where id=$1",[id])).rows).toEqual([{title:header.title,body:header.body,version:3,deleted_at:null}]);
  expect((await db.query("select action from audit_events where entity_id=$1 order by action",[id])).rows).toEqual([{action:"archived"},{action:"created"},{action:"restored"}]);
+});
+
+it("divide un saldo parcialmente cobrado, conserva la cartera y protege el cambio de reintentos", async () => {
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Reprogramación',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const schedule=(await db.query<{id:string}>("select id from payment_schedules where project_id=$1",[project])).rows[0].id;
+ await db.query("select record_payment($1,$2,300,current_date-1,'Abono',$3)",[org,schedule,crypto.randomUUID()]);
+ const key=crypto.randomUUID();
+ const move=(request:string,amount:number)=>db.query<{id:string}>("select replan_schedule($1,$2,$3,current_date-1,1000,700,$4,current_date+10) id",[org,schedule,request,amount]);
+ await asUser(reader);await expect(move(key,300)).rejects.toThrow();
+ await asUser(other);await expect(move(key,300)).rejects.toThrow();await asUser(owner);
+ await expect(move(key,701)).rejects.toThrow();
+ const split=(await move(key,500)).rows[0].id;
+ expect((await move(key,500)).rows[0].id).toBe(split);
+ await expect(move(key,400)).rejects.toThrow();
+ await expect(move(crypto.randomUUID(),300)).rejects.toThrow();
+ expect((await db.query("select amount_cents::int amount,collected_cents::int collected,balance_cents::int balance from payment_schedule_balances where project_id=$1 order by due_date",[project])).rows).toEqual([{amount:500,collected:300,balance:200},{amount:500,collected:0,balance:500}]);
+ expect((await db.query("select replan_schedule($1,$2,$3,current_date+10,500,500,500,current_date+12) id",[org,split,crypto.randomUUID()])).rows).toEqual([{id:split}]);
+ expect((await db.query("select due_on=current_date+12 updated from agenda_events where id=$1 and kind='collection'",[split])).rows).toEqual([{updated:true}]);
+ const history=()=>db.query("select project_id,project_name,amount_cents from schedule_change_history where schedule_id=$1",[schedule]);
+ expect((await history()).rows).toEqual([{project_id:project,project_name:"Reprogramación",amount_cents:"500"}]);
+ await asUser(reader);expect((await history()).rows).toHaveLength(0);await asUser(owner);
 });

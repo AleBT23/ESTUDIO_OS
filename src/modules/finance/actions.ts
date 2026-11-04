@@ -82,3 +82,51 @@ export async function reversePayment(
       "Pago revertido con trazabilidad. El movimiento original se conserva.",
   };
 }
+
+export async function replanSchedule(
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const ctx = await requireContext();
+  if (!canReadFinance(ctx.membership.role))
+    return { error: "Permisos insuficientes." };
+  const input = z
+    .object({
+      id: z.uuid(),
+      schedule: z.uuid(),
+      expected_due: z.iso.date(),
+      expected_amount: z.string().regex(/^\d+$/),
+      expected_balance: z.string().regex(/^\d+$/),
+      amount: moneyInput,
+      new_due: z.iso.date(),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!input.success) return { error: "Revisa el importe y la fecha." };
+  const {
+    id,
+    schedule,
+    expected_due,
+    expected_amount,
+    expected_balance,
+    amount,
+    new_due,
+  } = input.data;
+  const { error } = await ctx.db.rpc("replan_schedule", {
+    org: ctx.organization.id,
+    schedule,
+    request_id: id,
+    expected_due,
+    expected_amount,
+    expected_balance,
+    portion: toCents(amount),
+    new_due,
+  });
+  if (error)
+    return {
+      error:
+        "Actualiza el saldo y elige una fecha distinta con un importe positivo dentro del pendiente.",
+    };
+  for (const path of ["/", "/administracion", "/agenda", "/proyectos"])
+    revalidatePath(path, "layout");
+  return { success: "Plan actualizado." };
+}

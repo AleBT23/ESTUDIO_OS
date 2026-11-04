@@ -1,3 +1,4 @@
+import { ReplanForm } from "@/modules/finance/replan-form";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
@@ -43,7 +44,9 @@ export async function ProjectFinance({
       .maybeSingle(),
     ctx.db
       .from("payment_schedule_balances")
-      .select("id,label,due_date,amount_cents,collected_cents,balance_cents")
+      .select(
+        "id,label,due_date,amount_text:amount_cents::text,collected_text:collected_cents::text,balance_text:balance_cents::text",
+      )
       .eq("organization_id", ctx.organization.id)
       .eq("project_id", project)
       .order("due_date")
@@ -103,13 +106,14 @@ export async function ProjectFinance({
           {plans.data?.map((plan) => (
             <div className="activity-row" key={plan.id}>
               <strong>
-                {plan.label} · {formatMoney(plan.amount_cents)}
+                {plan.label} · {formatMoney(BigInt(plan.amount_text))}
               </strong>
               <p className="caption">
                 Fecha prevista {plan.due_date} · Recibido{" "}
-                {formatMoney(plan.collected_cents)} · Saldo{" "}
-                {formatMoney(plan.balance_cents)}
+                {formatMoney(BigInt(plan.collected_text))} · Saldo{" "}
+                {formatMoney(BigInt(plan.balance_text))}
               </p>
+              {BigInt(plan.balance_text) > 0n && <ReplanForm plan={plan} />}
             </div>
           ))}
           {Number(summary.data?.schedule_count || 0) > 500 && (
@@ -122,7 +126,7 @@ export async function ProjectFinance({
       </div>
       <PaymentForm
         plans={(plans.data || [])
-          .filter((p) => p.balance_cents > 0)
+          .filter((p) => BigInt(p.balance_text) > 0n)
           .map((p) => ({ ...p, project_name: name }))}
         today={today}
         requestId={crypto.randomUUID()}

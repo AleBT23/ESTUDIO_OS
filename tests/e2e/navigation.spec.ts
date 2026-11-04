@@ -104,6 +104,7 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
     "/recursos/plantillas",
     "/proyectos/" + id + "/tiempo/" + id,
     "/administracion/proveedores",
+    "/administracion/reprogramaciones",
     "/comercial/pipeline",
     "/comercial/catalogo",
     "/comercial/conceptos",
