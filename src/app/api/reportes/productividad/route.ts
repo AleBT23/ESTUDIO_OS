@@ -1,3 +1,4 @@
+import { ledgerCsv } from "@/modules/finance/cash-ledger";
 import { areaCashCsv } from "@/modules/finance/area-cash";
 import { expenseCsv } from "@/modules/finance/expense-categories";
 import { getContext } from "@/shared/auth/context";
@@ -21,6 +22,24 @@ export async function GET(request: Request) {
   if (!filters.success) return new Response(null, { status: 400, headers });
   const detail = new URL(request.url).searchParams.get("detalle");
   const args = { org: ctx.organization.id, ...filters.data };
+  if (detail === "movimientos") {
+    const { data, error } = await ctx.db.rpc("cash_ledger_export", args);
+    if (error)
+      return new Response(
+        error.code === "54000"
+          ? "Acota los filtros a 5.000 movimientos por archivo."
+          : "No se pudo exportar el detalle.",
+        { status: error.code === "54000" ? 413 : 503, headers },
+      );
+    return new Response(ledgerCsv(data), {
+      headers: {
+        ...headers,
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition":
+          'attachment; filename="movimientos-financieros.csv"',
+      },
+    });
+  }
   const result = await ctx.db.rpc(
     detail === "areas"
       ? "area_cash_report"

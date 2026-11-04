@@ -101,6 +101,20 @@ export default async function Reports({
         </div>
         <button className="button button-primary">Aplicar filtros</button>
       </form>
+      {filters.success && (
+        <p>
+          <a
+            className="button button-outline"
+            href={
+              "/api/reportes/productividad?" +
+              new URLSearchParams({ ...raw, detalle: "movimientos" })
+            }
+          >
+            Exportar movimientos y reversos CSV
+          </a>{" "}
+          · Hasta 5.000 movimientos por selección.
+        </p>
+      )}
       {groups.some((g) => g.options.error) && (
         <p className="notice">
           Algunas opciones de filtro no se pudieron cargar.

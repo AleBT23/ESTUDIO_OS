@@ -511,3 +511,6 @@ Configuración incorpora clientes por ID legado, reutiliza coincidencias exactas
 
 ### Variables de cotización en documentos y plantillas
 El editor vincula una versión emitida. El folio, total y anticipo provienen de su snapshot tanto en la vista previa como en la preparación de la versión documental. Se validan la organización, el cliente y, cuando se selecciona, el proyecto. Una edición desde el cliente anterior conserva el vínculo. Los documentos previos sin cotización mantienen su formato. Se verificó una propuesta de 25.000 MXN con anticipo de 12.500 MXN. Pasaron 204 pruebas, TypeScript, lint, build, nueve recorridos Playwright y restauración sintética con 69 migraciones. Pendiente emisión autenticada en staging.
+
+### Exportación de movimientos financieros
+Reportes descarga cobros, pagos, anticipos y reversos bajo los filtros activos. Cada fila conserva origen, área, custodia, importe original y contribución efectiva al flujo. Un reverso aporta cero de efectivo y conserva fecha y motivo. La descarga toma una instantánea SQL y pide acotar la selección si supera 5.000 movimientos. Se verificaron importes, aislamiento y escape de celdas. Pasaron 206 pruebas, TypeScript, lint, build, nueve recorridos Playwright y restauración con 70 migraciones. El inventario de solo lectura del destino configurado confirmó 10 aplicadas y 60 pendientes.

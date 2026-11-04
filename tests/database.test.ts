@@ -2721,3 +2721,15 @@ it("emite variables comerciales desde una cotización concreta y conserva el ví
  expect(resolveDocumentBody(parsed)).toContain("$12,500.00");
  await asUser(other);expect((await db.query("select id from document_quote_context where id=$1",[prepared.id])).rows).toEqual([]);await asUser(owner);
 });
+it("exporta el detalle con reversos sin modificar el flujo y excluye movimientos de otro proyecto",async()=>{
+ await asUser(owner);const proj=(await db.query<{id:string}>("select create_project_record($1,$2,'Detalle contable',current_date-1,1000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const entry=(await db.query<{id:string}>("select record_payment($1,id,300,current_date-1,'Referencia de proyecto',$3) id from payment_schedules where project_id=$2",[org,proj,crypto.randomUUID()])).rows[0].id;
+ const account=crypto.randomUUID();await db.query("insert into finance_cases(id,organization_id,project_id,name,area,managed,revenue_cents,cost_cents) values($1,$2,$3,'Gastos de obra','construction',true,0,600)",[account,org,proj]);
+ const out=crypto.randomUUID();await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,expense_category,paid_on) values($1,$2,$3,'out',100,'labor',current_date-1)",[out,org,account]);
+ await db.query("update finance_entries set reversal_reason='Duplicado' where id=$1",[out]);
+ const ledger=()=>db.query<{rows:{id:string;reversed:boolean}[]}>("select cash_ledger_export($1,current_date-1,current_date-1,$2,$3) rows",[org,client,proj]);
+ const list=(await ledger()).rows[0].rows;
+ expect(list).toHaveLength(2);expect(list.find(r=>r.id===entry)).toMatchObject({area:"project_plan",amount:"300",managed:false,reversed:false,reference:"Referencia de proyecto"});
+ expect(list.find(r=>r.id===out)).toMatchObject({area:"construction",amount:"100",managed:true,reversed:true,expense_category:"labor",reversal_reason:"Duplicado"});
+ await asUser(reader);await expect(ledger()).rejects.toThrow("Permisos");await asUser(other);await expect(ledger()).rejects.toThrow("Permisos");await asUser(owner);
+});
