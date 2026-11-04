@@ -15,12 +15,18 @@ export async function ProjectFinance({
   version,
   manual,
   page = 1,
+  planPage,
+  showPlans,
+  change,
 }: {
   project: string;
   name: string;
   version: number;
   manual: boolean;
   page?: number;
+  planPage: number;
+  showPlans: boolean;
+  change?: string;
 }) {
   const ctx = await requireContext();
   if (!canReadFinance(ctx.membership.role)) return null;
@@ -33,6 +39,24 @@ export async function ProjectFinance({
         </Link>
       </section>
     );
+  const planQuery = ctx.db
+    .from("project_schedule_details")
+    .select(
+      "id,label,due_date,change_description,amount_text:amount_cents::text,collected_text:collected_cents::text,balance_text:balance_cents::text",
+      { count: "exact" },
+    )
+    .eq("organization_id", ctx.organization.id)
+    .eq("project_id", project);
+  const historyQuery = ctx.db
+    .from("payments")
+    .select(
+      "id,amount_cents,paid_on,reference,state,version,reversal_reason,payment_schedules!inner(project_id,scope_change_id)",
+      { count: "exact" },
+    )
+    .eq("organization_id", ctx.organization.id)
+    .eq("payment_schedules.project_id", project);
+  const planLink = (n: number) =>
+    `?planes=${n}&payments=${page}${change ? "&ampliacion=" + change : ""}#plan-cobro`;
   const [summary, plans, payments] = await Promise.all([
     ctx.db
       .from("project_financial_summary")
@@ -42,23 +66,14 @@ export async function ProjectFinance({
       .eq("organization_id", ctx.organization.id)
       .eq("project_id", project)
       .maybeSingle(),
-    ctx.db
-      .from("payment_schedule_balances")
-      .select(
-        "id,label,due_date,amount_text:amount_cents::text,collected_text:collected_cents::text,balance_text:balance_cents::text",
-      )
-      .eq("organization_id", ctx.organization.id)
-      .eq("project_id", project)
+    (change ? planQuery.eq("scope_change_id", change) : planQuery)
       .order("due_date")
-      .limit(500),
-    ctx.db
-      .from("payments")
-      .select(
-        "id,amount_cents,paid_on,reference,state,version,reversal_reason,payment_schedules!inner(project_id)",
-        { count: "exact" },
-      )
-      .eq("organization_id", ctx.organization.id)
-      .eq("payment_schedules.project_id", project)
+      .order("id")
+      .range((planPage - 1) * 30, planPage * 30 - 1),
+    (change
+      ? historyQuery.eq("payment_schedules.scope_change_id", change)
+      : historyQuery
+    )
       .order("paid_on", { ascending: false })
       .order("created_at", { ascending: false })
       .range((page - 1) * 30, page * 30 - 1),
@@ -101,14 +116,24 @@ export async function ProjectFinance({
         {!summary.data && manual && (
           <AmountForm project={project} version={version} today={today} />
         )}
-        <details>
+        <details id="plan-cobro" open={!!change || showPlans}>
           <summary>Ver el plan de cobro</summary>
+          {change && (
+            <p>
+              Obligaciones de la ampliación seleccionada.{" "}
+              <Link href="?planes=1#plan-cobro">Ver todos los planes</Link>
+            </p>
+          )}
           {plans.data?.map((plan) => (
             <div className="activity-row" key={plan.id}>
               <strong>
                 {plan.label} · {formatMoney(BigInt(plan.amount_text))}
               </strong>
               <p className="caption">
+                {plan.change_description
+                  ? "Ampliación · " + plan.change_description
+                  : "Contrato base"}
+                <br />
                 Fecha prevista {plan.due_date} · Recibido{" "}
                 {formatMoney(BigInt(plan.collected_text))} · Saldo{" "}
                 {formatMoney(BigInt(plan.balance_text))}
@@ -116,23 +141,39 @@ export async function ProjectFinance({
               {BigInt(plan.balance_text) > 0n && <ReplanForm plan={plan} />}
             </div>
           ))}
-          {Number(summary.data?.schedule_count || 0) > 500 && (
-            <p className="notice">
-              Se muestran las primeras 500 obligaciones; los totales incluyen
-              todas.
-            </p>
+          <p>
+            {plans.count ?? 0} obligaciones · Página {planPage}
+          </p>
+          {planPage > 1 && (
+            <Link href={planLink(planPage - 1)}>Planes anteriores </Link>
+          )}
+          {planPage * 30 < (plans.count ?? 0) && (
+            <Link href={planLink(planPage + 1)}>Planes siguientes</Link>
           )}
         </details>
       </div>
       <PaymentForm
+        key={`${change ?? "todos"}-${planPage}`}
         plans={(plans.data || [])
           .filter((p) => BigInt(p.balance_text) > 0n)
-          .map((p) => ({ ...p, project_name: name }))}
+          .map((p) => ({
+            ...p,
+            project_name: name,
+            label: [
+              p.label,
+              p.change_description || "Contrato base",
+              p.due_date,
+            ].join(" · "),
+          }))}
         today={today}
         requestId={crypto.randomUUID()}
       />
       <div className="panel padded">
-        <h2>Historial de anticipos y pagos</h2>
+        <h2 id="historial-cobros">
+          {change
+            ? "Historial de cobros de esta ampliación"
+            : "Historial de anticipos y pagos"}
+        </h2>
         {payments.data?.map((payment) => (
           <div className="payment-row" key={payment.id}>
             <div>
@@ -168,7 +209,7 @@ export async function ProjectFinance({
           {page > 1 && (
             <Link
               className="button button-outline"
-              href={`/proyectos/${project}?payments=${page - 1}#cobros`}
+              href={`/proyectos/${project}?payments=${page - 1}&planes=${planPage}${change ? "&ampliacion=" + change : ""}#historial-cobros`}
             >
               Anteriores
             </Link>
@@ -176,7 +217,7 @@ export async function ProjectFinance({
           {page * 30 < (payments.count || 0) && (
             <Link
               className="button button-outline"
-              href={`/proyectos/${project}?payments=${page + 1}#cobros`}
+              href={`/proyectos/${project}?payments=${page + 1}&planes=${planPage}${change ? "&ampliacion=" + change : ""}#historial-cobros`}
             >
               Siguientes
             </Link>

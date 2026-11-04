@@ -33,6 +33,8 @@ export default async function ProjectPage({
     notes?: string;
     visits?: string;
     payments?: string;
+    planes?: string;
+    ampliacion?: string;
     tiempo?: string;
     honorarios?: string;
     cambios?: string;
@@ -158,6 +160,9 @@ export default async function ProjectPage({
         version={project.version}
         manual={!project.quote_version_id}
         page={page(filter.payments)}
+        showPlans={!!filter.planes}
+        planPage={page(filter.planes)}
+        change={z.uuid().safeParse(filter.ampliacion).success ? filter.ampliacion : undefined}
       />
     </>
   );

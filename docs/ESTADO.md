@@ -581,3 +581,6 @@ La captura del honorario pide el área y el origen del dinero antes de crear la 
 
 ### Estado de cuenta por cambio de alcance
 Cada solicitud vinculada muestra la cotización y sus obligaciones vigentes, cobros efectivos, saldo pendiente y cancelaciones. La prueba de aceptación comprueba que un cobro al contrato base queda fuera de la ampliación y verifica el efecto de un cobro parcial, su reverso y una cancelación tras reprogramar. El lector no puede consultar el estado de cuenta. Pasaron 228 pruebas y se restauraron 88 migraciones en PostgreSQL 17.
+
+### Cobro y seguimiento de obligaciones por ampliación
+Desde el estado de cuenta de una ampliación se abren sus obligaciones y su historial de pagos. El plan del expediente pagina por fecha e identificador. La prueba crea 505 obligaciones y confirma que se puede consultar y abonar la última. El selector distingue contrato base y ampliación e indica el vencimiento. Pasaron 229 pruebas, la compilación, TypeScript, ESLint y nueve recorridos de navegador con uno omitido. Se restauraron 89 migraciones sintéticas. El plan remoto de solo lectura verificó diez aplicadas y 79 pendientes. Playwright descubre el recorrido ampliado de propuesta, anticipo parcial, descarga de recibo y reverso. Su ejecución autenticada sigue pendiente por falta de la clave y las cuentas del Supabase aislado.

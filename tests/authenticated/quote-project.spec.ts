@@ -53,7 +53,46 @@ test("emite una propuesta, recupera su PDF y convierte el anticipo en un plan pe
   await expect(amount("Recibido MXN")).toContainText("$0.00");
   await expect(amount("Saldo por recibir MXN")).toContainText("25,000.00");
   await page.getByText("Ver el plan de cobro", { exact: true }).click();
-  await expect(page.getByText(/Anticipo · .*12,500.00/)).toBeVisible();
+  await expect(
+    page
+      .locator("#plan-cobro strong")
+      .filter({ hasText: /Anticipo · .*12,500.00/ }),
+  ).toBeVisible();
+  const payment = page.locator("#cobros form").filter({
+    has: page.getByRole("heading", { name: "Registrar un pago recibido" }),
+  });
+  const advance = payment.getByRole("option", {
+    name: /Anticipo · Contrato base/,
+  });
+  await payment
+    .getByLabel("Obligación de pago")
+    .selectOption((await advance.getAttribute("value")) ?? "");
+  await payment.getByLabel("Importe recibido MXN").fill("2500");
+  const reference = "Transferencia parcial " + ref;
+  await payment.getByLabel("Referencia del movimiento").fill(reference);
+  await payment.getByRole("button", { name: "Registrar cobro" }).click();
+  await expect(amount("Recibido MXN")).toContainText("2,500.00");
+  await expect(amount("Saldo por recibir MXN")).toContainText("22,500.00");
+  await page.reload();
+  const entry = page
+    .locator("#cobros .payment-row")
+    .filter({ hasText: reference });
+  const receipt = await entry
+    .getByRole("link", { name: "Descargar recibo PDF" })
+    .getAttribute("href");
+  const file = await page.request.get(receipt!);
+  expect(file.status()).toBe(200);
+  expect(
+    (await PDFDocument.load(await file.body())).getPageCount(),
+  ).toBeGreaterThan(0);
+  await entry.getByText("Revertir movimiento", { exact: true }).click();
+  await entry
+    .getByLabel("Motivo del reverso")
+    .fill("Corrección documentada de referencia");
+  await entry.getByRole("button", { name: "Confirmar reverso" }).click();
+  await expect(entry.getByText("Revertido", { exact: true })).toBeVisible();
+  await expect(amount("Recibido MXN")).toContainText("$0.00");
+  await expect(amount("Saldo por recibir MXN")).toContainText("25,000.00");
   const stored = await page.request.get(url!);
   expect(
     createHash("sha256")

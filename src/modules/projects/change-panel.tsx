@@ -115,6 +115,11 @@ export async function Changes({
                 </details>
               )}
               {c.scheduled !== null && (
+                <Link href={`?ampliacion=${c.id}#plan-cobro`}>
+                  Ver obligaciones y registrar cobro de esta ampliación
+                </Link>
+              )}
+              {c.scheduled !== null && (
                 <dl className="finance-summary">
                   {[
                     ["Programado vigente", c.scheduled],

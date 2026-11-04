@@ -2182,8 +2182,25 @@ it("aceptar la cotización complementaria añade paquetes y planes solo al proye
  await db.query("select replan_schedule($1,$2,$3,current_date,$4,$4,600,current_date+10)",[org,plan.id,crypto.randomUUID(),plan.amount]);
  await db.query("select cancel_schedule_balance($1,id,$3,due_date,600,600,'Descuento autorizado') from payment_schedules where scope_change_id=$2 and due_date=current_date+10",[org,request,crypto.randomUUID()]);
  expect((await statement()).rows).toEqual([{scheduled:total-600,received:0,outstanding:total-600,cancelled:600}]);
+ const details=()=>db.query("select change_description,sum(balance_cents)::int balance from project_schedule_details where project_id=$1 and scope_change_id=$2 group by change_description",[project,request]);
+ expect((await details()).rows).toEqual([{change_description:"Ampliación de alcance",balance:total-600}]);
+ await asUser(reader);expect((await details()).rows).toHaveLength(0);await asUser(owner);
  await asUser(reader);expect((await statement()).rows).toHaveLength(0);await asUser(owner);
  await asUser(other);expect((await db.query("select * from scope_changes where id=$1",[request])).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("permite consultar y cobrar una obligación posterior a las primeras 500 del expediente",async()=>{
+  await asUser(owner);
+  const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Proyecto de larga duración',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+  await db.exec("reset role");
+  await db.query("insert into payment_schedules(organization_id,project_id,label,amount_cents,due_date) select $1,$2,'Parcialidad ' || n,100,current_date+n from generate_series(1,505) n",[org,project]);
+  await asUser(owner);
+  const tail=await db.query<{id:string;label:string}>("select id,label from project_schedule_details where organization_id=$1 and project_id=$2 order by due_date,id offset 480 limit 30",[org,project]);
+  expect(tail.rows).toHaveLength(25);
+  const last=tail.rows[24];
+  expect(last.label).toBe("Parcialidad 505");
+  await db.query("select record_payment($1,$2,35,current_date,'Cobro parcial',$3)",[org,last.id,crypto.randomUUID()]);
+  expect((await db.query("select balance_cents::int remaining from project_schedule_details where id=$1",[last.id])).rows).toEqual([{remaining:65}]);
 });
 
 it("las versiones de plantilla conservan su texto al editar el documento de origen",async()=>{
