@@ -17,6 +17,7 @@ export default async function CatalogPage({
     archived?: string;
     q?: string;
     category?: string;
+    page?: string;
   }>;
 }) {
   const ctx = await requireContext();
@@ -28,19 +29,29 @@ export default async function CatalogPage({
       </p>
     );
   const q = typeof filter.q === "string" ? filter.q.slice(0, 120) : "";
+  const page = Math.max(1, Math.min(10000, parseInt(filter.page || "1") || 1));
+  const pageLink = (n: number) =>
+    "/comercial/catalogo?" +
+    new URLSearchParams({
+      q,
+      category: filter.category || "",
+      archived: filter.archived === "1" ? "1" : "0",
+      page: String(n),
+    });
   let query = ctx.db
     .from("services")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("organization_id", ctx.organization.id)
     .order("name")
-    .limit(500);
+    .order("id")
+    .range((page - 1) * 30, page * 30 - 1);
   query =
     filter.archived === "1"
       ? query.not("deleted_at", "is", null)
       : query.is("deleted_at", null);
   if (q) query = query.ilike("name", `%${q.replace(/[\\%_]/g, "\\$&")}%`);
   if (filter.category) query = query.eq("category_key", filter.category);
-  const [{ data, error }, categories] = await Promise.all([
+  const [{ data, error, count }, categories] = await Promise.all([
     query,
     ctx.db
       .from("service_categories")
@@ -225,10 +236,15 @@ export default async function CatalogPage({
               </p>
             </section>
           )}
-          <p className="caption" style={{ marginTop: 16 }}>
-            Hasta 500 resultados por búsqueda. Los servicios archivados
-            conservan sus referencias.
-          </p>
+          <nav aria-label="Páginas de servicios">
+            {page > 1 && <Link href={pageLink(page - 1)}>Anterior</Link>}{" "}
+            <span>
+              Página {page} · {count ?? 0} servicios
+            </span>{" "}
+            {page * 30 < (count ?? 0) && (
+              <Link href={pageLink(page + 1)}>Siguiente</Link>
+            )}
+          </nav>
         </>
       )}
     </>

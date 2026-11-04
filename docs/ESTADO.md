@@ -529,3 +529,6 @@ El catálogo ofrece sugerencias reutilizables al crear o editar servicios y perm
 
 ### Tareas iniciales al aceptar cotizaciones
 Las plantillas de fases pueden contener tareas. Al incorporarlas manualmente o al aceptar una propuesta, PostgreSQL guarda la revisión y crea las tareas dentro de la misma transacción. La prueba de aceptación mixta comprueba dos pendientes en el tablero y la conservación de ambos tras editar la plantilla. Pasaron 210 pruebas, compilación y restauración con 74 migraciones.
+
+### Paginación del catálogo
+El directorio presenta páginas de 30 servicios con conteo total y un orden estable. La búsqueda, categoría y selección de archivados se conservan al avanzar. Se verificó la recuperación de la segunda página y el enlace a la tercera. El inventario remoto de solo lectura confirmó 10 migraciones aplicadas y 64 pendientes hasta la 074.
