@@ -1980,3 +1980,13 @@ it("vincula subcontratistas del propio estudio y conserva el nombre en el acuerd
  expect((await add(org)).rows).toEqual([{provider:"Topografía Norte"}]);
  await asUser(other);await expect(add(otherOrg)).rejects.toThrow();expect((await db.query('select id from suppliers where id=$1',[supplier])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("las comunicaciones y la bitácora usan su expediente, categorías y permisos",async()=>{
+ await asUser(owner);const work=crypto.randomUUID();
+ await db.query("insert into works(id,organization_id,name) values($1,$2,'Visita de campo')",[work,org]);
+ const add=(kind:string,c:string|null,w:string|null)=>db.query("insert into journal_entries(id,organization_id,client_id,work_id,kind,occurred_on,body) values($1,$2,$3,$4,$5,current_date,'Acuerdos registrados')",[crypto.randomUUID(),org,c,w,kind]);
+ await add("call",client,null);await add("incident",null,work);
+ await expect(add("call",null,work)).rejects.toThrow();await expect(add("visit",client,work)).rejects.toThrow();
+ await asUser(other);expect((await db.query("select * from journal_entries where organization_id=$1",[org])).rows).toHaveLength(0);
+ await expect(add("call",client,null)).rejects.toThrow();await asUser(owner);
+});

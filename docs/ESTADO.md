@@ -281,3 +281,6 @@ Migración 018. Administración → Operaciones permite abrir el padrón, buscar
 
 ### Búsqueda y tema de la aplicación
 Búsqueda por nombre en clientes, proyectos, cotizaciones, documentos, obras y acuerdos con consultas por organización y por permiso; acceso desde la cabecera y Ctrl/Cmd+K. Tema claro/oscuro compartido, con preferencia persistida y aplicada desde el render inicial. TypeScript, ESLint, 126 pruebas, build y verificación PDF correctos. Chromium: seis pruebas correctas y una de instalación sin credenciales omitida; verificadas persistencia del tema, navegación móvil y protección de las rutas nuevas. Falta prueba autenticada de los resultados de búsqueda.
+
+### Comunicaciones con clientes y bitácora de obra
+Migración 019. Los expedientes incluyen entradas fechadas, historial paginado y autor registrado. Los clientes archivados conservan el historial en modo lectura. Se prueban las categorías permitidas para cada expediente y el aislamiento entre organizaciones. TypeScript, ESLint, 127 pruebas y compilación con empaquetado PDF correctos.

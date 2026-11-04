@@ -1,4 +1,5 @@
 "use client";
+import { RecordForm } from "@/shared/ui/record-form";
 import { saveInvoice } from "./invoice-action";
 import { saveBudgetItem } from "./budget-action";
 import { useActionState } from "react";
@@ -16,26 +17,18 @@ export function OperationForm({
   id: string;
   children: React.ReactNode;
 }) {
-  const [state, action, pending] = useActionState(
+  const save =
     kind === "invoice"
       ? saveInvoice
       : kind === "budget"
         ? saveBudgetItem
-        : saveOperation.bind(null, kind),
-    {} as OperationState,
-  );
+        : saveOperation.bind(null, kind);
   return (
-    <form action={action} className="panel padded">
-      <input type="hidden" name="id" value={state.nextId ?? id} />
-      <div className="form-grid">{children}</div>
-      <button disabled={pending} className="button button-primary">
-        {pending ? "Guardando…" : "Guardar"}
-      </button>
-      <p role="status">{state.error || state.success}</p>
-    </form>
+    <RecordForm id={id} save={save}>
+      {children}
+    </RecordForm>
   );
 }
-
 export function ReverseEntryForm({ id }: { id: string }) {
   const [state, action, pending] = useActionState(
     reverseEntry,

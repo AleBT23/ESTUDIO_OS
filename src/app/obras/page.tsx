@@ -1,3 +1,4 @@
+import { Journal } from "@/modules/journal/panel";
 import Link from "next/link";
 import { z } from "zod";
 import { requireContext } from "@/shared/auth/context";
@@ -8,7 +9,12 @@ import { workMetrics } from "@/modules/finance/work-report";
 export default async function Works({
   searchParams,
 }: {
-  searchParams: Promise<{ obra?: string; page?: string; partidas?: string }>;
+  searchParams: Promise<{
+    obra?: string;
+    page?: string;
+    partidas?: string;
+    historial?: string;
+  }>;
 }) {
   const ctx = await requireContext();
   if (!canReadFinance(ctx.membership.role))
@@ -119,6 +125,13 @@ export default async function Works({
         <WorkBudget
           id={id}
           page={Math.max(1, Math.min(10000, parseInt(q.partidas ?? "1") || 1))}
+        />
+      )}
+      {id && current?.data && (
+        <Journal
+          scope="work"
+          id={id}
+          page={Math.max(1, Math.min(10000, parseInt(q.historial ?? "1") || 1))}
         />
       )}
     </>

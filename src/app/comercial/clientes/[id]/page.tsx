@@ -1,3 +1,4 @@
+import { Journal } from "@/modules/journal/panel";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -12,11 +13,11 @@ export default async function ClientPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; historial?: string }>;
 }) {
   const ctx = await requireContext();
   const { id } = await params;
-  const { edit } = await searchParams;
+  const { edit, historial } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const { data, error } = await ctx.db
     .from("clients")
@@ -133,6 +134,14 @@ export default async function ClientPage({
           clientId={id}
           contacts={(contacts.data || []) as Contact[]}
           writable={canWrite && !client.deleted_at}
+        />
+      )}
+      {canWrite && edit !== "1" && (
+        <Journal
+          scope="client"
+          id={id}
+          writable={!client.deleted_at}
+          page={Math.max(1, Math.min(10000, parseInt(historial ?? "1") || 1))}
         />
       )}
     </>
