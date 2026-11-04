@@ -84,6 +84,8 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
 }) => {
   const id = "11111111-1111-4111-8111-111111111111";
   for (const path of [
+    "/api/biblioteca/" + id,
+    "/api/obras/" + id + "/reporte",
     "/api/reportes/productividad",
     "/api/comprobantes/" + id,
     "/api/documentos/" + id,
@@ -93,6 +95,13 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
     expect((await request.get(path)).status()).toBe(403);
   for (const path of [
     "/buscar",
+    "/agenda?view=board",
+    "/agenda/notificaciones",
+    "/comercial/marketing",
+    "/recursos/biblioteca",
+    "/recursos/procedimientos",
+    "/recursos/plantillas",
+    "/proyectos/" + id + "/tiempo/" + id,
     "/administracion/proveedores",
     "/comercial/pipeline",
     "/comercial/catalogo",

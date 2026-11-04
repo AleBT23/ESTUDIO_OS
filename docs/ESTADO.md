@@ -387,3 +387,6 @@ Obras y acuerdos nuevos comprueban la relación cliente–proyecto. Un acuerdo c
 
 ### Auditoría previa a la migración 046
 Ejecutar scripts/sql/audit-finance-associations.sql sobre una copia restaurada con acceso de lectura completo a projects, works y finance_cases. Cada fila identifica una discrepancia, el vínculo seleccionado y el esperado. Un resultado vacío acredita solo estas comprobaciones. La prueba local en transacción de solo lectura detectó cuatro discrepancias simuladas y respetó los vínculos opcionales válidos. Pasaron 162 pruebas, TypeScript y ESLint. Sigue pendiente ejecutar la consulta sobre un respaldo real restaurado.
+
+### Acceso sin sesión en los módulos recientes
+Playwright comprobó en Chromium que Agenda Kanban, notificaciones, marketing, biblioteca, procedimientos, plantillas e historial de tiempo redirigen a acceso sin sesión. Las descargas de biblioteca y reporte de obra devolvieron 403. Compilación y verificación PDF aprobadas. Siete recorridos pasaron y se omitió el de instalación sin credenciales porque Supabase está configurado. Aún falta la prueba autenticada en preview.
