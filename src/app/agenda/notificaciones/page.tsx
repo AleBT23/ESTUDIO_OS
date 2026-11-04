@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
-import { eventHref, kinds } from "@/modules/projects/agenda-event";
+import {
+  eventHref,
+  kinds,
+  eventTypeLabel,
+} from "@/modules/projects/agenda-event";
 import { markNotification } from "@/modules/projects/notification-action";
 export default async function Notifications({
   searchParams,
@@ -14,7 +18,9 @@ export default async function Notifications({
   const kind = q.kind && Object.hasOwn(kinds, q.kind) ? q.kind : "";
   let query = ctx.db
     .from("agenda_notifications")
-    .select("id,kind,label,project_id,due_on,read_at", { count: "exact" })
+    .select("id,kind,label,project_id,due_on,read_at,balance_cents,managed", {
+      count: "exact",
+    })
     .eq("organization_id", ctx.organization.id);
   query = read ? query.not("read_at", "is", null) : query.is("read_at", null);
   if (kind) query = query.eq("kind", kind);
@@ -69,7 +75,7 @@ export default async function Notifications({
           {result.data.map((e) => (
             <article key={e.kind + e.id}>
               <p>
-                {e.due_on} · {kinds[e.kind]}
+                {e.due_on} · {eventTypeLabel(e)}
               </p>
               <Link href={eventHref(e)}>{e.label}</Link>
               <form action={markNotification}>

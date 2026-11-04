@@ -1,4 +1,4 @@
-import { canWriteProject } from "@/shared/permissions";
+import { canWriteProject, canReadFinance } from "@/shared/permissions";
 import { TaskBoard } from "@/modules/projects/task-board";
 import { studioToday } from "@/modules/projects/agenda-window";
 import { AgendaDeadlines, StudioCalendar } from "@/modules/projects/calendar";
@@ -14,6 +14,8 @@ const views = {
   mine: "Asignados a mí",
   lateTasks: "Tareas vencidas",
   deliveries: "Próximas entregas",
+  receivables: "Por cobrar",
+  payables: "Por pagar",
   high: "Prioridad alta",
   overdue: "Vencidos",
   all: "Lista",
@@ -35,7 +37,13 @@ export default async function Agenda({
 }) {
   const ctx = await requireContext();
   const q = await searchParams;
-  const view = q.view && Object.hasOwn(views, q.view) ? q.view : "today";
+  const visibleViews = Object.entries(views).filter(
+    ([key]) =>
+      !["receivables", "payables"].includes(key) ||
+      canReadFinance(ctx.membership.role),
+  );
+  const view =
+    q.view && visibleViews.some(([key]) => key === q.view) ? q.view : "today";
   const today = studioToday(ctx.organization.timezone);
   const date = z.iso.date().safeParse(q.date).success ? q.date : today;
   return (
@@ -53,7 +61,7 @@ export default async function Agenda({
         </p>
       </header>
       <nav className="tabs" aria-label="Vistas de agenda">
-        {Object.entries(views).map(([k, label]) => (
+        {visibleViews.map(([k, label]) => (
           <Link
             key={k}
             href={"?view=" + k}
@@ -74,9 +82,16 @@ export default async function Agenda({
           <button className="button button-outline">Ver fecha</button>
         </form>
       )}
-      {["today", "week", "date", "overdue", "all", "deliveries"].includes(
-        view,
-      ) && (
+      {[
+        "today",
+        "week",
+        "date",
+        "overdue",
+        "all",
+        "deliveries",
+        "receivables",
+        "payables",
+      ].includes(view) && (
         <AgendaDeadlines
           view={view}
           date={view === "date" ? (date ?? today) : today}
@@ -91,7 +106,7 @@ export default async function Agenda({
           page={Math.max(1, Math.min(10000, parseInt(q.page ?? "1") || 1))}
         />
       ) : (
-        view !== "deliveries" && (
+        !["deliveries", "receivables", "payables"].includes(view) && (
           <DashboardTasks
             page={Math.max(1, Math.min(10000, parseInt(q.page ?? "1") || 1))}
             view={view}

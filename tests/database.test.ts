@@ -2452,6 +2452,8 @@ it("los vencimientos del acuerdo siguen el saldo parcial, la liquidación y el r
   };
   await movement(40);
   expect(await notices()).toEqual(["agreement_collection","agreement_payment"]);
+  const amounts=()=>db.query("select kind,balance_cents,managed from agenda_notifications where id=$1 order by kind",[account]);
+  expect((await amounts()).rows).toEqual([{kind:"agreement_collection",balance_cents:"60",managed:false},{kind:"agreement_payment",balance_cents:"60",managed:false}]);
   const finalPayment=await movement(60);
   expect(await notices()).toEqual(["agreement_payment"]);
   await db.query("update finance_entries set reversal_reason='Captura duplicada' where id=$1",[finalPayment]);

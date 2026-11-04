@@ -15,6 +15,7 @@ export async function ProjectFinance({
   page = 1,
   planPage,
   showPlans,
+  schedule,
   change,
 }: {
   project: string;
@@ -24,6 +25,7 @@ export async function ProjectFinance({
   page?: number;
   planPage: number;
   showPlans: boolean;
+  schedule?: string;
   change?: string;
 }) {
   const ctx = await requireContext();
@@ -37,7 +39,7 @@ export async function ProjectFinance({
         </Link>
       </section>
     );
-  const planQuery = ctx.db
+  let planQuery = ctx.db
     .from("project_schedule_details")
     .select(
       "id,label,due_date,change_description,amount_text:amount_cents::text,collected_text:collected_cents::text,balance_text:balance_cents::text",
@@ -45,7 +47,7 @@ export async function ProjectFinance({
     )
     .eq("organization_id", ctx.organization.id)
     .eq("project_id", project);
-  const historyQuery = ctx.db
+  let historyQuery = ctx.db
     .from("project_payment_history")
     .select(
       "id,amount_cents,paid_on,reference,state,version,reversal_reason,package_name",
@@ -53,8 +55,12 @@ export async function ProjectFinance({
     )
     .eq("organization_id", ctx.organization.id)
     .eq("project_id", project);
+  if (schedule) {
+    planQuery = planQuery.eq("id", schedule);
+    historyQuery = historyQuery.eq("schedule_id", schedule);
+  }
   const planLink = (n: number) =>
-    `?planes=${n}&payments=${page}${change ? "&ampliacion=" + change : ""}#plan-cobro`;
+    `?planes=${n}&payments=${page}${change ? "&ampliacion=" + change : ""}${schedule ? "&obligacion=" + schedule : ""}#plan-cobro`;
   const [summary, plans, payments] = await Promise.all([
     ctx.db
       .from("project_financial_summary")
@@ -111,11 +117,13 @@ export async function ProjectFinance({
         {!summary.data && manual && (
           <AmountForm project={project} version={version} today={today} />
         )}
-        <details id="plan-cobro" open={!!change || showPlans}>
+        <details id="plan-cobro" open={!!schedule || !!change || showPlans}>
           <summary>Ver el plan de cobro</summary>
-          {change && (
+          {(change || schedule) && (
             <p>
-              Obligaciones de la ampliación seleccionada.{" "}
+              {schedule
+                ? "Obligación seleccionada en la agenda."
+                : "Obligaciones de la ampliación seleccionada."}{" "}
               <Link href="?planes=1#plan-cobro">Ver todos los planes</Link>
             </p>
           )}
@@ -148,7 +156,7 @@ export async function ProjectFinance({
         </details>
       </div>
       <SchedulePaymentForm
-        key={`${change ?? "todos"}-${planPage}`}
+        key={`${schedule ?? change ?? "todos"}-${planPage}`}
         plans={(plans.data || [])
           .filter((p) => BigInt(p.balance_text) > 0n)
           .map((p) => ({
@@ -165,9 +173,11 @@ export async function ProjectFinance({
       />
       <div className="panel padded">
         <h2 id="historial-cobros">
-          {change
-            ? "Historial de cobros de esta ampliación"
-            : "Historial de anticipos y pagos"}
+          {schedule
+            ? "Historial de la obligación seleccionada"
+            : change
+              ? "Historial de cobros de esta ampliación"
+              : "Historial de anticipos y pagos"}
         </h2>
         {payments.data?.map((payment) => (
           <div className="payment-row" key={payment.id}>
@@ -205,7 +215,7 @@ export async function ProjectFinance({
           {page > 1 && (
             <Link
               className="button button-outline"
-              href={`/proyectos/${project}?payments=${page - 1}&planes=${planPage}${change ? "&ampliacion=" + change : ""}#historial-cobros`}
+              href={`/proyectos/${project}?payments=${page - 1}&planes=${planPage}${change ? "&ampliacion=" + change : ""}${schedule ? "&obligacion=" + schedule : ""}#historial-cobros`}
             >
               Anteriores
             </Link>
@@ -213,7 +223,7 @@ export async function ProjectFinance({
           {page * 30 < (payments.count || 0) && (
             <Link
               className="button button-outline"
-              href={`/proyectos/${project}?payments=${page + 1}&planes=${planPage}${change ? "&ampliacion=" + change : ""}#historial-cobros`}
+              href={`/proyectos/${project}?payments=${page + 1}&planes=${planPage}${change ? "&ampliacion=" + change : ""}${schedule ? "&obligacion=" + schedule : ""}#historial-cobros`}
             >
               Siguientes
             </Link>

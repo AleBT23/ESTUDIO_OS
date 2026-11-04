@@ -2,7 +2,7 @@ import { weekThrough } from "./agenda-window";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 const weekday = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-import { eventHref, kinds } from "./agenda-event";
+import { eventHref, eventTypeLabel } from "./agenda-event";
 export async function StudioCalendar({
   date,
   page,
@@ -29,7 +29,9 @@ export async function StudioCalendar({
       .lt("due_on", iso(next)),
     ctx.db
       .from("agenda_events")
-      .select("id,project_id,kind,label", { count: "exact" })
+      .select("id,project_id,kind,label,balance_cents,managed", {
+        count: "exact",
+      })
       .eq("organization_id", org)
       .eq("due_on", date)
       .order("kind")
@@ -82,7 +84,7 @@ export async function StudioCalendar({
       {events.data.length ? (
         events.data.map((e) => (
           <article key={e.kind + e.id} className="activity-row">
-            <small>{kinds[e.kind]}</small>
+            <small>{eventTypeLabel(e)}</small>
             <Link href={eventHref(e)}>{e.label}</Link>
           </article>
         ))
@@ -109,14 +111,20 @@ export async function AgendaDeadlines({
   const ctx = await requireContext();
   let query = ctx.db
     .from("agenda_events")
-    .select("id,kind,label,project_id,due_on", { count: "exact" })
+    .select("id,kind,label,project_id,due_on,balance_cents,managed", {
+      count: "exact",
+    })
     .eq("organization_id", ctx.organization.id)
     .neq("kind", "task");
+  if (view === "receivables")
+    query = query.in("kind", ["collection", "agreement_collection"]);
+  if (view === "payables") query = query.eq("kind", "agreement_payment");
   if (view === "deliveries") query = query.eq("kind", "delivery");
   if (view === "week" || view === "deliveries")
     query = query.gte("due_on", date).lte("due_on", weekThrough(date));
   else if (view === "overdue") query = query.lt("due_on", date);
-  else if (view !== "all") query = query.eq("due_on", date);
+  else if (!["all", "receivables", "payables"].includes(view))
+    query = query.eq("due_on", date);
   const result = await query
     .order("due_on")
     .order("kind")
@@ -129,15 +137,19 @@ export async function AgendaDeadlines({
   return (
     <section className="panel padded">
       <h2>
-        {view === "deliveries"
-          ? "Entregas de los próximos siete días"
-          : "Vencimientos y seguimientos"}
+        {view === "receivables"
+          ? "Cobros con fecha y saldo pendiente"
+          : view === "payables"
+            ? "Pagos con fecha y saldo pendiente"
+            : view === "deliveries"
+              ? "Entregas de los próximos siete días"
+              : "Vencimientos y seguimientos"}
       </h2>
       {!result.data.length && <p>Sin eventos en esta selección.</p>}
       {result.data.map((e) => (
         <article className="activity-row" key={e.kind + e.id}>
           <small>
-            {e.due_on} · {kinds[e.kind]}
+            {e.due_on} · {eventTypeLabel(e)}
           </small>
           <Link href={eventHref(e)}>{e.label}</Link>
         </article>
