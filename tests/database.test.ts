@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(34);
+  expect(rows).toHaveLength(35);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2819,4 +2819,22 @@ it("el ensayo de presets conserva el orden, exige referencias activas y evita re
  expect((await apply(preset)).rows[0].result).toBe("unchanged");
  expect((await db.query("select s.legacy_id,i.quantity::int qty from service_presets p join preset_items i on i.preset_id=p.id join services s on i.service_id=s.id where p.legacy_id=$1 order by i.position",[preset.id])).rows).toEqual([{legacy_id:"srv-B",qty:1},{legacy_id:"srv-A",qty:1}]);
  await expect(apply({...preset,serviceIds:["srv-A","srv-B"]})).rejects.toThrow("distintos");
+});
+it("archiva literalmente una propuesta para cotejo sin crear proyectos, contratos ni cobros",async()=>{
+ await asUser(owner);
+ const cid="hist-cl-"+crypto.randomUUID();
+ const cli=(await db.query<{id:string}>("insert into clients(organization_id,legacy_id,name,kind) values($1,$2,'Archivo de prueba','company') returning id",[org,cid])).rows[0].id;
+ const record={id:"historica-077",proposalNumber:"COT-2024-001",clientId:cid,items:[{unit:"pct"}],grandTotal:3200000,notes:"Texto íntegro"};
+ const save=(row:object)=>db.query<{result:string}>("select stage_historical_quote($1,$2::jsonb,$3,'MXN') result",[org,JSON.stringify(row),"a".repeat(64)]);
+ const totals=()=>db.query("select (select count(*) from quotes) quotes,(select count(*) from projects) projects,(select count(*) from finance_cases) agreements,(select count(*) from payments) payments");
+ const read=()=>db.query("select payload,client_id from legacy_proposal_archive where organization_id=$1 and legacy_id=$2",[org,record.id]);
+ await db.exec("reset role");await db.query("insert into private.legacy_staging_targets values($1) on conflict do nothing",[org]);await asUser(owner);
+ const before=(await totals()).rows;
+ expect((await save(record)).rows[0].result).toBe("inserted");expect((await save(record)).rows[0].result).toBe("unchanged");
+ await expect(save({...record,grandTotal:1})).rejects.toThrow("distintos");
+ expect((await read()).rows).toEqual([{payload:record,client_id:cli}]);
+ expect((await totals()).rows).toEqual(before);
+ await expect(db.query("update legacy_proposal_archive set folio='X' where legacy_id=$1",[record.id])).rejects.toThrow();
+ for(const user of [other,reader]){await asUser(user);expect((await read()).rows).toEqual([]);await expect(save(record)).rejects.toThrow("no habilitado");}
+ await asUser(owner);
 });

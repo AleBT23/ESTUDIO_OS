@@ -541,3 +541,6 @@ El propietario puede recuperar un preset por identificador después de importar 
 
 ### Conciliación individual de propuestas
 El informe local permite revisar por folio e identificador el total histórico, el recalculado y la diferencia de subtotal y descuentos. Usa el IVA registrado en cada propuesta. Una prueba reproduce una diferencia de 178,20 al comparar una partida porcentual histórica con el cálculo actual. La revisión conserva intactos el archivo y la base de datos.
+
+### Archivo histórico de propuestas en staging
+El propietario puede conservar y consultar una propuesta histórica por su identificador, junto con sus partidas, folio, moneda de configuración y huella de origen. El vínculo al directorio exige coincidencia por ID. Se verificó que el contenido, incluidos los importes, permanece idéntico tras reintentos y que la operación conserva los conteos de cotizaciones operativas, proyectos, acuerdos y cobros. Pasaron 215 pruebas y se restauraron 77 migraciones en PostgreSQL 17 con datos sintéticos. El inventario remoto confirmó 10 migraciones aplicadas y 67 pendientes. La suite autenticada se detiene antes de iniciar sesión por falta de la clave local y las cuentas de administrador y lector. Pendientes el ensayo con copia real, la conciliación de PDFs y la importación de conceptos.

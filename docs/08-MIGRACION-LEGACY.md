@@ -27,3 +27,6 @@ En una base aislada con la migración 068, el administrador de PostgreSQL habili
 
 ## Ensayo de servicios y presets
 Con las migraciones 075 y 076, revisa la exportación en Configuración y consulta los identificadores en el informe local. Importa cada servicio a la línea elegida. El catálogo exige moneda MXN explícita y precios representables en centavos. Conserva las tarifas porcentuales y el estado de archivo. Después selecciona el preset por su identificador. Todos sus servicios deben estar activos en el destino de ensayo. El preset conserva el orden del legado y cantidad uno en cada partida. Una repetición coincidente conserva la versión existente.
+
+## Archivo histórico de propuestas
+En staging, el propietario puede abrir el archivo desde Configuración y seleccionar una propuesta por el identificador mostrado en el informe de conciliación. Se conserva el contenido JSON de la propuesta, su folio y la huella de la exportación. La moneda mostrada corresponde a la configuración de la exportación. El vínculo al cliente se establece solo por identificador original. Los importes históricos quedan disponibles para cotejo y la operación carece de efectos financieros. Una revisión distinta del mismo identificador requiere conciliación antes de cualquier nueva incorporación.

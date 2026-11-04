@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { stageLegacyService, stageLegacyPreset } from "./stage-legacy-service";
 import { RecordForm } from "@/shared/ui/record-form";
 import { stageLegacyClients } from "./stage-legacy-clients";
@@ -91,6 +92,11 @@ export function StageLegacyPanel({
           </label>
         </RecordForm>
       </details>
+      <p>
+        <Link href="/configuracion/archivo">
+          Abrir archivo histórico de propuestas de staging
+        </Link>
+      </p>
     </>
   );
 }

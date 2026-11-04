@@ -54,6 +54,7 @@ export async function verifyLegacyBackup(input: unknown) {
   }
   return {
     payload: backup.payload,
+    checksum: actual,
     issues,
     validForImport: issues.length === 0,
   };

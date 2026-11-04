@@ -11,7 +11,10 @@ export function selectLegacyService(entries: Entries, id: string) {
 export function selectLegacyPreset(entries: Entries, id: string) {
   return pickById(entries.archiquote_presets, id);
 }
-function pickById(raw: string | null, id: string) {
+export function selectLegacyProposal(entries: Entries, id: string) {
+  return pickById(entries.archiquote_proposals, id, "proposalNumber");
+}
+function pickById(raw: string | null, id: string, field = "name") {
   const values = z
     .array(z.object({ id: z.string() }).passthrough())
     .max(10000)
@@ -20,16 +23,19 @@ function pickById(raw: string | null, id: string) {
   if (matches.length !== 1)
     throw Error("El identificador debe corresponder a un único registro.");
   const selected = matches[0];
+  const name = selected[field];
   if (
-    values.some(
-      (v) =>
+    typeof name === "string" &&
+    values.some((v) => {
+      const other = v[field];
+      return (
         v !== selected &&
-        typeof v.name === "string" &&
-        typeof selected.name === "string" &&
-        v.name.trim().toLocaleLowerCase("es-MX") ===
-          selected.name.trim().toLocaleLowerCase("es-MX"),
-    )
+        typeof other === "string" &&
+        other.trim().toLocaleLowerCase("es-MX") ===
+          name.trim().toLocaleLowerCase("es-MX")
+      );
+    })
   )
-    throw Error("Nombre duplicado en la exportación.");
+    throw Error("Nombre o folio duplicado en la exportación.");
   return selected;
 }
