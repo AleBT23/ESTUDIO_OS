@@ -1,4 +1,5 @@
 import { DeliveryPanel } from "@/modules/projects/delivery-panel";
+import { canManageCommercial } from "@/shared/permissions";
 import Link from "next/link";
 import { z } from "zod";
 import { notFound } from "next/navigation";
@@ -105,6 +106,11 @@ export default async function ProjectPage({
           </div>
         </>
       ) : null}
+      {canManageCommercial(ctx.membership.role) && (
+        <Link href={"/comercial/contratos?proyecto=" + id}>
+          Contratos del proyecto
+        </Link>
+      )}
       <DeliveryPanel
         id={id}
         page={page(filter.entregas)}

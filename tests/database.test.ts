@@ -2066,3 +2066,14 @@ it("publica comprobantes solo tras cargar el objeto y limita acceso, sustitució
  for(const user of [reader,other]){await asUser(user);expect((await list()).rows).toHaveLength(0);expect((await db.query("select name from storage.objects where name=$1",[path])).rows).toHaveLength(0);}
  await asUser(owner);
 });
+
+it("el contrato firmado conserva el cliente del proyecto y no duplica sus cobros",async()=>{
+ await asUser(owner);
+ const proj=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Proyecto contratado',current_date,5000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const another=(await db.query<{id:string}>("insert into clients(organization_id,name) values($1,'Cliente distinto') returning id",[org])).rows[0].id;
+ const create=(customer:string,reference:string)=>db.query("insert into contracts(id,organization_id,client_id,project_id,reference,title,signed_on,scope) values($1,$2,$3,$4,$5,'Servicios técnicos',current_date,'Planos ejecutivos')",[crypto.randomUUID(),org,customer,proj,reference]);
+ await create(client,"CT-A");await expect(create(client," ct-a ")).rejects.toThrow();await expect(create(another,"CT-B")).rejects.toThrow();
+ expect((await db.query("select collected_cents::int,balance_cents::int from project_financial_summary where project_id=$1",[proj])).rows).toEqual([{collected_cents:0,balance_cents:5000}]);
+ for(const user of [reader,other]){await asUser(user);expect((await db.query("select id from contracts where project_id=$1",[proj])).rows).toHaveLength(0);await expect(create(client,"CT-C")).rejects.toThrow();}
+ await asUser(owner);
+});

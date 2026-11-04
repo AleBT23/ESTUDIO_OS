@@ -70,6 +70,11 @@ export default async function ClientPage({
             "Ambas líneas / por definir"}
         </p>
       </div>
+      {canWrite && (
+        <Link href={"/comercial/contratos?cliente=" + id}>
+          Contratos del cliente
+        </Link>
+      )}
       {edit === "1" && canWrite && !client.deleted_at ? (
         <ClientForm client={client} lines={ctx.lines} />
       ) : (

@@ -8,6 +8,7 @@ export function CommercialTabs({ active }: { active: string }) {
         ["Conceptos", "/comercial/conceptos"],
         ["Presets", "/comercial/presets"],
         ["Cotizaciones", "/comercial/cotizaciones"],
+        ["Contratos", "/comercial/contratos"],
       ].map(([label, href]) => (
         <Link
           key={href}
