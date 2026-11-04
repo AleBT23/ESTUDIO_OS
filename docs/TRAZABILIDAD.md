@@ -30,13 +30,13 @@
 | DOC-01 | Parcial: motor de variables con lista blanca, sintaxis/missing-data y sustitución no recursiva probados; documentos con párrafos/subtítulos/listas/saltos | Plantillas reutilizables versionadas, tablas/imágenes y contexto de cotización integrado en editor |
 | DOC-02 | Parcial: PNG real carta, proporción preservada, márgenes seguros y preview PDF | Membretes múltiples privados/carga, aviso de proporción/ajuste y guías visuales |
 | DOC-03 | Parcial: seis secciones opcionales/reordenables, presupuesto obligatorio; Unicode, 1/12 páginas, encabezado repetido y firmas; pdf.test | Personalización de textos/plantillas/anexos y escenarios extremos de contenido |
-| DOC-04 | Parcial: cartas/oficios/minutas/reportes, borradores guardados, contexto cliente/proyecto opcional, márgenes, preview y emisión/descarga/versiones privadas sin presupuesto | E2E remoto; tablas/imágenes/adjuntos; archivo recuperable del documento |
+| DOC-04 | Cartas, oficios, minutas y reportes con borradores, contexto, emisión y versiones privadas. Recursos permite archivar y recuperar documentos con auditoría y versión optimista (051). | E2E autenticado y alcance de tablas, imágenes y adjuntos en el cuerpo. |
 | LIB-01 | Implementado localmente | Biblioteca buscable, etiquetas, vínculos, revisiones inmutables y adjuntos privados de hasta 2 MiB por versión. Pendiente preview autenticada. |
 | SOP-01 | Implementado localmente | Procedimientos reutilizables, ejecuciones independientes por proyecto y pasos reversibles. Preview autenticada pendiente. |
 | CORE-01 | Parcial: Supabase SSR, roles, RLS y autorización servidor probados SQL | Credenciales y E2E Auth, invitaciones/roles editables, revisión de acceso por proyecto |
 | CORE-02 | Parcial: auditoría, versiones, archivo de clientes/contactos/servicios, reversos de cobro | Completar recuperación en restantes entidades |
 | CORE-03 | Parcial: exportador legado/validador SHA-256, migrador con checksums | Importación staging/reconciliación, backups BD/archivos, exportación general y restauración ensayada |
-| CORE-04 | Parcial: fecha/señal de seguimiento sin duplicar calendario | Centro persistente de notificaciones/recordatorios y proveedor/jobs |
+| CORE-04 | Agenda y avisos internos por usuario. Incluye seguimientos, vencimientos de acuerdos según saldo y recordatorios privados sin proyecto, con reprogramación y recurrencia (038, 048 y 049). | Verificación autenticada de punta a punta y evaluación del proveedor de notificaciones externas. |
 | CORE-05 | Parcial: shell responsive, formularios, foco/reduced-motion; E2E móvil | E2E de formularios autenticados y accesibilidad ampliada |
 
 ## Hitos

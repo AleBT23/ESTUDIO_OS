@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(19);
+  expect(rows).toHaveLength(20);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2417,4 +2417,23 @@ it("el expediente atribuye los acuerdos sin duplicar al cliente de la obra o del
  expect((await visible()).rows).toEqual([{client_id:client,managed:true,receivable:"900",payable:"750"}]);
  await asUser(reader);expect((await visible()).rows).toHaveLength(0);
  await asUser(other);expect((await visible()).rows).toHaveLength(0);await asUser(owner);
+});
+
+it("archiva y recupera el documento con control de versión, permisos y auditoría",async()=>{
+ await asUser(owner);
+ const header={title:"Acta de archivo",kind:"letter",body:"Texto del documento",margins:defaultDocumentOptions.margins};
+ const {id}=(await db.query<{id:string}>("select save_studio_document($1,null,0,$2::jsonb) id",[org,JSON.stringify(header)])).rows[0];
+ const issued=(await db.query<{data:{id:string;storage_path:string;snapshot:unknown}}>("select prepare_studio_document($1,$2,1) data",[org,id])).rows[0].data;
+ await db.query("insert into storage.objects(bucket_id,name) values('estudio-documents',$1)",[issued.storage_path]);
+ await db.query("select finalize_studio_document($1,$2,$3)",[org,issued.id,"d".repeat(64)]);
+ const change=(v:number,archive:boolean)=>db.query("select set_studio_document_archived($1,$2,$3,$4)",[org,id,v,archive]);
+ await asUser(reader);await expect(change(1,true)).rejects.toThrow();
+ await asUser(other);await expect(change(1,true)).rejects.toThrow();
+ await asUser(owner);await change(1,true);
+ await expect(change(1,false)).rejects.toThrow();
+ await expect(db.query("select prepare_studio_document($1,$2,2)",[org,id])).rejects.toThrow();
+ expect((await db.query("select snapshot,storage_path,state from generated_documents where id=$1",[issued.id])).rows).toEqual([{snapshot:issued.snapshot,storage_path:issued.storage_path,state:"issued"}]);
+ await change(2,false);
+ expect((await db.query("select title,body,version,deleted_at from studio_documents where id=$1",[id])).rows).toEqual([{title:header.title,body:header.body,version:3,deleted_at:null}]);
+ expect((await db.query("select action from audit_events where entity_id=$1 order by action",[id])).rows).toEqual([{action:"archived"},{action:"created"},{action:"restored"}]);
 });

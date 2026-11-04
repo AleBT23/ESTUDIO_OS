@@ -423,3 +423,6 @@ Agenda → Mis recordatorios permite crear, reprogramar y completar pendientes p
 
 ### Acuerdos en el expediente del cliente
 Comercial → Cliente muestra los acuerdos propios y administrados con sus saldos por cobrar y por pagar. Incluye acuerdos vinculados indirectamente por proyecto u obra y enlaza a su historial y al reporte filtrado. Se verificaron atribución y permisos. Pasaron 171 pruebas, TypeScript, ESLint, build, Playwright (7 aprobadas y 1 omitida) y concurrencia PostgreSQL con 50 migraciones. Pendiente validar en preview y producción.
+
+### Archivo recuperable de documentos
+En Recursos → Documentos, administración puede archivar un documento, buscarlo en Archivados y restaurarlo. La operación comprueba la versión vigente y registra actor y cambio en la auditoría existente. La prueba SQL verificó permisos, edición obsoleta, recuperación del texto y conservación del registro emitido con su snapshot y ruta privada. Biblioteca y Procedimientos ya enlazan a sus módulos desde Documentos. Pasaron 172 pruebas, TypeScript, ESLint, build y empaquetado PDF; 7 recorridos Playwright pasaron y 1 se omitió. PostgreSQL local aplicó 51 migraciones. Pendiente recorrido autenticado con descarga desde Storage en preview y restauración de un respaldo real antes de migrar producción.

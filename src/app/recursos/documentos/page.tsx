@@ -1,3 +1,5 @@
+import { RecordForm } from "@/shared/ui/record-form";
+import { changeDocumentArchive } from "@/modules/documents/standalone-actions";
 import { TemplatePanel } from "@/modules/documents/template-panel";
 import Link from "next/link";
 import { z } from "zod";
@@ -17,6 +19,7 @@ export default async function StudioDocumentsPage({
 }: {
   searchParams: Promise<{
     new?: string;
+    archivo?: string;
     plantilla?: string;
     selected?: string;
     edit?: string;
@@ -33,6 +36,7 @@ export default async function StudioDocumentsPage({
       </p>
     );
   const filter = await searchParams;
+  const archived = filter.archivo === "1";
   const q = typeof filter.q === "string" ? filter.q.trim().slice(0, 120) : "";
   const page = Math.max(
     1,
@@ -42,9 +46,12 @@ export default async function StudioDocumentsPage({
     .from("studio_documents")
     .select("id,title,kind,version,updated_at", { count: "exact" })
     .eq("organization_id", ctx.organization.id)
-    .is("deleted_at", null)
     .order("updated_at", { ascending: false })
+    .order("id")
     .range((page - 1) * 30, page * 30 - 1);
+  query = archived
+    ? query.not("deleted_at", "is", null)
+    : query.is("deleted_at", null);
   if (q) query = query.ilike("title", "%" + q.replace(/[\\%_]/g, "\\$&") + "%");
   const list = await query;
   if (list.error) throw new Error("No se pudieron cargar los documentos.");
@@ -110,7 +117,8 @@ export default async function StudioDocumentsPage({
   if (versions?.error)
     throw new Error("No se pudo consultar el historial documental.");
   const href = (n: number) =>
-    "/recursos/documentos?" + new URLSearchParams({ q, page: String(n) });
+    "/recursos/documentos?" +
+    new URLSearchParams({ q, archivo: archived ? "1" : "0", page: String(n) });
   return (
     <>
       <div className="page-heading">
@@ -124,8 +132,8 @@ export default async function StudioDocumentsPage({
           Documentos
         </Link>
         <Link href="/recursos/plantillas">Plantillas</Link>
-        <span className="planned">Biblioteca · pendiente</span>
-        <span className="planned">Procedimientos · pendiente</span>
+        <Link href="/recursos/biblioteca">Biblioteca</Link>
+        <Link href="/recursos/procedimientos">Procedimientos</Link>
       </nav>
       {selected && !editing && (
         <TemplatePanel source={selected.id} version={selected.version} />
@@ -158,6 +166,21 @@ export default async function StudioDocumentsPage({
                 </Link>
               </Button>
             </div>
+            <details>
+              <summary>Archivar documento</summary>
+              <RecordForm
+                id={selected.id}
+                save={changeDocumentArchive}
+                submitLabel="Archivar documento"
+              >
+                <input type="hidden" name="version" value={selected.version} />
+                <input type="hidden" name="intent" value="archive" />
+                <p>
+                  Podrás recuperarlo desde Archivados. Sus versiones emitidas se
+                  conservan.
+                </p>
+              </RecordForm>
+            </details>
             <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
               {selected.body}
             </p>
@@ -215,6 +238,13 @@ export default async function StudioDocumentsPage({
         <>
           <div className="toolbar">
             <form className="search-form">
+              <label>
+                Mostrar
+                <select name="archivo" defaultValue={archived ? "1" : "0"}>
+                  <option value="0">Vigentes</option>
+                  <option value="1">Archivados</option>
+                </select>
+              </label>
               <input
                 type="search"
                 name="q"
@@ -230,24 +260,42 @@ export default async function StudioDocumentsPage({
           </div>
           {list.data?.length ? (
             <div className="overview-grid">
-              {list.data.map((doc) => (
-                <Link
-                  className="panel overview-card"
-                  key={doc.id}
-                  href={"/recursos/documentos?selected=" + doc.id}
-                >
-                  <p className="eyebrow">
-                    {documentKinds[doc.kind as keyof typeof documentKinds]}
-                  </p>
-                  <h3>{doc.title}</h3>
-                  <span className="card-action">Abrir documento →</span>
-                </Link>
-              ))}
+              {list.data.map((doc) =>
+                archived ? (
+                  <article className="panel padded" key={doc.id}>
+                    <h3>{doc.title}</h3>
+                    <RecordForm
+                      id={doc.id}
+                      save={changeDocumentArchive}
+                      submitLabel="Restaurar documento"
+                    >
+                      <input type="hidden" name="version" value={doc.version} />
+                      <input type="hidden" name="intent" value="restore" />
+                    </RecordForm>
+                  </article>
+                ) : (
+                  <Link
+                    className="panel overview-card"
+                    key={doc.id}
+                    href={"/recursos/documentos?selected=" + doc.id}
+                  >
+                    <p className="eyebrow">
+                      {documentKinds[doc.kind as keyof typeof documentKinds]}
+                    </p>
+                    <h3>{doc.title}</h3>
+                    <span className="card-action">Abrir documento →</span>
+                  </Link>
+                ),
+              )}
             </div>
           ) : (
             <section className="panel empty-state">
               <h2>
-                {q ? "Sin coincidencias" : "El siguiente acuerdo empieza aquí"}
+                {archived
+                  ? "Sin documentos archivados en esta selección"
+                  : q
+                    ? "Sin coincidencias"
+                    : "El siguiente acuerdo empieza aquí"}
               </h2>
               <p>
                 Prepara un documento independiente, con membrete y sin
