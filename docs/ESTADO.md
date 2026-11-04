@@ -604,3 +604,6 @@ Al ampliar la ventana con el menú móvil abierto se libera el desplazamiento y 
 
 ### Acceso desde enlaces internos
 La pantalla de acceso conserva la ruta y los filtros de la página protegida solicitada. La acción de inicio de sesión valida el destino y devuelve al usuario a esa página. Portal e invitaciones conservan sus propios destinos. Playwright verificó la llegada a acceso desde enlaces directos, incluido el tablero de Agenda. La prueba con credenciales del lector queda pendiente del entorno de ensayo. Pasaron 232 pruebas Vitest, diez recorridos de navegador, la compilación, ESLint y TypeScript. Un recorrido quedó omitido por configuración.
+
+### Validación de formularios compartidos
+Los formularios de registro conservan los campos al recibir un error de la acción de guardado. El componente distingue las alertas de error de las confirmaciones y comunica cuándo está ocupado. Playwright comprueba el rechazo de un correo inválido y la conservación de su valor en el registro por invitación. Se verificaron 232 pruebas Vitest, diez recorridos Playwright, compilación, ESLint y TypeScript. Un recorrido condicionado por la configuración quedó omitido.

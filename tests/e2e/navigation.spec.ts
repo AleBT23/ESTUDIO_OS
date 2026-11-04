@@ -36,7 +36,7 @@ test("configuración sin credenciales explica el bloqueo y no inventa conexión"
     page.getByText("Conexión pendiente", { exact: true }),
   ).toBeVisible();
   await page.goto("/comercial/clientes/nuevo");
-  await expect(page).toHaveURL(url=>url.pathname==="/acceso");
+  await expect(page).toHaveURL((url) => url.pathname === "/acceso");
   await expect(
     page.getByText("El estudio aún no está conectado.", { exact: false }),
   ).toBeVisible();
@@ -118,8 +118,10 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
     "/recursos/documentos",
   ]) {
     await page.goto(path);
-    await expect(page).toHaveURL(url=>url.pathname==="/acceso" && url.searchParams.get("volver")===path);
-
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === "/acceso" && url.searchParams.get("volver") === path,
+    );
   }
 });
 
@@ -194,6 +196,14 @@ test("la invitación ofrece acceso y registro de cuenta sin crear membresías al
     await expect(
       page.getByRole("button", { name: "Crear cuenta", exact: true }),
     ).toBeVisible();
+    const form = page.locator("details form");
+    await form.getByLabel("Correo electrónico").fill("prueba@local");
+    await form.getByLabel(/Contraseña/).fill("valor-sintetico-de-prueba");
+    await form.getByRole("button", { name: "Crear cuenta" }).click();
+    await expect(form.getByRole("alert")).toContainText("Revisa el correo");
+    await expect(form.getByLabel("Correo electrónico")).toHaveValue(
+      "prueba@local",
+    );
   } else
     await expect(
       page.getByText("Las invitaciones requieren conexión con el estudio."),
