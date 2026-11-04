@@ -278,3 +278,6 @@ Migración 017. Desde el detalle de un acuerdo se registran folio, fecha e impor
 
 ### Padrón comercial de proveedores
 Migración 018. Administración → Operaciones permite abrir el padrón, buscar proveedores y subcontratistas y asociarlos a nuevos acuerdos. Se conserva el nombre histórico del proveedor del acuerdo. La prueba PostgreSQL comprueba la asociación y el rechazo de una referencia cruzada entre estudios. TypeScript, ESLint y 126 pruebas correctos.
+
+### Búsqueda y tema de la aplicación
+Búsqueda por nombre en clientes, proyectos, cotizaciones, documentos, obras y acuerdos con consultas por organización y por permiso; acceso desde la cabecera y Ctrl/Cmd+K. Tema claro/oscuro compartido, con preferencia persistida y aplicada desde el render inicial. TypeScript, ESLint, 126 pruebas, build y verificación PDF correctos. Chromium: seis pruebas correctas y una de instalación sin credenciales omitida; verificadas persistencia del tema, navegación móvil y protección de las rutas nuevas. Falta prueba autenticada de los resultados de búsqueda.

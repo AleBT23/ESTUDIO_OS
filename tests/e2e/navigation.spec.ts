@@ -90,6 +90,8 @@ test("rutas de PDF y captura protegidas rechazan acceso sin sesión", async ({
   ])
     expect((await request.get(path)).status()).toBe(403);
   for (const path of [
+    "/buscar",
+    "/administracion/proveedores",
     "/comercial/pipeline",
     "/comercial/catalogo",
     "/comercial/conceptos",
@@ -117,4 +119,20 @@ test("la barra lateral conserva la preferencia al recargar", async ({
     .getByRole("link", { name: "Comercial", exact: true })
     .click();
   await expect(page).toHaveURL(/\/comercial$/);
+});
+
+test("el modo oscuro conserva la preferencia y el contraste de superficie al navegar", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Activar modo oscuro" }).click();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  expect(
+    await page
+      .locator("body")
+      .evaluate((el) => getComputedStyle(el).backgroundColor),
+  ).toBe("rgb(23, 27, 25)");
+  await page.getByRole("button", { name: "Activar modo claro" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });

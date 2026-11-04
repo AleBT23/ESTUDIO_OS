@@ -21,10 +21,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const ctx = await getContext();
+  const dark = (await cookies()).get("studio-theme")?.value === "dark";
   return (
-    <html lang="es">
+    <html lang="es" data-theme={dark ? "dark" : "light"}>
       <body>
         <Shell
+          darkTheme={dark}
           compactMenu={
             (await cookies()).get("studio-menu-compact")?.value === "1"
           }

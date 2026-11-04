@@ -12,6 +12,9 @@ import {
   Wallet,
   BookOpen,
   Settings2,
+  Search,
+  Sun,
+  Moon,
   ArrowUpRight,
   Menu,
   X,
@@ -31,17 +34,35 @@ export function Shell({
   organization,
   email,
   compactMenu,
+  darkTheme,
   finance,
 }: {
   children: React.ReactNode;
   organization?: string;
   email?: string;
+  darkTheme?: boolean;
   compactMenu?: boolean;
   finance?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [compact, setCompact] = useState(!!compactMenu);
+  const [dark, setDark] = useState(!!darkTheme);
+  const searchLink = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "k" &&
+        searchLink.current
+      ) {
+        event.preventDefault();
+        searchLink.current.click();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const sidebar = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -231,19 +252,48 @@ export function Shell({
             <span>/</span>
             <strong>
               {current?.label ||
-                (pathname === "/obras"
-                  ? "Obras"
-                  : pathname === "/agenda"
-                    ? "Agenda"
-                    : pathname === "/acceso"
-                      ? "Acceso"
-                      : "Configuración")}
+                (pathname === "/buscar"
+                  ? "Búsqueda"
+                  : pathname === "/obras"
+                    ? "Obras"
+                    : pathname === "/agenda"
+                      ? "Agenda"
+                      : pathname === "/acceso"
+                        ? "Acceso"
+                        : "Configuración")}
             </strong>
           </div>
-          <Link className="topbar-link" href="/comercial">
-            Ir a Comercial
-            <ArrowUpRight size={15} />
-          </Link>
+          <button
+            className="icon-button"
+            aria-label={dark ? "Activar modo claro" : "Activar modo oscuro"}
+            onClick={() => {
+              const theme = dark ? "light" : "dark";
+              document.documentElement.dataset.theme = theme;
+              document.cookie =
+                "studio-theme=" +
+                theme +
+                "; Path=/; SameSite=Lax; Max-Age=31536000";
+              setDark(!dark);
+            }}
+          >
+            {dark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          {organization ? (
+            <Link
+              href="/buscar"
+              ref={searchLink}
+              className="icon-button"
+              aria-label="Buscar en el estudio"
+              title="Buscar (Ctrl/⌘ K)"
+            >
+              <Search size={18} />
+            </Link>
+          ) : (
+            <Link className="topbar-link" href="/comercial">
+              Ir a Comercial
+              <ArrowUpRight size={15} />
+            </Link>
+          )}
         </header>
         <main id="contenido" tabIndex={-1}>
           {children}
