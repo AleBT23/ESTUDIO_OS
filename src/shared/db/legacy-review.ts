@@ -186,15 +186,15 @@ export async function reviewLegacyBackup(value: unknown) {
       note("Propuesta " + (i + 1) + ": partidas o importes no conciliables.");
     }
   }
+  const identities = (group: Group) =>
+    (data.get(group) ?? []).map((row) => ({
+      id: text(row.id),
+      name: text(row.name),
+    }));
   return {
-    presets: (data.get("presets") ?? []).map((row) => ({
-      id: text(row.id),
-      name: text(row.name),
-    })),
-    services: (data.get("services") ?? []).map((row) => ({
-      id: text(row.id),
-      name: text(row.name),
-    })),
+    presets: identities("presets"),
+    services: identities("services"),
+    concepts: identities("concept_library"),
     counts,
     issues,
     issueCount,

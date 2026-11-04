@@ -5,6 +5,7 @@ import { verifyLegacyBackup } from "@/shared/db/legacy-backup";
 import {
   selectLegacyService,
   selectLegacyPreset,
+  selectLegacyConcept,
 } from "@/shared/db/legacy-service";
 import type { RecordState } from "@/shared/ui/record-form";
 export async function stageLegacyService(
@@ -57,7 +58,8 @@ export async function stageLegacyService(
   };
 }
 
-export async function stageLegacyPreset(
+async function stageTextRecord(
+  kind: "preset" | "concept",
   _: RecordState,
   form: FormData,
 ): Promise<RecordState> {
@@ -79,26 +81,43 @@ export async function stageLegacyPreset(
     );
     if (!validForImport)
       return { error: "El respaldo contiene errores de exportación." };
-    item = selectLegacyPreset(payload.entries, id.trim());
+    item =
+      kind === "preset"
+        ? selectLegacyPreset(payload.entries, id.trim())
+        : selectLegacyConcept(payload.entries, id.trim());
   } catch {
     return {
-      error: "Revisa la exportación y el identificador único del preset.",
+      error: "Revisa la exportación y el identificador único del registro.",
     };
   }
-  const { data, error } = await ctx.db.rpc("stage_legacy_preset", {
-    org: ctx.organization.id,
-    item,
-  });
+  const { data, error } = await ctx.db.rpc(
+    kind === "preset" ? "stage_legacy_preset" : "stage_legacy_concept",
+    {
+      org: ctx.organization.id,
+      item,
+    },
+  );
   if (error)
     return {
       error:
-        "Comprueba que cada servicio esté importado y activo y que el preset coincida con el catálogo de staging.",
+        kind === "preset"
+          ? "Comprueba que cada servicio esté importado y activo y que el preset coincida con el catálogo de staging."
+          : "Revisa permisos, longitud del texto y coincidencias con el catálogo.",
     };
-  revalidatePath("/comercial/presets");
+  revalidatePath(
+    kind === "preset" ? "/comercial/presets" : "/comercial/conceptos",
+  );
   return {
     success:
       data === "inserted"
-        ? "Preset incorporado al catálogo de staging."
-        : "El preset ya coincide con el catálogo.",
+        ? "Registro incorporado al catálogo de staging."
+        : "El registro ya coincide con el catálogo.",
   };
+}
+
+export async function stageLegacyPreset(prev: RecordState, form: FormData) {
+  return stageTextRecord("preset", prev, form);
+}
+export async function stageLegacyConcept(prev: RecordState, form: FormData) {
+  return stageTextRecord("concept", prev, form);
 }

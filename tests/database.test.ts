@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(35);
+  expect(rows).toHaveLength(36);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2837,4 +2837,16 @@ it("archiva literalmente una propuesta para cotejo sin crear proyectos, contrato
  await expect(db.query("update legacy_proposal_archive set folio='X' where legacy_id=$1",[record.id])).rejects.toThrow();
  for(const user of [other,reader]){await asUser(user);expect((await read()).rows).toEqual([]);await expect(save(record)).rejects.toThrow("no habilitado");}
  await asUser(owner);
+});
+it("importa un concepto sin alterar espacios, acentos ni saltos de línea y protege ediciones locales",async()=>{
+ const item={id:"legacy-concept",name:"Alcance histórico",text:"Intervención · m²\nSegunda línea  "};
+ const apply=(v:object)=>db.query<{result:string}>("select stage_legacy_concept($1,$2::jsonb) result",[org,JSON.stringify(v)]);
+ await db.exec("reset role");await db.query("insert into private.legacy_staging_targets values($1) on conflict do nothing",[org]);await asUser(reader);
+ await expect(apply(item)).rejects.toThrow("no habilitado");await asUser(owner);
+ expect((await apply(item)).rows[0].result).toBe("inserted");
+ expect((await apply(item)).rows[0].result).toBe("unchanged");
+ expect((await db.query("select body from concepts where organization_id=$1 and legacy_id=$2",[org,item.id])).rows).toEqual([{body:item.text}]);
+ await expect(apply({...item,id:"duplicate"})).rejects.toThrow("ambiguo");
+ await db.query("update concepts set body='Nueva revisión' where organization_id=$1 and legacy_id=$2",[org,item.id]);
+ await expect(apply(item)).rejects.toThrow("distintos");
 });

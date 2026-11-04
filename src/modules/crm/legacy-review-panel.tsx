@@ -157,29 +157,26 @@ export function LegacyReviewPanel() {
               </nav>
             </details>
           )}
-          {!!result.services.length && (
-            <details>
-              <summary>Identificadores de servicios para staging</summary>
-              <ul>
-                {result.services.map((s, i) => (
-                  <li key={i}>
-                    {s.name} · <code>{s.id}</code>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-          {!!result.presets.length && (
-            <details>
-              <summary>Identificadores de presets para staging</summary>
-              <ul>
-                {result.presets.map((p, i) => (
-                  <li key={i}>
-                    {p.name} · <code>{p.id}</code>
-                  </li>
-                ))}
-              </ul>
-            </details>
+          {(
+            [
+              ["servicios", result.services],
+              ["presets", result.presets],
+              ["conceptos", result.concepts],
+            ] as const
+          ).map(
+            ([label, records]) =>
+              records.length > 0 && (
+                <details key={label}>
+                  <summary>Identificadores de {label} para staging</summary>
+                  <ul>
+                    {records.map((r, i) => (
+                      <li key={i}>
+                        {r.name} · <code>{r.id}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ),
           )}
           <h3>Incidencias ({result.issueCount})</h3>
           {result.issueCount ? (

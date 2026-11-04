@@ -8,6 +8,9 @@ export function selectLegacyService(entries: Entries, id: string) {
     throw Error("Se requiere una exportación con moneda MXN explícita.");
   return pickById(entries.archiquote_services, id);
 }
+export function selectLegacyConcept(entries: Entries, id: string) {
+  return pickById(entries.archiquote_concept_library, id);
+}
 export function selectLegacyPreset(entries: Entries, id: string) {
   return pickById(entries.archiquote_presets, id);
 }

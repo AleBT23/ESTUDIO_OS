@@ -30,3 +30,6 @@ Con las migraciones 075 y 076, revisa la exportación en Configuración y consul
 
 ## Archivo histórico de propuestas
 En staging, el propietario puede abrir el archivo desde Configuración y seleccionar una propuesta por el identificador mostrado en el informe de conciliación. Se conserva el contenido JSON de la propuesta, su folio y la huella de la exportación. La moneda mostrada corresponde a la configuración de la exportación. El vínculo al cliente se establece solo por identificador original. Los importes históricos quedan disponibles para cotejo y la operación carece de efectos financieros. Una revisión distinta del mismo identificador requiere conciliación antes de cualquier nueva incorporación.
+
+## Conceptos reutilizables
+La migración 078 habilita la importación individual a la biblioteca comercial del estudio de ensayo. Localiza el ID en el informe de revisión y selecciona ese registro en Configuración. El texto conserva acentos, espacios y saltos de línea. Si un miembro ya editó el concepto, la discrepancia requiere revisión.

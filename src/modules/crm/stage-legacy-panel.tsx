@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { stageLegacyService, stageLegacyPreset } from "./stage-legacy-service";
+import {
+  stageLegacyService,
+  stageLegacyPreset,
+  stageLegacyConcept,
+} from "./stage-legacy-service";
 import { RecordForm } from "@/shared/ui/record-form";
 import { stageLegacyClients } from "./stage-legacy-clients";
 export function StageLegacyPanel({
@@ -97,6 +101,23 @@ export function StageLegacyPanel({
           Abrir archivo histórico de propuestas de staging
         </Link>
       </p>
+      <details className="panel padded">
+        <summary>Importar un concepto de staging</summary>
+        <RecordForm
+          id="stage-concept"
+          save={stageLegacyConcept}
+          submitLabel="Importar concepto a staging"
+        >
+          <label>
+            Exportación JSON
+            <input type="file" accept=".json" name="file" required />
+          </label>
+          <label>
+            Identificador original del concepto
+            <input name="legacy_id" required maxLength={160} />
+          </label>
+        </RecordForm>
+      </details>
     </>
   );
 }
