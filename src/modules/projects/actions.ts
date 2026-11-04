@@ -32,7 +32,13 @@ export async function saveProjectNote(
       return { error: "Referencia inválida. Recarga el expediente." };
     const { data, error } = await ctx.db
       .from("project_notes")
-      .update({ body: record.body, due_on: record.due_on })
+      .update({
+        body: record.body,
+        due_on: record.due_on,
+        priority: record.priority,
+        repeat_days: record.repeat_days,
+        assignee: record.assignee,
+      })
       .eq("organization_id", ctx.organization.id)
       .eq("project_id", project)
       .eq("id", identity.data.id)

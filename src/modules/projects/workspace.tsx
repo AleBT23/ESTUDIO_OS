@@ -23,10 +23,14 @@ export async function DashboardTasks({
         actualización.
       </p>
     );
+  const members = await ctx.db
+    .from("memberships")
+    .select("user_id")
+    .eq("organization_id", ctx.organization.id);
   let query = ctx.db
     .from("project_notes_context")
     .select(
-      "id,project_id,project_name,kind,body,due_on,completed_at,version,created_at",
+      "id,project_id,project_name,kind,body,due_on,priority,repeat_days,assignee,completed_at,version,created_at",
       { count: "exact" },
     )
     .eq("organization_id", ctx.organization.id)
@@ -44,6 +48,8 @@ export async function DashboardTasks({
     view === "completed"
       ? query.not("completed_at", "is", null)
       : query.is("completed_at", null);
+  if (view === "mine") query = query.eq("assignee", ctx.user.id);
+  if (view === "high") query = query.eq("priority", "high");
   if (view === "today") query = query.eq("due_on", today);
   if (view === "date" && date) query = query.eq("due_on", date);
   if (view === "week")
@@ -76,6 +82,7 @@ export async function DashboardTasks({
       {data?.length ? (
         data.map((note) => (
           <NoteRow
+            members={members.data ?? []}
             key={note.id + ":" + note.version}
             note={note as ProjectNote}
             writable={canWriteProject(ctx.membership!.role)}
@@ -125,11 +132,11 @@ export async function ProjectWorkspace({
       </p>
     );
   const writable = canWriteProject(ctx.membership.role);
-  const [notes, visits] = await Promise.all([
+  const [notes, visits, members] = await Promise.all([
     ctx.db
       .from("project_notes")
       .select(
-        "id,project_id,kind,body,due_on,completed_at,version,created_at",
+        "id,project_id,kind,body,due_on,priority,repeat_days,assignee,completed_at,version,created_at",
         { count: "exact" },
       )
       .eq("organization_id", ctx.organization.id)
@@ -147,6 +154,10 @@ export async function ProjectWorkspace({
       .order("observed_on", { ascending: false })
       .order("created_at", { ascending: false })
       .range((visitsPage - 1) * 10, visitsPage * 10 - 1),
+    ctx.db
+      .from("memberships")
+      .select("user_id")
+      .eq("organization_id", ctx.organization.id),
   ]);
   if (notes.error || visits.error)
     throw new Error("No se pudo cargar la bitácora del proyecto.");
@@ -174,10 +185,13 @@ export async function ProjectWorkspace({
           Correcciones de planos, actualizaciones y recordatorios. Los
           pendientes abiertos también aparecen en Inicio.
         </p>
-        {writable && <NoteForm project={project} />}
+        {writable && (
+          <NoteForm members={members.data ?? []} project={project} />
+        )}
         <div>
           {notes.data?.map((note) => (
             <NoteRow
+              members={members.data ?? []}
               key={note.id + ":" + note.version}
               note={note as ProjectNote}
               writable={writable}

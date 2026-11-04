@@ -12,7 +12,9 @@ import type { ProjectNote } from "./schema";
 export function NoteForm({
   project,
   note,
+  members = [],
 }: {
+  members?: { user_id: string }[];
   project: string;
   note?: ProjectNote;
 }) {
@@ -65,6 +67,44 @@ export function NoteForm({
             <option value="note">Nota de seguimiento</option>
           </select>
         </label>
+        {kind === "task" && (
+          <>
+            <label>
+              Prioridad
+              <select name="priority" defaultValue={note?.priority ?? "normal"}>
+                <option value="low">Baja</option>
+                <option value="normal">Normal</option>
+                <option value="high">Alta</option>
+              </select>
+            </label>
+            <label>
+              Repetición
+              <select name="repeat_days" defaultValue={note?.repeat_days ?? 0}>
+                <option value="0">Sin repetición</option>
+                <option value="1">Diaria</option>
+                <option value="7">Semanal</option>
+                <option value="14">Cada dos semanas</option>
+              </select>
+            </label>
+            <label>
+              Responsable
+              <select name="assignee" defaultValue={note?.assignee ?? ""}>
+                <option value="">Sin asignar</option>
+                {note?.assignee &&
+                  !members.some((m) => m.user_id === note.assignee) && (
+                    <option value={note.assignee}>
+                      Miembro {note.assignee.slice(0, 8)}
+                    </option>
+                  )}
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    Miembro {m.user_id.slice(0, 8)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
         {note && <input type="hidden" name="kind" value={note.kind} />}
         <label>
           Fecha de seguimiento (opcional)
@@ -89,10 +129,12 @@ export function NoteForm({
 }
 export function NoteRow({
   note,
+  members = [],
   writable = false,
   showProject = false,
 }: {
   note: ProjectNote;
+  members?: { user_id: string }[];
   writable?: boolean;
   showProject?: boolean;
 }) {
@@ -131,6 +173,18 @@ export function NoteRow({
           </Link>
         )}
         <p className="note-body">{note.body}</p>
+        {note.kind === "task" && (
+          <small>
+            Prioridad{" "}
+            {
+              { low: "baja", normal: "normal", high: "alta" }[
+                note.priority ?? "normal"
+              ]
+            }
+            {note.assignee ? " · Responsable " + note.assignee.slice(0, 8) : ""}
+            {note.repeat_days ? " · Cada " + note.repeat_days + " días" : ""}
+          </small>
+        )}
         <p className="caption">
           {note.kind === "note" ? "Nota" : "Pendiente"}
           {note.due_on ? ` · Seguimiento ${note.due_on}` : ""} ·{" "}
@@ -144,7 +198,7 @@ export function NoteRow({
         {writable && (
           <details>
             <summary>Editar nota</summary>
-            <NoteForm project={note.project_id} note={note} />
+            <NoteForm members={members} project={note.project_id} note={note} />
           </details>
         )}
       </div>

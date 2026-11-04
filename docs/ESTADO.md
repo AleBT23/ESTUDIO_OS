@@ -296,3 +296,6 @@ Migración 022. Cada partida enlaza su historial de mediciones, cantidad ejecuta
 
 ### Consumos de materiales, mano de obra y equipo
 Migración 023. Cada partida incluye un registro físico de recursos por fecha, unidad, cantidad y proveedor opcional. El historial se filtra por categoría. Los consumos no incrementan automáticamente la estimación ni registran cargos. Se verificó que PostgreSQL rechaza referencias a partidas de otra obra y excluye otras organizaciones. TypeScript, lint, 131 pruebas y compilación con guard PDF correctos. Siguiente bloque: recurrencias, prioridades y responsables de agenda y comprobantes privados.
+
+### Recurrencia y asignación de pendientes
+Migración 024. Los pendientes del expediente admiten prioridad, responsable del estudio y repetición diaria, semanal o quincenal. Al completar se crea la ocurrencia siguiente respecto a la fecha programada, en la misma transacción. Reabrir y completar nuevamente conserva una sola sucesora. La agenda incorpora vistas de prioridad alta y asignados a mí. Se probaron cambio de año, restricciones de fecha y membresía y ausencia de duplicados. TypeScript, ESLint, 132 pruebas y build con empaquetado PDF correctos.

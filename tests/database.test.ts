@@ -2037,3 +2037,15 @@ it("asocia recursos a la partida y rechaza consumos de otra obra u organización
  expect((await db.query("select estimated_quantity::int from work_budget_items where id=$1",[item])).rows).toEqual([{estimated_quantity:0}]);
  await asUser(other);expect((await db.query("select * from work_resource_usage where item_id=$1",[item])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("completar un pendiente semanal genera una única ocurrencia y conserva prioridad y responsable",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Agenda semanal',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body,due_on,assignee,priority,repeat_days) values($1,$2,'task','Visita semanal','2026-12-29',$3,'high',7) returning id",[org,project,owner])).rows[0].id;
+ const toggle=(done:boolean)=>db.query("update project_notes set completed_at=case when $2 then now() else null end where id=$1",[id,done]);
+ await toggle(true);await toggle(false);await toggle(true);
+ const rows=await db.query("select due_on::text due,priority,assignee,repeat_days from project_notes_context where project_id=$1 and completed_at is null",[project]);
+ expect(rows.rows).toEqual([{due:"2027-01-05",priority:"high",assignee:owner,repeat_days:7}]);
+ await expect(db.query("update project_notes set assignee=$2 where id=$1",[id,other])).rejects.toThrow();
+ await expect(db.query("update project_notes set due_on=null where id=$1",[id])).rejects.toThrow();
+});

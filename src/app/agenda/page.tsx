@@ -7,6 +7,8 @@ const views = {
   calendar: "Calendario",
   today: "Hoy",
   week: "Próximos siete días",
+  mine: "Asignados a mí",
+  high: "Prioridad alta",
   overdue: "Vencidos",
   all: "Lista",
   completed: "Completados",
