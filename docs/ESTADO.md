@@ -348,3 +348,6 @@ Inicio muestra el número de avisos sin leer y Agenda abre la bandeja individual
 
 ### Favoritos personales y búsqueda ampliada
 Inicio → Mis favoritos reúne registros guardados desde la búsqueda global. Se suman oportunidades, publicaciones y recursos técnicos. Cada usuario administra su lista, con paginación y filtro por nombre. Los resultados usan el registro vigente y sus permisos. Se probaron renombrado, archivo, aislamiento personal y entre organizaciones. 149 pruebas, TypeScript, ESLint, build y 39 migraciones locales correctos. La migración 039 y la validación autenticada en preview siguen pendientes.
+
+### Actividad reciente en Inicio
+La cronología paginada enlaza cambios de estado de cotizaciones, revisiones de entregables, cobros de proyecto, movimientos y reversos financieros y versiones de biblioteca. La fecha corresponde al registro del evento y se presenta en la zona horaria del estudio. Se verificaron el movimiento original, su reverso y su aislamiento por rol y organización. Pasaron 150 pruebas, TypeScript, lint, build y 40 migraciones en PostgreSQL local. Pendientes la preview autenticada y la migración 040 en producción.

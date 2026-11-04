@@ -2262,3 +2262,15 @@ it("los favoritos siguen los permisos y nombres actuales del registro",async()=>
  await asUser(owner);expect((await result()).rows[0]).toMatchObject({favorite:true});
  await db.query("update clients set deleted_at=now() where id=$1",[id]);expect((await result()).rows).toHaveLength(0);
 });
+
+it("la actividad conserva registro y reverso con permisos financieros",async()=>{
+ await asUser(owner);
+ const account=crypto.randomUUID(),entry=crypto.randomUUID();
+ await db.query("insert into finance_cases(id,organization_id,name,area,revenue_cents,cost_cents) values($1,$2,'Estudio externo','service',5000,0)",[account,org]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'in',2000,current_date-1)",[entry,org,account]);
+ await db.query("update finance_entries set reversal_reason='Corrección de importe' where id=$1",[entry]);
+ const history=()=>db.query("select action,target_id from studio_activity where organization_id=$1 and id=$2 order by occurred_at,action",[org,entry]);
+ expect((await history()).rows).toEqual([{action:"received",target_id:account},{action:"reversed",target_id:account}]);
+ await asUser(reader);expect((await history()).rows).toHaveLength(0);
+ await asUser(other);expect((await history()).rows).toHaveLength(0);await asUser(owner);
+});

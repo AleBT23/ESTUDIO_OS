@@ -1,3 +1,4 @@
+import { RecentActivity } from "@/modules/dashboard/recent-activity";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -17,7 +18,7 @@ import { DashboardTasks } from "@/modules/projects/workspace";
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ pendingPage?: string }>;
+  searchParams: Promise<{ pendingPage?: string; activityPage?: string }>;
 }) {
   const ctx = await getContext();
   const filter = await searchParams;
@@ -158,6 +159,12 @@ export default async function HomePage({
         <p>
           <Link href="/buscar?favorites=1">Mis favoritos</Link>
         </p>
+        <RecentActivity
+          page={Math.max(
+            1,
+            Math.min(10000, parseInt(filter.activityPage || "1") || 1),
+          )}
+        />
         <DashboardTasks page={pendingPage} />
       </>
     );
