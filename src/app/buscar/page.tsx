@@ -163,3 +163,5 @@ export default async function Search({
     </>
   );
 }
+
+export const metadata = { title: "Buscar en el estudio" };

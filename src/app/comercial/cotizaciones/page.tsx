@@ -215,3 +215,5 @@ export default async function QuotesPage({
     </>
   );
 }
+
+export const metadata = { title: "Cotizaciones" };

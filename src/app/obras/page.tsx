@@ -143,3 +143,5 @@ export default async function Works({
     </>
   );
 }
+
+export const metadata = { title: "Obras" };

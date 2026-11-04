@@ -104,3 +104,5 @@ export default async function Invitations({
     </>
   );
 }
+
+export const metadata = { title: "Invitaciones del equipo" };

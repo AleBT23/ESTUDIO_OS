@@ -97,3 +97,5 @@ export default async function Suppliers({
     </>
   );
 }
+
+export const metadata = { title: "Proveedores y subcontratistas" };

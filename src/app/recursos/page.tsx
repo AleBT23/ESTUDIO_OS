@@ -55,3 +55,5 @@ export default function ResourcesPage() {
     </>
   );
 }
+
+export const metadata = { title: "Recursos del estudio" };

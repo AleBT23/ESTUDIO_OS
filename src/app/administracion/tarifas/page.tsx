@@ -92,3 +92,5 @@ export default async function CostRates({
     </>
   );
 }
+
+export const metadata = { title: "Tarifas del equipo" };

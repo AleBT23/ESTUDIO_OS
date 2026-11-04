@@ -90,3 +90,5 @@ export default async function Receipts({
     </>
   );
 }
+
+export const metadata = { title: "Comprobante de movimiento" };

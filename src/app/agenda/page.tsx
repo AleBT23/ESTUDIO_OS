@@ -117,3 +117,5 @@ export default async function Agenda({
     </>
   );
 }
+
+export const metadata = { title: "Agenda del estudio" };

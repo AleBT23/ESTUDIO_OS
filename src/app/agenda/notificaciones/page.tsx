@@ -101,3 +101,5 @@ export default async function Notifications({
     </>
   );
 }
+
+export const metadata = { title: "Mis notificaciones" };

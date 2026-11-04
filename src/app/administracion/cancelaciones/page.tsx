@@ -78,3 +78,5 @@ export default async function Cancellations({
     </>
   );
 }
+
+export const metadata = { title: "Cancelaciones de saldo" };

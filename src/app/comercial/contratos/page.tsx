@@ -184,3 +184,5 @@ export default async function Contracts({
     </>
   );
 }
+
+export const metadata = { title: "Contratos" };

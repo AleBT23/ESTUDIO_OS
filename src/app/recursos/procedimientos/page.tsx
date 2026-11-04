@@ -156,3 +156,5 @@ export default async function ProceduresPage({
     </>
   );
 }
+
+export const metadata = { title: "Procedimientos" };

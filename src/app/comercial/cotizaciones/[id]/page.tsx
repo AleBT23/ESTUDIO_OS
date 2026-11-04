@@ -323,3 +323,5 @@ export default async function QuotePage({
     </>
   );
 }
+
+export const metadata = { title: "Detalle de cotización" };

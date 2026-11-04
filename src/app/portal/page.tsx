@@ -83,3 +83,5 @@ export default async function Portal({
     </>
   );
 }
+
+export const metadata = { title: "Portal de clientes" };

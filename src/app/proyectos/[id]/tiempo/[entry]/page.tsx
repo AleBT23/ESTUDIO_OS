@@ -135,3 +135,5 @@ export default async function TimeHistory({
     </>
   );
 }
+
+export const metadata = { title: "Registro de tiempo" };

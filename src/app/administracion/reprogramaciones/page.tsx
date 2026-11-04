@@ -97,3 +97,5 @@ export default async function ScheduleChanges({
     </>
   );
 }
+
+export const metadata = { title: "Reprogramaciones de cobro" };

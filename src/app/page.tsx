@@ -253,3 +253,5 @@ export default async function HomePage({
     </>
   );
 }
+
+export const metadata = { title: {absolute: "Inicio · ESTUDIO OS"} };

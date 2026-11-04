@@ -199,3 +199,5 @@ export default async function Reminders({
     </>
   );
 }
+
+export const metadata = { title: "Mis recordatorios" };

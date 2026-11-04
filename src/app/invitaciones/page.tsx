@@ -75,3 +75,5 @@ export default async function Inbox() {
     </section>
   );
 }
+
+export const metadata = { title: "Acceso con invitación" };

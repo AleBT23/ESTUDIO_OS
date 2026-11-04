@@ -229,3 +229,5 @@ export default async function MarketingPage({
     </>
   );
 }
+
+export const metadata = { title: "Marketing" };

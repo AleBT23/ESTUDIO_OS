@@ -175,3 +175,5 @@ export default async function ClientPage({
     </>
   );
 }
+
+export const metadata = { title: "Expediente del cliente" };

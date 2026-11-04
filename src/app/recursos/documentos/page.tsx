@@ -336,3 +336,5 @@ export default async function StudioDocumentsPage({
     </>
   );
 }
+
+export const metadata = { title: "Documentos" };

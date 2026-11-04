@@ -123,3 +123,5 @@ export default async function Item({
     </>
   );
 }
+
+export const metadata = { title: "Partida de obra" };

@@ -127,3 +127,5 @@ export default async function Team({
     </>
   );
 }
+
+export const metadata = { title: "Equipo" };

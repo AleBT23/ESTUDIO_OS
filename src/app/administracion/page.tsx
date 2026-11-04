@@ -248,3 +248,5 @@ export default async function FinancePage({
     </>
   );
 }
+
+export const metadata = { title: "Administración" };

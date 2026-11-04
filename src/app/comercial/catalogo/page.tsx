@@ -250,3 +250,5 @@ export default async function CatalogPage({
     </>
   );
 }
+
+export const metadata = { title: "Catálogo de servicios" };

@@ -109,3 +109,5 @@ export default async function HistoricalArchive({
     </>
   );
 }
+
+export const metadata = { title: "Archivo histórico de propuestas" };

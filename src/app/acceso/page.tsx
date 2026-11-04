@@ -42,3 +42,5 @@ export default async function LoginPage({
     </div>
   );
 }
+
+export const metadata = { title: "Acceso al estudio" };

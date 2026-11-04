@@ -607,3 +607,6 @@ La pantalla de acceso conserva la ruta y los filtros de la página protegida sol
 
 ### Validación de formularios compartidos
 Los formularios de registro conservan los campos al recibir un error de la acción de guardado. El componente distingue las alertas de error de las confirmaciones y comunica cuándo está ocupado. Playwright comprueba el rechazo de un correo inválido y la conservación de su valor en el registro por invitación. Se verificaron 232 pruebas Vitest, diez recorridos Playwright, compilación, ESLint y TypeScript. Un recorrido condicionado por la configuración quedó omitido.
+
+### Identificación de pantallas en el navegador
+Las 46 páginas existentes declaran un título de pestaña en español. Las fichas se identifican por tipo de registro y los títulos incluyen la marca del estudio. Playwright contrastó el título real en Inicio, Comercial y el portal. Pasaron 232 pruebas Vitest, once recorridos de navegador, la compilación, ESLint y TypeScript. Un recorrido condicionado por la configuración quedó omitido.

@@ -266,3 +266,5 @@ export default async function Reports({
     </>
   );
 }
+
+export const metadata = { title: "Reportes financieros" };

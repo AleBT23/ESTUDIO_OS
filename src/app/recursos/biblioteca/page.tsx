@@ -155,3 +155,5 @@ export default async function Library({
     </>
   );
 }
+
+export const metadata = { title: "Biblioteca" };

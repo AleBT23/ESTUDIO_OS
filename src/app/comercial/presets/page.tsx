@@ -145,3 +145,5 @@ export default async function PresetsPage({
     </>
   );
 }
+
+export const metadata = { title: "Presets de cotización" };

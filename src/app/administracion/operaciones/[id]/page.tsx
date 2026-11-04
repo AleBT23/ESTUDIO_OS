@@ -238,3 +238,5 @@ export default async function Operation({
     </>
   );
 }
+
+export const metadata = { title: "Detalle de operación financiera" };

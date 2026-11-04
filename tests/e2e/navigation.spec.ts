@@ -235,3 +235,16 @@ test("el menú móvil libera el foco y el desplazamiento al pasar a escritorio",
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
 });
+
+test("el título de la pestaña distingue las áreas y el portal", async ({
+  page,
+}) => {
+  for (const [route, title] of [
+    ["/", "Inicio"],
+    ["/comercial", "Comercial"],
+    ["/portal", "Portal de clientes"],
+  ]) {
+    await page.goto(route);
+    await expect(page).toHaveTitle(title + " · ESTUDIO OS");
+  }
+});

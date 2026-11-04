@@ -168,3 +168,5 @@ export default async function ProjectsPage({
     </>
   );
 }
+
+export const metadata = { title: "Proyectos" };

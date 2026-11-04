@@ -188,3 +188,5 @@ export default async function PipelinePage({
     </>
   );
 }
+
+export const metadata = { title: "Oportunidades" };

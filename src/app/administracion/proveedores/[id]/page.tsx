@@ -112,3 +112,5 @@ export default async function Supplier({
     </>
   );
 }
+
+export const metadata = { title: "Estado de cuenta del proveedor" };

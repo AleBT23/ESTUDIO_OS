@@ -161,3 +161,5 @@ export default async function OpenObligations({
     </>
   );
 }
+
+export const metadata = { title: "Cartera por vencimiento" };
