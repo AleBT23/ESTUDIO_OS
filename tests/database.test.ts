@@ -2192,3 +2192,15 @@ it("cada ejecución conserva su propio avance y solo admite pasos definidos",asy
  await asUser(owner);await db.query("delete from procedure_checks where run_id=$1 and step=1",[a]);
  expect((await db.query("select step from procedure_checks where run_id=$1",[a])).rows).toHaveLength(0);
 });
+
+it("la biblioteca preserva adjuntos históricos y busca solo la revisión vigente",async()=>{
+ await asUser(owner);
+ const id=crypto.randomUUID();
+ const add=(version:number,title:string)=>db.query("insert into library_revisions(id,resource_id,organization_id,version,title,tags,filename,attachment) values($1,$2,$3,$4,$5,'BIM','plano.ifc',decode('0102ff','hex'))",[version===1?id:crypto.randomUUID(),id,org,version,title]);
+ await add(1,"Primera familia");await expect(add(3,"Revisión adelantada")).rejects.toThrow();
+ await add(2,"Segunda familia");await expect(add(2,"Edición concurrente")).rejects.toThrow();
+ const search=(term:string)=>db.query("select version from current_library_resources where resource_id=$1 and search_text ilike $2",[id,"%"+term+"%"]);
+ expect((await search("Primera")).rows).toHaveLength(0);expect((await search("bim")).rows).toEqual([{version:2}]);
+ await asUser(reader);expect((await db.query("select encode(attachment,'hex') bytes from library_revisions where id=$1",[id])).rows).toEqual([{bytes:"0102ff"}]);await expect(add(3,"Sin permiso")).rejects.toThrow();
+ await asUser(other);expect((await search("BIM")).rows).toHaveLength(0);expect((await db.query("select attachment from library_revisions where id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
+});

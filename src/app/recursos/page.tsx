@@ -12,7 +12,7 @@ export default function ResourcesPage() {
         <span className="selected">Identidad gráfica</span>
         <Link href="/recursos/documentos">Documentos</Link>
         <Link href="/recursos/plantillas">Plantillas</Link>
-        <span className="planned">Biblioteca · pendiente</span>
+        <Link href="/recursos/biblioteca">Biblioteca técnica</Link>
         <Link href="/recursos/procedimientos">Procedimientos</Link>
       </nav>
       <div className="settings-grid">

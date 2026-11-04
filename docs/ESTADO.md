@@ -333,3 +333,6 @@ Migración 033 pendiente de producción. Comercial → Marketing permite registr
 
 ### Procedimientos reutilizables
 Recursos → Procedimientos permite a administración definir pasos ordenados y al equipo iniciar listas independientes con proyecto opcional. Cada ejecución muestra el avance y permite completar o reabrir pasos. Migración 034 verificada en PostgreSQL local, con aislamiento y permisos por rol. Pasaron 144 pruebas, TypeScript, lint y compilación. Pendientes la preview autenticada y la biblioteca técnica/BIM.
+
+### Biblioteca técnica y BIM
+Recursos → Biblioteca técnica permite publicar revisiones con etiquetas, descripción, vínculo y un archivo privado de hasta 2 MiB. Los modelos de mayor tamaño se referencian por vínculo. Se conserva cada revisión junto con su adjunto en la misma transacción. Búsqueda paginada sobre la versión vigente y descarga por revisión con autorización del estudio. 145 pruebas, lint, TypeScript, build y 35 migraciones en PostgreSQL local correctos. La prueba de extremo a extremo con Auth y la migración de producción siguen pendientes.
