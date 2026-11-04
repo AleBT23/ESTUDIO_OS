@@ -162,11 +162,29 @@ try {
   const [measure] =
     await first`select count(*)::int entries,sum(amount_cents)::int earned from work_estimates where item_id=${item}`;
   assert.deepEqual({ ...measure }, { entries: 1, earned: 2 });
+  const [customer] =
+    await first`insert into clients(organization_id,name) values(${org},'Cliente de concurrencia') returning id`;
+  const [project] =
+    await first`select create_project_record(${org},${customer.id},'Reparto concurrente',current_date,0,${randomUUID()}) id`;
+  const pack = randomUUID();
+  await admin`insert into project_service_packages(id,organization_id,project_id,business_line_id,name,scope) select ${pack},${org},${project.id},id,'Paquete','[]'::jsonb from business_lines where organization_id=${org} limit 1`;
+  await admin`insert into package_financials(organization_id,package_id,contracted_net_cents) values(${org},${pack},10001)`;
+  await race(
+    (db) =>
+      db`insert into collaborator_fees(id,organization_id,project_id,package_id,member_id,label,rate_bps) values(${randomUUID()},${org},${project.id},${pack},${owner},'Diseño',6000)`,
+  );
+  const [fee] =
+    await first`select sum(cost_cents)::int cost from finance_cases where package_id=${pack}`;
+  assert.equal(fee.cost, 6001);
   console.log(
     JSON.stringify({
       postgres: server.version,
       migrations: migrations.length,
-      verified: ["cobros concurrentes", "estimaciones concurrentes"],
+      verified: [
+        "cobros concurrentes",
+        "estimaciones concurrentes",
+        "repartos concurrentes",
+      ],
     }),
   );
 } finally {

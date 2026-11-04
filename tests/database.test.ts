@@ -2104,3 +2104,17 @@ it("el colaborador registra tiempo propio por tarea, con corrección versionada 
  await asUser(owner);expect((await db.query("select sum(minutes)::int minutes from project_time where project_id=$1",[project])).rows).toEqual([{minutes:105}]);
  await asUser(reader);await expect(add(crypto.randomUUID())).rejects.toThrow();expect((await db.query("select * from time_corrections where time_id=$1",[entry])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el reparto compromete un único costo, limita los porcentajes y concilia pagos parciales",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Reparto por paquete',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const pack=crypto.randomUUID();await db.exec("reset role");
+ await db.query("insert into project_service_packages(id,organization_id,project_id,business_line_id,name,scope) select $1,$2,$3,id,'Visualización','[]'::jsonb from business_lines where organization_id=$2 limit 1",[pack,org,project]);
+ await db.query("insert into package_financials(organization_id,package_id,contracted_net_cents) values($1,$2,10001)",[org,pack]);await asUser(owner);
+ const fee=crypto.randomUUID();const add=(id:string,bps:number)=>db.query("insert into collaborator_fees(id,organization_id,project_id,package_id,member_id,label,rate_bps) values($1,$2,$3,$4,$5,'Modelado', $6) on conflict do nothing",[id,org,project,pack,owner,bps]);
+ await add(fee,5000);await add(fee,5000);await expect(add(crypto.randomUUID(),5001)).rejects.toThrow();
+ expect((await db.query("select allocated_bps from package_financials where package_id=$1",[pack])).rows).toEqual([{allocated_bps:5000}]);
+ await add(crypto.randomUUID(),5000);expect((await db.query("select sum(cost_cents)::int total from finance_cases where package_id=$1",[pack])).rows).toEqual([{total:10001}]);
+ await db.query("insert into finance_entries(id,organization_id,case_id,direction,amount_cents,paid_on) values($1,$2,$3,'out',2000,current_date-1)",[crypto.randomUUID(),org,fee]);
+ expect((await db.query("select cost_cents::int,paid_cents::int,payable_cents::int from finance_case_balances where id=$1",[fee])).rows).toEqual([{cost_cents:5001,paid_cents:2000,payable_cents:3001}]);
+ await asUser(reader);expect((await db.query("select * from collaborator_fees where id=$1",[fee])).rows).toHaveLength(0);await asUser(owner);
+});

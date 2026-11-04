@@ -314,3 +314,6 @@ Migración 027. La ruta /portal ofrece registro y acceso mediante Supabase Auth.
 
 ### Tiempo por proyecto, paquete y tarea
 Migración 028. Cada expediente permite registrar la actividad propia con fecha y minutos; paquete y tarea son opcionales y deben pertenecer al proyecto. Los colaboradores consultan sus registros y administración los del equipo. La corrección comprueba versión y conserva valores anteriores y actor en time_corrections. Los administradores pueden consultar el directorio de membresías de su organización para asignar responsables. TypeScript, lint, 137 pruebas y 28 migraciones en PostgreSQL multiconexión correctos.
+
+### Honorarios y distribución por paquete
+Migración 029. El expediente permite acordar honorarios fijos o un porcentaje del neto contratado de un paquete con un miembro del equipo. Cada regla crea atómicamente un solo acuerdo de costo y reutiliza su historial de pagos, comprobantes, reversos y saldo. El reparto porcentual acumulado no excede el 100 % y el redondeo concilia hasta el último centavo. Verificados pago parcial, reintento, aislamiento y límite concurrente en PostgreSQL 18.6 con dos escritores. TypeScript, lint, 138 pruebas y build con guard PDF correctos.
