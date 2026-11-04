@@ -12,7 +12,7 @@
 | QUO-02 | Parcial: presets con servicios/cantidades/notas, copia editable en propuesta | Condiciones reutilizables y retrocompatibilidad verificadas en 061. Diseño de secciones, márgenes y membrete copiado al borrador (071). Pendiente recorrido autenticado |
 | QUO-03 | Parcial: partidas, cantidades, descuentos, IVA, anticipo, vigencia, condiciones; cálculo servidor y SQL coinciden | Multimoneda solo tras reglas explícitas; UI principal contra Supabase |
 | QUO-04 | Parcial: borrador, emisión/snapshot/PDF, envío manual, aceptación, rechazo/vencimiento y revisión con motivo e historial; snapshots anteriores inmutables | E2E remoto y aceptación del usuario |
-| QUO-05 | Parcial: aceptación crea proyecto/paquetes/plan atómicamente; prueba 25,000/50%/cobrado cero | Fases por línea aplicadas al convertir (065). Pendientes tareas desde plantilla y recorrido remoto |
+| QUO-05 | Parcial: aceptación crea proyecto/paquetes/plan atómicamente; prueba 25,000/50%/cobrado cero | Fases por línea aplicadas al convertir (065). Tareas copiadas al tablero (074). Pendiente recorrido remoto |
 | QUO-06 | Parcial: seis unidades, porcentaje corregido, horas/costos externos previstos, resultado/margen e ingreso por hora exactos y fórmulas visibles | Atribución completa de costos por partida, tarifas para costo imputado de horas y E2E |
 | MKT-01 | Implementado localmente | Comercial → Marketing. Ideas, agenda por mes, canal, publicación, enlace, resultados y portafolio asociado a proyecto y oportunidad. Pendiente el recorrido autenticado en preview. |
 | PRJ-01 | Parcial: expediente con cliente, ubicación, responsable, inicio, cierre en Agenda y vínculo a versión. Adjuntos privados y enlaces (059 y 060) | Recorrido autenticado de ficha y adjuntos |

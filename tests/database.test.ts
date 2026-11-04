@@ -2653,16 +2653,19 @@ it("la aceptación mixta copia solo la plantilla automática y conserva su revis
  await asUser(reader);
  expect((await db.query("update phase_templates set on_quote_acceptance=true where id=$1 returning id",[t.id])).rows).toEqual([]);
  await asUser(owner);
- const enabled=(await db.query<{version:number}>("update phase_templates set on_quote_acceptance=true where id=$1 returning version",[t.id])).rows[0].version;
+ const enabled=(await db.query<{version:number}>("update phase_templates set on_quote_acceptance=true,tasks=array['Revisar levantamiento','Preparar propuesta'] where id=$1 returning version",[t.id])).rows[0].version;
  const alternate=crypto.randomUUID();await db.query("insert into phase_templates(id,organization_id,business_line_id,name,phases) values($1,$2,$3,'Prueba alternativa',array['Inicio'])",[alternate,org,t.business_line_id]);
  await expect(db.query("update phase_templates set on_quote_acceptance=true where id=$1",[alternate])).rejects.toThrow();
  const {id,version,prepared}=await issuedFixture();
  await db.query("select mark_quote_sent($1,$2,$3,$4)",[org,id,version,prepared.id]);
  const proj=(await db.query<{id:string}>("select accept_quote($1,id,version,current_date,current_date) id from quotes where id=$2",[org,id])).rows[0].id;
  const plans=()=>db.query("select template_id,template_version,phases,completed from project_phase_plans where project_id=$1",[proj]);
+ const tasks=()=>db.query("select body,lane from project_task_board where project_id=$1 order by body",[proj]);
  expect((await plans()).rows).toEqual([{template_id:t.id,template_version:enabled,phases:t.phases,completed:0}]);
- await db.query("update phase_templates set on_quote_acceptance=false,phases=array['Nueva fase'] where id=$1",[t.id]);
+ expect((await tasks()).rows).toEqual([{body:"Preparar propuesta",lane:"pending"},{body:"Revisar levantamiento",lane:"pending"}]);
+ await db.query("update phase_templates set on_quote_acceptance=false,phases=array['Nueva fase'],tasks=array['Otra tarea'] where id=$1",[t.id]);
  expect((await plans()).rows).toEqual([{template_id:t.id,template_version:enabled,phases:t.phases,completed:0}]);
+ expect((await tasks()).rows).toEqual([{body:"Preparar propuesta",lane:"pending"},{body:"Revisar levantamiento",lane:"pending"}]);
 });
 it("el expediente vincula proyectos y obras indirectas y restringe documentos comerciales por rol",async()=>{
  await asUser(owner);

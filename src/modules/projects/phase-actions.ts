@@ -14,6 +14,17 @@ export async function savePhaseTemplate(
       id: z.uuid(),
       version: z.coerce.number().int().nonnegative(),
       name: z.string().trim().min(2).max(160),
+      tasks: z
+        .string()
+        .max(41000)
+        .transform((s) =>
+          s
+            .split(/\r?\n/)
+            .map((v) => v.trim())
+            .filter(Boolean),
+        )
+        .pipe(z.array(z.string().max(400)).max(100))
+        .optional(),
       phases: z
         .string()
         .max(41000)

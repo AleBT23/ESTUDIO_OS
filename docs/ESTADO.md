@@ -526,3 +526,6 @@ El resumen y su desglose por área usan la misma consulta SQL y los mismos filtr
 
 ### Categorías de servicios por despacho
 El catálogo ofrece sugerencias reutilizables al crear o editar servicios y permite filtrar activos y archivados por categoría. PostgreSQL agrupa diferencias de mayúsculas y espacios sin reescribir los nombres históricos. Pasaron 210 pruebas y la restauración sintética con 73 migraciones.
+
+### Tareas iniciales al aceptar cotizaciones
+Las plantillas de fases pueden contener tareas. Al incorporarlas manualmente o al aceptar una propuesta, PostgreSQL guarda la revisión y crea las tareas dentro de la misma transacción. La prueba de aceptación mixta comprueba dos pendientes en el tablero y la conservación de ambos tras editar la plantilla. Pasaron 210 pruebas, compilación y restauración con 74 migraciones.

@@ -16,7 +16,7 @@ export async function PhasePanel({ project }: { project: string }) {
     ctx.db
       .from("phase_templates")
       .select(
-        "id,name,business_line_id,service_id,phases,version,on_quote_acceptance",
+        "id,name,business_line_id,service_id,phases,tasks,version,on_quote_acceptance",
       )
       .eq("organization_id", org)
       .order("name"),
@@ -97,6 +97,9 @@ export async function PhasePanel({ project }: { project: string }) {
                   <li key={i}>{s}</li>
                 ))}
               </ol>
+              {t.tasks.length > 0 && (
+                <p>Tareas al aplicar la plantilla: {t.tasks.join(" · ")}</p>
+              )}
               {manage && !t.service_id && (
                 <details>
                   <summary>
@@ -160,6 +163,14 @@ export async function PhasePanel({ project }: { project: string }) {
                         required
                       />
                     </label>
+                    <label>
+                      Tareas iniciales, una por línea
+                      <textarea
+                        name="tasks"
+                        rows={4}
+                        defaultValue={t.tasks.join("\n")}
+                      />
+                    </label>
                   </RecordForm>
                 </details>
               )}
@@ -194,6 +205,10 @@ export async function PhasePanel({ project }: { project: string }) {
                 <label>
                   Fases, una por línea
                   <textarea name="phases" rows={5} required />
+                </label>
+                <label>
+                  Tareas iniciales, una por línea
+                  <textarea name="tasks" rows={4} />
                 </label>
               </RecordForm>
             </details>
