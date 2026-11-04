@@ -2910,3 +2910,18 @@ it("filtra proyectos y agenda por la misma línea y periodo sin duplicar un proy
  await asUser(reader);expect((await db.query("select id from dashboard_period_items($1) where kind='quote'",[org])).rows).toEqual([]);
  await asUser(owner);
 });
+it("conserva el costo copiado, redondea por partida y mantiene el costo porcentual fijo",async()=>{
+ const {line,service}=await commercialFixture(),row={service_id:service,business_line_id:line,name:"Levantamiento",unit:"m2",quantity:"2.5",unit_price_cents:10000,discount_rate:"5"};
+ const pct={...row,name:"Coordinación",unit:"pct",quantity:"100000",unit_price_cents:800};
+ const items=[{...row,unit_cost_cents:101},{...pct,unit_cost_cents:3000}];
+ const quote=await draft(items);
+ const read=async()=>(await db.query<{version:number;cost:number}>("select version,direct_cost_cents::int cost from quotes where id=$1",[quote])).rows[0];
+ let saved=await read();expect(saved.cost).toBe(3253);
+ await db.query("update services set estimated_cost_cents=900 where id=$1",[service]);
+ await draft([row,pct],quote,saved.version);saved=await read();expect(saved.cost).toBe(3253);
+ await expect(draft([pct,row],quote,saved.version)).rejects.toThrow("conservar");
+ expect(await read()).toEqual(saved);
+ expect((await db.query("select unit_cost_cents::int cost from quote_items where quote_id=$1 order by position",[quote])).rows).toEqual([{cost:101},{cost:3000}]);
+ const snapshot=(await db.query<{snapshot:string}>("select (prepare_quote_version($1,$2,$3,$4::jsonb)->'snapshot')::text snapshot",[org,quote,saved.version,JSON.stringify(defaultDocumentOptions)])).rows[0].snapshot;
+ expect(snapshot).not.toMatch(/unit_cost|direct_cost/);
+});

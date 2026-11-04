@@ -10,6 +10,7 @@ import {
   fromCents,
   splitAdvance,
   estimateFees,
+  quoteLineCostCents,
 } from "@/shared/money";
 import { saveQuote } from "./actions";
 import {
@@ -96,6 +97,7 @@ export function QuoteEditor({
       business_line_id: service.business_line_id,
       unit: service.unit,
       unitPrice: fromCents(service.price_cents),
+      unitCost: fromCents(service.estimated_cost_cents),
       quantity,
       discount: "0",
     };
@@ -150,6 +152,7 @@ export function QuoteEditor({
       header.externalCost,
       header.estimated_hours,
       header.hourlyCost,
+      items.reduce((n, i) => n + quoteLineCostCents(i), 0),
     );
   } catch {
     /* Mostrar estado incompleto durante captura; validación al guardar. */
@@ -386,6 +389,20 @@ export function QuoteEditor({
                     />
                   </label>
                   <label>
+                    {item.unit === "pct"
+                      ? "Costo directo fijo de la partida MXN"
+                      : "Costo directo por unidad MXN"}
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.unitCost ?? ""}
+                      onChange={(e) =>
+                        updateItem(index, "unitCost", e.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
                     Descuento %
                     <input
                       type="number"
@@ -474,6 +491,7 @@ export function QuoteEditor({
                     quantity: "1",
                     unit: "fixed",
                     unitPrice: "0.00",
+                    unitCost: "",
                     discount: "0",
                   },
                 ]);
@@ -529,7 +547,7 @@ export function QuoteEditor({
                 />
               </label>
               <label>
-                Costos externos previstos MXN
+                Otros costos externos previstos MXN
                 <input
                   type="number"
                   inputMode="decimal"
@@ -586,10 +604,11 @@ export function QuoteEditor({
               </div>
             </dl>
             <p className="caption">
-              El resultado descuenta del ingreso sin IVA los costos externos y,
-              cuando capturas una tarifa interna, las horas previstas
-              multiplicadas por esa tarifa. El margen divide el resultado entre
-              el ingreso sin IVA. El ingreso por hora usa las horas previstas.
+              El resultado descuenta del ingreso sin IVA los costos directos de
+              las partidas, los otros costos externos y, cuando capturas una
+              tarifa interna, las horas previstas multiplicadas por esa tarifa.
+              El margen divide el resultado entre el ingreso sin IVA. El ingreso
+              por hora usa las horas previstas.
             </p>
           </section>
         </div>

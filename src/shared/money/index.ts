@@ -105,11 +105,24 @@ export function marginOnRevenue(net: bigint, revenue: bigint): string | null {
   if (revenue === 0n) return null;
   return new D(net.toString()).div(revenue.toString()).mul(100).toFixed(2);
 }
+export function quoteLineCostCents(item: {
+  unit: string;
+  quantity: string;
+  unitCost?: string;
+}) {
+  if (!item.unitCost) return 0;
+  return cents(
+    positive(item.unitCost).mul(
+      item.unit === "pct" ? 1 : positive(item.quantity),
+    ),
+  );
+}
 export function estimateFees(
   netRevenueCents: number,
   externalCost: string,
   estimatedHours: string,
   hourlyCost?: string,
+  itemCostCents = 0,
 ) {
   if (!Number.isSafeInteger(netRevenueCents) || netRevenueCents < 0)
     throw new Error("Ingreso inválido");
@@ -118,7 +131,10 @@ export function estimateFees(
   const laborCostCents = hourlyCost
     ? cents(hours.mul(positive(hourlyCost)))
     : null;
-  const totalCostCents = externalCostCents + (laborCostCents ?? 0);
+  if (!Number.isSafeInteger(itemCostCents) || itemCostCents < 0)
+    throw Error("Costo de partidas inválido");
+  const totalCostCents =
+    itemCostCents + externalCostCents + (laborCostCents ?? 0);
   if (!Number.isSafeInteger(totalCostCents))
     throw Error("Costos fuera de rango");
   const profitCents = netRevenueCents - totalCostCents;

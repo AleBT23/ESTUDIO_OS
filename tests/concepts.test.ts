@@ -1,6 +1,6 @@
 import { it, expect } from "vitest";
 import { conceptSchema, insertConcept } from "@/modules/quotes/concept-schema";
-import { estimateFees } from "@/shared/money";
+import { estimateFees, quoteLineCostCents } from "@/shared/money";
 it("inserta copia de concepto conservando el alcance de la partida", () => {
   const original = { body: "Iluminación y revisión de diseño." };
   let description = insertConcept("Modelado del edificio.", original.body);
@@ -61,4 +61,13 @@ it("descuenta las horas previstas una sola vez y distingue cero de una tarifa au
     laborCostCents: 0,
     profitCents: 10000,
   });
+});
+it("concilia el costo directo con la base de obra y las cantidades fraccionarias", () => {
+  const costs =
+    quoteLineCostCents({ unit: "pct", quantity: "100000", unitCost: "30.00" }) +
+    quoteLineCostCents({ unit: "m2", quantity: "2.5", unitCost: "1.01" });
+  expect(costs).toBe(3253);
+  expect(estimateFees(250000, "10", "1", "100", costs).profitCents).toBe(
+    235747,
+  );
 });

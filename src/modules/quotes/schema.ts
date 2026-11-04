@@ -66,6 +66,7 @@ export const quoteItemSchema = z
     ),
     unit: z.enum(["m2", "unit", "hour", "visit", "fixed", "pct"]),
     unitPrice: moneyInput,
+    unitCost: z.union([moneyInput, z.literal("")]).optional(),
     discount: percentage,
   })
   .refine(

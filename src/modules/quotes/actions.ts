@@ -227,11 +227,16 @@ export async function saveQuote(
       }),
       external_cost_cents: toCents(externalCost),
     },
-    items: input.data.items.map(({ unitPrice, discount, ...item }) => ({
-      ...item,
-      unit_price_cents: toCents(unitPrice),
-      discount_rate: discount,
-    })),
+    items: input.data.items.map(
+      ({ unitPrice, unitCost, discount, ...item }) => ({
+        ...item,
+        unit_price_cents: toCents(unitPrice),
+        ...(unitCost !== undefined && {
+          unit_cost_cents: unitCost === "" ? null : toCents(unitCost),
+        }),
+        discount_rate: discount,
+      }),
+    ),
   });
   if (error)
     return {

@@ -37,7 +37,7 @@ export default async function QuotePage({
       .order("position"),
     ctx.db
       .from("quote_fee_estimates")
-      .select("labor_cents,profit_cents,margin_pct")
+      .select("labor_cents,profit_cents,margin_pct,item_cost_cents")
       .eq("organization_id", ctx.organization.id)
       .eq("id", id)
       .maybeSingle(),
@@ -76,6 +76,7 @@ export default async function QuotePage({
     quantity: String(i.quantity),
     unit: i.unit,
     unitPrice: fromCents(i.unit_price_cents),
+    unitCost: i.unit_cost_cents == null ? "" : fromCents(i.unit_cost_cents),
     discount: String(i.discount_rate),
   }));
   const versions = await ctx.db
@@ -226,6 +227,8 @@ export default async function QuotePage({
               <p>Estimación no disponible.</p>
             ) : (
               <dl>
+                <dt>Costos directos de partidas</dt>
+                <dd>{formatMoney(BigInt(fees.data.item_cost_cents))}</dd>
                 <dt>Costo previsto de horas</dt>
                 <dd>
                   {fees.data.labor_cents === null
