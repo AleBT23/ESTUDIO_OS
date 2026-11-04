@@ -111,7 +111,7 @@ export default async function HomePage({
           </Link>
           {quotes && (
             <Link
-              href="/comercial/cotizaciones"
+              href="/comercial/cotizaciones?status=sent"
               className="panel overview-card"
             >
               <h2>Cotizaciones enviadas</h2>

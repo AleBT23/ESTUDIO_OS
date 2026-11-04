@@ -393,3 +393,6 @@ Playwright comprobó en Chromium que Agenda Kanban, notificaciones, marketing, b
 
 ### Directorio de proyectos paginado
 El directorio consulta 30 expedientes por página con total exacto y orden estable. Conserva el nombre buscado, el estado y el destino de captura de pendientes o visitas al cambiar de página. Inicio → Proyectos activos abre la selección correspondiente al indicador. La prueba del componente verificó el rango 211–240 y la navegación conservando filtros con datos simulados. Pasaron 163 pruebas, TypeScript y ESLint. Pendiente recorrido autenticado.
+
+### Consulta de cotizaciones por estado
+Inicio → Cotizaciones enviadas abre las propuestas enviadas del mismo estudio. En Comercial se puede combinar estado con búsqueda por nombre y conservar ambos al paginar. Orden estable por actualización e identificador. La prueba del componente verificó el filtro, rango y enlace de página con datos simulados. Pasaron 164 pruebas, TypeScript y ESLint. Pendiente validación autenticada en preview.
