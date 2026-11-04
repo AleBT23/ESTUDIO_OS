@@ -80,6 +80,7 @@ export async function saveOperation(
           ? "No se registró el movimiento. Verifica el saldo, la fecha y si ya aparece en el historial."
           : "No se pudo guardar. Revisa los datos y si el registro ya existe.",
     };
+  revalidatePath("/");
   revalidatePath("/administracion/operaciones", "layout");
   return { success: "Registro guardado.", nextId: crypto.randomUUID() };
 }

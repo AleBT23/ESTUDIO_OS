@@ -1906,6 +1906,11 @@ it("separa cobros parciales, anticipos, costo y fondos de obra con aislamiento",
   expect((await balance(service)).rows[0]).toEqual({receivable_cents:700000,payable_cents:800000,expected_margin_cents:240000,cash_cents:340000});
   await enter(crypto.randomUUID(),managed,"in",100000,true);
   expect((await balance(managed)).rows[0]).toMatchObject({expected_margin_cents:null,cash_cents:100000});
+  const totals = await db.query("select area,managed,received_cents,cash_cents,expected_margin_cents from finance_area_indicators where organization_id=$1 and source='operations'",[org]);
+  expect(totals.rows).toEqual(expect.arrayContaining([
+    {area:"service",managed:false,received_cents:"500000",cash_cents:"340000",expected_margin_cents:"240000"},
+    {area:"construction",managed:true,received_cents:"100000",cash_cents:"100000",expected_margin_cents:null}
+  ]));
   for (const user of [other,reader]) {
     await asUser(user);
     expect((await balance(service)).rows).toHaveLength(0);

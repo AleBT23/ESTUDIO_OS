@@ -258,3 +258,6 @@ Migración aditiva 012 probada en PGlite. En Administración → Operaciones se 
 
 ### Agenda y navegación
 La agenda consulta los pendientes existentes por organización y zona horaria, con vistas de hoy, siete días, vencidos, lista, completados y fecha elegida. Reutiliza edición, reprogramación, completar y reabrir con control de versión. Barra lateral contraíble en escritorio con preferencia persistente y accesos autenticados según rol. Typecheck, lint, 120 pruebas, build y empaquetado correctos. Chromium: cinco casos correctos y uno exclusivo de instalaciones sin credenciales omitido. Pendientes recordatorios independientes, recurrencias y responsables.
+
+### Indicadores financieros
+Migración 013 y resumen en Inicio: cobrado, pagado, cartera, cuentas por pagar, flujo y margen previsto por área y custodia. Los planes históricos aparecen por separado con su alcance original. Totales agregados en SQL y transferidos como texto entero para preservar precisión. Comprobados los totales y la exclusión del margen en fondos del cliente; 120 pruebas, typecheck, lint y compilación correctos.

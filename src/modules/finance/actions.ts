@@ -40,6 +40,7 @@ export async function recordPayment(
       error:
         "No se registró el cobro. Revisa que no supere el saldo y que la fecha no sea futura. Si ya lo registraste, recarga la página.",
     };
+  revalidatePath("/");
   revalidatePath("/administracion");
   revalidatePath("/proyectos", "layout");
   return {
@@ -73,6 +74,7 @@ export async function reversePayment(
     return {
       error: "No se pudo revertir. Recarga si el movimiento ya cambió.",
     };
+  revalidatePath("/");
   revalidatePath("/administracion");
   revalidatePath("/proyectos", "layout");
   return {

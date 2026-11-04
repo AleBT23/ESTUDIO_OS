@@ -67,11 +67,13 @@ export function splitAdvance(total: number, percentage: string) {
     .toNumber();
   return { advance, balance: total - advance, collected: 0 };
 }
-export function formatMoney(cents: number, currency = "MXN") {
-  if (!Number.isSafeInteger(cents)) throw new Error("Importe fuera de rango");
+export function formatMoney(cents: number | bigint, currency = "MXN") {
+  if (typeof cents === "number" && !Number.isSafeInteger(cents))
+    throw new Error("Importe fuera de rango");
   // No dividir en coma flotante: en importes cercanos al máximo seguro,
   // cents/100 puede perder un centavo incluso antes del formateo.
-  const absolute = BigInt(Math.abs(cents));
+  const integer = BigInt(cents);
+  const absolute = integer < 0n ? -integer : integer;
   const whole = new Intl.NumberFormat("es-MX", {
     maximumFractionDigits: 0,
   }).format(absolute / 100n);

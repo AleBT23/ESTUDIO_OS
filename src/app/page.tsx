@@ -12,6 +12,7 @@ import { getContext } from "@/shared/auth/context";
 import { isConfigured } from "@/shared/db/server";
 import { formatMoney } from "@/shared/money";
 import { canReadFinance, canManageCommercial } from "@/shared/permissions";
+import { AreaIndicators } from "@/modules/finance/area-indicators";
 import { DashboardTasks } from "@/modules/projects/workspace";
 export default async function HomePage({
   searchParams,
@@ -140,6 +141,7 @@ export default async function HomePage({
             )}
           </section>
         )}
+        <AreaIndicators />
         <DashboardTasks page={pendingPage} />
       </>
     );
