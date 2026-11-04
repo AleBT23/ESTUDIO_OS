@@ -2,6 +2,7 @@ import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
 import {
+  receivedPerHour,
   reportFilters,
   type ProductivityRow,
 } from "@/modules/finance/productivity-report";
@@ -48,7 +49,8 @@ export default async function Reports({
         <p>
           El flujo por hora divide los cobros menos pagos efectivos entre las
           horas registradas del periodo. Los fondos del cliente se presentan por
-          separado.
+          separado. El cobrado por hora divide los cobros efectivos propios
+          entre las horas trabajadas.
         </p>
       </header>
       <form className="panel padded">
@@ -102,27 +104,32 @@ export default async function Reports({
                       "Flujo",
                       "Tiempo",
                       "Flujo por hora",
+                      "Cobrado por hora",
                     ].map((k) => (
                       <th key={k}>{k}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.line_name + String(r.managed)}>
-                      <th>{r.line_name}</th>
-                      <td>{r.managed ? "Del cliente" : "Propios"}</td>
-                      {[r.received, r.paid, r.net].map((v, i) => (
-                        <td key={i}>{formatMoney(BigInt(v))}</td>
-                      ))}
-                      <td>{r.minutes} min</td>
-                      <td>
-                        {r.net_hourly === null
-                          ? "—"
-                          : formatMoney(BigInt(r.net_hourly))}
-                      </td>
-                    </tr>
-                  ))}
+                  {rows.map((r) => {
+                    const hourly = receivedPerHour(r);
+                    return (
+                      <tr key={r.line_name + String(r.managed)}>
+                        <th>{r.line_name}</th>
+                        <td>{r.managed ? "Del cliente" : "Propios"}</td>
+                        {[r.received, r.paid, r.net].map((v, i) => (
+                          <td key={i}>{formatMoney(BigInt(v))}</td>
+                        ))}
+                        <td>{r.minutes} min</td>
+                        <td>
+                          {r.net_hourly === null
+                            ? "—"
+                            : formatMoney(BigInt(r.net_hourly))}
+                        </td>
+                        <td>{hourly === null ? "—" : formatMoney(hourly)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

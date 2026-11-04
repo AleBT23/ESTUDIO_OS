@@ -27,8 +27,13 @@ export type ProductivityRow = {
   minutes: string;
   net_hourly: string | null;
 };
+export function receivedPerHour(row: ProductivityRow): bigint | null {
+  const minutes = BigInt(row.minutes);
+  if (row.managed || minutes === 0n) return null;
+  return (BigInt(row.received) * 60n + minutes / 2n) / minutes;
+}
 export function reportCsv(rows: ProductivityRow[]) {
-  const decimal = (value: string) => {
+  const decimal = (value: string | bigint) => {
     const n = BigInt(value),
       a = n < 0n ? -n : n;
     return (
@@ -51,9 +56,11 @@ export function reportCsv(rows: ProductivityRow[]) {
         "Flujo MXN",
         "Minutos",
         "Flujo por hora MXN",
+        "Cobrado por hora MXN",
       ].join(","),
-      ...rows.map((r) =>
-        [
+      ...rows.map((r) => {
+        const hourly = receivedPerHour(r);
+        return [
           label(r.line_name),
           r.managed ? "Del cliente" : "Propios",
           decimal(r.received),
@@ -61,8 +68,9 @@ export function reportCsv(rows: ProductivityRow[]) {
           decimal(r.net),
           r.minutes,
           r.net_hourly === null ? "" : decimal(r.net_hourly),
-        ].join(","),
-      ),
+          hourly === null ? "" : decimal(hourly),
+        ].join(",");
+      }),
     ].join("\r\n") +
     "\r\n"
   );

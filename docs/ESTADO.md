@@ -399,3 +399,6 @@ Inicio → Cotizaciones enviadas abre las propuestas enviadas del mismo estudio.
 
 ### Precisión del resumen financiero por proyecto
 Inicio y el expediente solicitan como texto los totales en centavos de project_financial_summary y los formatean con BigInt. La clasificación de saldos sigue usando la columna numérica en PostgreSQL. La regresión de formato verifica un total superior al rango entero seguro de JavaScript. Pasaron 164 pruebas, TypeScript, ESLint y compilación. Pendiente comprobar las consultas PostgREST con una sesión autenticada en preview.
+
+### Cobrado por hora en reportes
+Administración → Reportes y el CSV incluyen cobros propios efectivos por hora registrada junto al flujo por hora después de pagos. Ambos usan el mismo filtro y cálculo en centavos. La tasa queda vacía para fondos administrados y periodos sin horas. Pasaron 165 pruebas, TypeScript y ESLint. Pendiente validar la presentación autenticada.
