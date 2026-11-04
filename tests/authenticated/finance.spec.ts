@@ -1,16 +1,6 @@
-import { test, expect, type Page } from "@playwright/test";
+import { login } from "./login";
+import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-async function login(page: Page, role: "ADMIN" | "READER") {
-  await page.goto("/acceso");
-  await page
-    .getByLabel("Correo electrónico")
-    .fill(process.env["ESTUDIO_TEST_" + role + "_EMAIL"]!);
-  await page
-    .getByLabel("Contraseña", { exact: true })
-    .fill(process.env["ESTUDIO_TEST_" + role + "_PASSWORD"]!);
-  await page.getByRole("button", { name: "Entrar al estudio" }).click();
-  await expect(page).toHaveURL("http://127.0.0.1:3419/");
-}
 test("administración registra un anticipo propio y concilia el saldo después de recargar", async ({
   page,
 }) => {
