@@ -4,7 +4,8 @@ import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
 import { RecordForm } from "@/shared/ui/record-form";
-import type { ProductivityRow } from "@/modules/finance/productivity-report";
+import { AreaCashTable } from "@/modules/finance/area-cash-table";
+import type { AreaCashRow } from "@/modules/finance/area-cash";
 import { cashFilter } from "./cash-filter";
 import { setCashFilter } from "./cash-filter-action";
 export async function PeriodFlow() {
@@ -17,13 +18,13 @@ export async function PeriodFlow() {
     Object.fromEntries(new URLSearchParams(stored)),
     ctx.lines,
   ) ?? { from_date: "", to_date: "", line: "" };
-  const result = await ctx.db.rpc("cash_productivity", {
+  const result = await ctx.db.rpc("area_cash_report", {
     org: ctx.organization.id,
     from_date: values.from_date || null,
     to_date: values.to_date || null,
     line: values.line || null,
   });
-  const rows: ProductivityRow[] = result.data ?? [];
+  const rows: AreaCashRow[] = result.data ?? [];
   return (
     <section className="panel padded">
       <h2>Flujo por periodo y línea</h2>
@@ -55,7 +56,7 @@ export async function PeriodFlow() {
       {result.error ? (
         <p role="status">No se pudo consultar el flujo del periodo.</p>
       ) : !rows.length ? (
-        <p>Sin movimientos ni tiempo registrado para esta selección.</p>
+        <p>Sin movimientos efectivos en esta selección.</p>
       ) : (
         <div className="table-scroll">
           <table>
@@ -92,6 +93,18 @@ export async function PeriodFlow() {
             </tbody>
           </table>
         </div>
+      )}
+      {!result.error && rows.length > 0 && (
+        <details>
+          <summary>Desglosar por área y consultar márgenes</summary>
+          <AreaCashTable
+            rows={rows}
+            url={
+              "/api/reportes/productividad?" +
+              new URLSearchParams({ ...values, detalle: "areas" })
+            }
+          />
+        </details>
       )}
       <Link href={"/administracion/reportes?" + new URLSearchParams(values)}>
         Abrir reporte detallado con estos filtros

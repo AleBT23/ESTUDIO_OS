@@ -520,3 +520,6 @@ El preset puede guardar el orden de secciones, los márgenes y la revisión del 
 
 ### Historial de interacciones por oportunidad
 Pipeline conserva llamadas, reuniones, correos y notas con fecha y autor en Supabase. El historial está paginado y se conserva al archivar la oportunidad. Se verificaron los permisos del administrador, lector y miembro de otro estudio, la protección del autor y el rechazo de escrituras sobre oportunidades archivadas. Pasaron 208 pruebas y la restauración sintética de 72 migraciones.
+
+### Flujo del periodo en Inicio
+El resumen y su desglose por área usan la misma consulta SQL y los mismos filtros de fechas y línea que el CSV. La prueba del panel contrasta un servicio propio con fondos de obra administrados y verifica la ausencia de margen propio sobre estos últimos. Pasaron 209 pruebas y nueve recorridos de navegación.
