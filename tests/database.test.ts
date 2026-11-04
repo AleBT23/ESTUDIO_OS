@@ -2204,3 +2204,18 @@ it("la biblioteca preserva adjuntos históricos y busca solo la revisión vigent
  await asUser(reader);expect((await db.query("select encode(attachment,'hex') bytes from library_revisions where id=$1",[id])).rows).toEqual([{bytes:"0102ff"}]);await expect(add(3,"Sin permiso")).rejects.toThrow();
  await asUser(other);expect((await search("BIM")).rows).toHaveLength(0);expect((await db.query("select attachment from library_revisions where id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("las fases aplicadas conservan su versión aunque administración revise la plantilla",async()=>{
+ await asUser(owner);
+ const templates=(await db.query<{id:string;name:string;phases:string[]}>("select id,name,phases from phase_templates where organization_id=$1 order by name",[org])).rows;
+ const architectural=templates.find(t=>t.name==="Arquitectura")!;
+ expect(architectural.phases).not.toEqual(templates.find(t=>t.name==="Visualización")!.phases);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Prueba de fases',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const id=crypto.randomUUID();
+ await db.query("insert into project_phase_plans(id,organization_id,project_id,template_id,template_version) values($1,$2,$3,$4,1)",[id,org,project,architectural.id]);
+ await db.query("update phase_templates set phases=array['Diagnóstico','Entrega'] where id=$1",[architectural.id]);
+ expect((await db.query("select phases,template_version from project_phase_plans where id=$1",[id])).rows).toEqual([{phases:architectural.phases,template_version:1}]);
+ expect((await db.query("update project_phase_plans set completed=1 where id=$1 and completed=0 returning completed",[id])).rows).toEqual([{completed:1}]);
+ await expect(db.query("update project_phase_plans set completed=1000 where id=$1",[id])).rejects.toThrow();
+ await asUser(other);expect((await db.query("select id from project_phase_plans where id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
+});

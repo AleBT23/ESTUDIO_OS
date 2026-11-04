@@ -17,7 +17,7 @@
 | MKT-01 | Implementado localmente | Comercial → Marketing. Ideas, agenda por mes, canal, publicación, enlace, resultados y portafolio asociado a proyecto y oportunidad. Pendiente el recorrido autenticado en preview. |
 | PRJ-01 | Parcial: expediente con cliente, fecha de inicio, estado y vínculo a versión | Edición de ubicación/fechas/responsables, documentos y enlaces |
 | PRJ-02 | Parcial: paquetes mixtos de una cotización, alcance y presupuesto neto por línea segregado | Edición de paquetes y continuidad completa |
-| PRJ-03 | Pendiente | Plantillas editables/fases y aplicación a proyectos |
+| PRJ-03 | Implementado localmente | Plantillas editables por línea o servicio y planes por proyecto. Arquitectura y visualización tienen fases iniciales distintas. Preview autenticada pendiente. |
 | TASK-01 | Pendiente | Tareas/subtareas, responsables, prioridades, dependencias y tres vistas |
 | DEL-01 | Pendiente | Entregables, archivos, revisiones y aprobaciones |
 | CHG-01 | Pendiente | Impacto, aprobación, extra y alcance trazable |

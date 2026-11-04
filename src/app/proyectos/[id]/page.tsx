@@ -1,3 +1,4 @@
+import { PhasePanel } from "@/modules/projects/phase-panel";
 import { DeliveryPanel } from "@/modules/projects/delivery-panel";
 import { canManageCommercial } from "@/shared/permissions";
 import { TimePanel } from "@/modules/projects/time-panel";
@@ -117,6 +118,7 @@ export default async function ProjectPage({
           Contratos del proyecto
         </Link>
       )}
+      <PhasePanel project={id} />
       <DeliveryPanel
         id={id}
         page={page(filter.entregas)}

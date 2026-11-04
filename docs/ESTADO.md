@@ -336,3 +336,6 @@ Recursos → Procedimientos permite a administración definir pasos ordenados y 
 
 ### Biblioteca técnica y BIM
 Recursos → Biblioteca técnica permite publicar revisiones con etiquetas, descripción, vínculo y un archivo privado de hasta 2 MiB. Los modelos de mayor tamaño se referencian por vínculo. Se conserva cada revisión junto con su adjunto en la misma transacción. Búsqueda paginada sobre la versión vigente y descarga por revisión con autorización del estudio. 145 pruebas, lint, TypeScript, build y 35 migraciones en PostgreSQL local correctos. La prueba de extremo a extremo con Auth y la migración de producción siguen pendientes.
+
+### Fases por línea o servicio
+El expediente permite aplicar una plantilla, avanzar y reabrir fases. Administración puede modificar los nombres y etapas para futuros planes. Cada plan conserva una copia al aplicarse. Los estudios reciben recorridos iniciales distintos para arquitectura y visualización. Se verificaron aislamiento, límites y preservación de la versión aplicada, con 146 pruebas, TypeScript, lint y 36 migraciones locales. La migración 036 sigue pendiente de producción.
