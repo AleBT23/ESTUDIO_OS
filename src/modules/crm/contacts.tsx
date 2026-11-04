@@ -125,7 +125,7 @@ export function ClientContacts({
   writable: boolean;
 }) {
   return (
-    <section className="panel padded" style={{ marginTop: 24 }}>
+    <section id="contactos" className="panel padded" style={{ marginTop: 24 }}>
       <h2>Personas de contacto</h2>
       {contacts
         .filter((c) => !c.deleted_at)

@@ -1,3 +1,4 @@
+import {DossierNav} from "@/shared/ui/dossier-nav";
 import { DossierPanel } from "@/modules/documents/dossier-panel";
 import {ProjectDetails} from "@/modules/projects/project-details";
 import {ProjectPerformance} from "@/modules/projects/project-performance";
@@ -83,12 +84,13 @@ export default async function ProjectPage({
           {client.data.name}
         </p>
       </div>
+      <DossierNav scope="project" role={ctx.membership.role} packages={!!packagesResult.data?.length}/>
       <ProjectDetails project={project}/>
       <DossierPanel scope="project" parent={id} inactive={project.state==="archived"} archived={filter.archivados==="1"} page={page(filter.archivos)}/>
       {packagesResult.data?.length ? (
         <>
           <div className="section-heading">
-            <h2>Paquetes de servicios</h2>
+            <h2 id="paquetes">Paquetes de servicios</h2>
             <span className="caption">
               Un expediente · {packagesResult.data?.length || 0} líneas
               contratadas

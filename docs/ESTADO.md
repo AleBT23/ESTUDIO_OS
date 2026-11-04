@@ -480,3 +480,6 @@ npm run db:plan abre una transacción PostgreSQL de solo lectura y contrasta el 
 
 ### Flujo por área y custodia en Reportes
 El reporte por periodo, cliente, proyecto, obra, paquete y línea muestra cobros, pagos, flujo y margen de caja propios por área. Los fondos administrados se agrupan aparte y los planes sin área atribuida mantienen su propio renglón. La tabla y el CSV usan la misma consulta con permisos de Supabase. Se conciliaron las tres áreas con pagos parciales y se comprobaron centavos por encima del rango entero seguro de JavaScript. Pasaron 194 pruebas, TypeScript, ESLint, build, nueve recorridos Playwright y restauración sintética con 64 migraciones.
+
+### Navegación interna de expedientes
+Clientes y proyectos ofrecen accesos de teclado y táctiles a las secciones disponibles para cada rol. Administración puede saltar a cobros, honorarios y rentabilidad. El cliente archivado omite el acceso al portal. Se comprobaron enlaces por rol y la condición de paquetes presentes. Pasaron 196 pruebas, lint, TypeScript, build y nueve recorridos Playwright (uno omitido). Falta el recorrido autenticado de cada expediente.

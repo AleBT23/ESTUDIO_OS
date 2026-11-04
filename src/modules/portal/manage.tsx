@@ -15,7 +15,7 @@ export async function PortalAccess({ client }: { client: string }) {
   if (error)
     return <p className="notice">No se pudo consultar el acceso al portal.</p>;
   return (
-    <section className="panel padded">
+    <section id="portal" className="panel padded">
       <h2>Acceso al portal de clientes</h2>
       <p>
         El cliente puede consultar su identificador de cuenta al entrar al{" "}

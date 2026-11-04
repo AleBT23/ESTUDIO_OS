@@ -31,7 +31,7 @@ export async function ProjectDetails({ project: p }: { project: Details }) {
   const name = (id: string) =>
     id === ctx.user.id ? "Mi cuenta" : "Miembro " + id.slice(0, 8);
   return (
-    <section className="panel padded">
+    <section id="ficha" className="panel padded">
       <h2>Ficha del proyecto</h2>
       <dl className="detail-list">
         {[

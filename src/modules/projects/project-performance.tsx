@@ -39,7 +39,7 @@ export async function ProjectPerformance({ project }: { project: string }) {
   const margin = marginOnRevenue(received - paid, received);
   const money = (v: string) => formatMoney(BigInt(v));
   return (
-    <section className="panel padded">
+    <section id="rendimiento" className="panel padded">
       <h2>Estimación y ejecución del proyecto</h2>
       <h3>Presupuesto aceptado</h3>
       {e ? (

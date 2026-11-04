@@ -32,7 +32,7 @@ export async function PhasePanel({ project }: { project: string }) {
     return <p className="notice">No se pudieron cargar las fases.</p>;
   const assigned = new Set(plans.data.map((p) => p.template_id));
   return (
-    <section className="panel padded">
+    <section id="fases" className="panel padded">
       <h2>Fases del proyecto</h2>
       {!plans.data.length && (
         <p>Elige una plantilla para incorporar un plan de trabajo.</p>

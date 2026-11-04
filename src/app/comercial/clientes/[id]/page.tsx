@@ -1,3 +1,4 @@
+import {DossierNav} from "@/shared/ui/dossier-nav";
 import { DossierPanel } from "@/modules/documents/dossier-panel";
 import { ClientAgreements } from "@/modules/crm/client-agreements";
 import { Journal } from "@/modules/journal/panel";
@@ -78,6 +79,7 @@ export default async function ClientPage({
             "Ambas líneas / por definir"}
         </p>
       </div>
+      {edit !== "1" && <DossierNav scope="client" role={ctx.membership.role} archived={!!client.deleted_at}/>}
       {canWrite && (
         <Link href={"/comercial/contratos?cliente=" + id}>
           Contratos del cliente
@@ -89,7 +91,7 @@ export default async function ClientPage({
         <div className="detail-layout">
           <section className="panel padded">
             <div className="section-heading">
-              <h2>Información del cliente</h2>
+              <h2 id="ficha">Información del cliente</h2>
               {canWrite && !client.deleted_at && (
                 <Button asChild variant="outline">
                   <Link href={`/comercial/clientes/${id}?edit=1`}>Editar</Link>
