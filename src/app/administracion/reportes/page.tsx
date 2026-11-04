@@ -1,3 +1,4 @@
+import { TimeCostSummary, type TimeCost } from "@/modules/finance/time-cost-summary";
 import {
   expenseCategories,
   financeAreas,
@@ -29,7 +30,7 @@ export default async function Reports({
     ["package", "Paquete", "project_service_packages"],
     ["line", "Línea", "business_lines"],
   ];
-  const [groups, result, expenses] = await Promise.all([
+  const [groups, result, expenses, timeCost] = await Promise.all([
     Promise.all(
       sources.map(async ([name, label, table]) => ({
         name,
@@ -46,6 +47,9 @@ export default async function Reports({
       : null,
     filters.success
       ? ctx.db.rpc("expense_breakdown", { org, ...filters.data })
+      : null,
+    filters.success
+      ? ctx.db.rpc("time_cost_report", { org, ...filters.data }).maybeSingle<TimeCost>()
       : null,
   ]);
   const rows: ProductivityRow[] = result?.data ?? [];
@@ -155,6 +159,17 @@ export default async function Reports({
           </a>
         </section>
       )}
+      {filters.success &&
+        (raw.work ? (
+          <p>
+            Las horas se registran por proyecto o paquete. Selecciona un
+            proyecto sin filtro de obra para consultar su costo interno.
+          </p>
+        ) : timeCost?.error || !timeCost?.data ? (
+          <p>No se pudo calcular el costo de las horas.</p>
+        ) : (
+          <TimeCostSummary row={timeCost.data} />
+        ))}
       {filters.success && (
         <section className="panel padded">
           <h2>Egresos por categoría</h2>

@@ -1,3 +1,4 @@
+import { TimeCostSummary, type TimeCost } from "@/modules/finance/time-cost-summary";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
@@ -6,7 +7,7 @@ import type { ProductivityRow } from "@/modules/finance/productivity-report";
 export async function ProjectPerformance({ project }: { project: string }) {
   const ctx = await requireContext();
   if (!canReadFinance(ctx.membership.role)) return null;
-  const [estimate, flow] = await Promise.all([
+  const [estimate, flow, timeCost] = await Promise.all([
     ctx.db
       .from("project_quote_estimates")
       .select("*")
@@ -14,6 +15,9 @@ export async function ProjectPerformance({ project }: { project: string }) {
       .eq("project_id", project)
       .maybeSingle(),
     ctx.db.rpc("cash_productivity", { org: ctx.organization.id, project }),
+    ctx.db
+      .rpc("time_cost_report", { org: ctx.organization.id, project })
+      .maybeSingle<TimeCost>(),
   ]);
   if (estimate.error || flow.error)
     return (
@@ -73,6 +77,11 @@ export async function ProjectPerformance({ project }: { project: string }) {
         <dt>Tiempo trabajado</dt>
         <dd>{minutes.toString()} min</dd>
       </dl>
+      {timeCost.error || !timeCost.data ? (
+        <p>No se pudo calcular el costo de las horas.</p>
+      ) : (
+        <TimeCostSummary row={timeCost.data} />
+      )}
       <Link href={"/administracion/reportes?project=" + project}>
         Ver flujo por hora, línea y periodo
       </Link>

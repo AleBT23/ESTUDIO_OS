@@ -2509,3 +2509,18 @@ it("desglosa pagos efectivos por área, categoría y fondos y concilia con el fl
  expect((await db.query("select managed,paid from cash_productivity($1,current_date-1,current_date-1,$2,$3,$4) order by managed",[org,client,project,work])).rows).toEqual([{managed:false,paid:"180"},{managed:true,paid:"180"}]);
  await asUser(reader);expect((await report()).rows).toHaveLength(0);await asUser(other);expect((await report()).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("valora minutos por tarifa vigente, distingue cero de falta de tarifa y protege los costos internos",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Horas imputadas','2026-01-01',0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const time=(day:string,minutes:number)=>db.query("insert into project_time(id,organization_id,project_id,worked_on,minutes,description) values($1,$2,$3,$4,$5,'Diseño interior')",[crypto.randomUUID(),org,project,day,minutes]);
+ const rate=(day:string,cents:number)=>db.query("insert into member_cost_rates(id,organization_id,member_id,effective_on,hourly_cents) values($1,$2,$3,$4,$5)",[crypto.randomUUID(),org,owner,day,cents]);
+ await time("2026-01-01",10);await rate("2026-01-02",0);await time("2026-01-02",60);
+ await rate("2026-01-03",101);await time("2026-01-03",15);await time("2026-01-03",15);
+ await rate("2026-01-04",240);await time("2026-01-04",60);
+ const report=(start:string|null)=>db.query("select * from time_cost_report($1,$2,null,$3,$4)",[org,start,client,project]);
+ expect((await report(null)).rows).toEqual([{rated_minutes:"150",unrated_minutes:"10",estimated_cost:"291"}]);
+ expect((await report("2026-01-04")).rows).toEqual([{rated_minutes:"60",unrated_minutes:"0",estimated_cost:"240"}]);
+ await expect(rate("2026-01-04",1000)).rejects.toThrow();
+ await asUser(other);expect((await report(null)).rows).toHaveLength(0);await asUser(reader);expect((await report(null)).rows).toHaveLength(0);await expect(rate("2026-01-05",99)).rejects.toThrow();await asUser(owner);
+});
