@@ -67,6 +67,15 @@ test("emite una propuesta, recupera su PDF y convierte el anticipo en un plan pe
   await payment
     .getByLabel("Obligación de pago")
     .selectOption((await advance.getAttribute("value")) ?? "");
+  const packageSelect = payment.getByLabel(
+    "Paquete al que corresponde el cobro",
+  );
+  await expect(packageSelect.locator("option")).toHaveCount(2);
+  const packageId = await packageSelect
+    .locator("option")
+    .nth(1)
+    .getAttribute("value");
+  await packageSelect.selectOption(packageId!);
   await payment.getByLabel("Importe recibido MXN").fill("2500");
   const reference = "Transferencia parcial " + ref;
   await payment.getByLabel("Referencia del movimiento").fill(reference);
@@ -77,6 +86,11 @@ test("emite una propuesta, recupera su PDF y convierte el anticipo en un plan pe
   const entry = page
     .locator("#cobros .payment-row")
     .filter({ hasText: reference });
+  const ledger = await page.request.get(
+    "/api/reportes/productividad?detalle=movimientos&package=" + packageId,
+  );
+  expect(ledger.status()).toBe(200);
+  expect(await ledger.text()).toContain(reference);
   const receipt = await entry
     .getByRole("link", { name: "Descargar recibo PDF" })
     .getAttribute("href");

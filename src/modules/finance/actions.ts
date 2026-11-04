@@ -16,6 +16,7 @@ export async function recordPayment(
   const input = z
     .object({
       schedule: z.uuid(),
+      package_id: z.union([z.uuid(), z.literal("")]).optional(),
       amount: moneyInput.refine((v) => Number(v) > 0),
       date: z.iso.date(),
       reference: z.string().trim().max(200),
@@ -27,14 +28,18 @@ export async function recordPayment(
       error:
         "Selecciona una obligación, un importe mayor a cero y la fecha del pago.",
     };
-  const { error } = await ctx.db.rpc("record_payment", {
-    org: ctx.organization.id,
-    schedule: input.data.schedule,
-    amount: toCents(input.data.amount),
-    payment_date: input.data.date,
-    payment_reference: input.data.reference,
-    request_id: input.data.request_id,
-  });
+  const { error } = await ctx.db.rpc(
+    input.data.package_id ? "record_package_payment" : "record_payment",
+    {
+      ...(input.data.package_id && { target_package: input.data.package_id }),
+      org: ctx.organization.id,
+      schedule: input.data.schedule,
+      amount: toCents(input.data.amount),
+      payment_date: input.data.date,
+      payment_reference: input.data.reference,
+      request_id: input.data.request_id,
+    },
+  );
   if (error)
     return {
       error:

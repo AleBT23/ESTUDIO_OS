@@ -106,6 +106,7 @@ it("prepara componentes reales para revisión responsive sin simular persistenci
       h(ObservationForm, { project: id, today: "2026-10-25", requestId: id }),
     ),
     h(PaymentForm, {
+      packageOptions: { [id]: [{ id, name: "Planos arquitectónicos" }] },
       plans: [
         {
           id,

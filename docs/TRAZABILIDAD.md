@@ -23,7 +23,7 @@
 | CHG-01 | Solicitudes con impacto en días y cotización adicional vinculada. Aceptación transaccional de paquetes y obligaciones en el mismo proyecto (031). | Validación autenticada del ciclo de aprobación. |
 | FIN-01 | Planes, saldos, pagos efectivos, reversos y reprogramación total o por parcialidades. Recibos PDF por movimiento de proyecto o acuerdo. Pruebas SQL de conservación y concurrencia, permisos y lectura del PDF. | Cancelación del saldo de planes con motivo y auditoría (063). Pendiente recorrido autenticado. |
 | FIN-02 | Acuerdos y movimientos por área y origen de fondos, comprobantes privados, padrón de proveedores y estado de cuenta vinculado con pagos, reversos y saldo pendiente. | Categorías y pagos conciliados con flujo en 055. Falta verificar captura y exportación con sesión aislada. |
-| FIN-03 | Honorarios por miembro y paquete, fijos o porcentuales, con saldo, pagos y comprobantes (029). Probado el límite concurrente de reparto. | Conciliación en preview. |
+| FIN-03 | Honorarios por miembro y paquete, fijos o porcentuales, con saldo, pagos y comprobantes (029). Probado el límite concurrente de reparto y la clasificación por área y origen de fondos (087). | Conciliación en preview. |
 | TIME-01 | Implementado localmente | Captura y corrección versionada por usuario, proyecto, paquete y tarea. Historial paginado en expediente. Pendiente recorrido autenticado en preview. |
 | PROF-01 | Presupuesto aceptado, margen previsto, cobrado y flujo por hora, margen sobre cobros propios. Las horas usan tarifa vigente por miembro y reportan minutos sin tarifa por separado (056). | Validar datos de referencia, indirectos y aceptación del reporte en preview. |
 | REP-01 | Reportes de flujo y egresos por categoría con filtros de periodo, cliente, proyecto, obra, paquete y línea. CSV con centavos exactos. | Recorrido autenticado, descarga y conciliación con datos representativos. |
@@ -42,7 +42,7 @@
 ## Hitos
 - A: PDF con PNG real probado con fixture sintético; **presets reales no migrados**. No aceptado.
 - B: prueba SQL correcta de propuesta emitida/enviada/aceptada → proyecto mixto → obligaciones sin cobro automático. Falta flujo UI real y aceptación.
-- C. El expediente muestra por paquete el presupuesto, los cobros, los gastos y los minutos trabajados. El reporte por línea permite filtrar el periodo. Los pagos generales quedan sin asignar (086). Pendiente conciliación autenticada.
+- C. El expediente muestra por paquete el presupuesto, los cobros, los gastos y los minutos trabajados. El reporte por línea permite filtrar el periodo. La captura permite asignar un cobro al paquete del contrato o ampliación. Flujo, historial y CSV conservan la atribución y el reverso. Los pagos generales quedan sin asignar (086 y 090). Pendiente conciliación autenticada.
 - D. La aceptación del extra crea paquetes y obligaciones en el proyecto original. La conciliación por solicitud cubre parcialidades, reversos, reprogramaciones y cancelaciones (088). Falta el recorrido autenticado.
 - E. Pendiente conciliación contra una copia real respaldada.
 - F: minuta independiente de 1 página y reporte de visita de 3 páginas generados, reabiertos y revisados visualmente con PNG real; persistencia/versiones/Storage verificadas en PostgreSQL de pruebas. Falta E2E remoto/aceptación.

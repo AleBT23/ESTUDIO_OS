@@ -1,13 +1,11 @@
+import { SchedulePaymentForm } from "@/modules/finance/schedule-payment-form";
 import { ReplanForm } from "@/modules/finance/replan-form";
 import Link from "next/link";
 import { Wallet } from "lucide-react";
 import { getContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
-import {
-  PaymentForm,
-  ReversePaymentForm,
-} from "@/modules/finance/payment-forms";
+import { ReversePaymentForm } from "@/modules/finance/payment-forms";
 export default async function FinancePage({
   searchParams,
 }: {
@@ -69,9 +67,9 @@ export default async function FinancePage({
       .order("id")
       .range((page - 1) * 30, page * 30 - 1),
     ctx.db
-      .from("payments")
+      .from("project_payment_history")
       .select(
-        "id,schedule_id,amount_cents,paid_on,reference,state,version,reversal_reason",
+        "id,schedule_id,amount_cents,paid_on,reference,state,version,reversal_reason,package_name",
         { count: "exact" },
       )
       .eq("organization_id", ctx.organization.id)
@@ -185,7 +183,7 @@ export default async function FinancePage({
         </div>
       </section>
       <div style={{ marginTop: 24 }}>
-        <PaymentForm
+        <SchedulePaymentForm
           plans={pending}
           today={today}
           requestId={crypto.randomUUID()}
@@ -201,7 +199,7 @@ export default async function FinancePage({
                 {payment.state === "posted" ? "Cobrado" : "Revertido"}
               </span>
               <p className="caption" style={{ marginTop: 7 }}>
-                {payment.paid_on} · {payment.reference || "Sin referencia"}
+                {payment.paid_on} · {payment.reference || "Sin referencia"} · {payment.package_name ?? "Sin paquete asignado"}
               </p>
               <a href={"/api/recibos/" + payment.id + "?origen=proyecto"}>
                 Descargar recibo PDF

@@ -9,6 +9,8 @@ type Row = {
   client_name: string | null;
   project_name: string | null;
   work_name: string | null;
+  package_name: string | null;
+  line_name: string | null;
   supplier: string | null;
   area: keyof typeof cashAreas;
   managed: boolean;
@@ -22,7 +24,7 @@ type Row = {
 };
 export function ledgerCsv(rows: Row[]) {
   const header =
-    "ID,Origen,Fecha,Concepto,Cliente,Proyecto,Obra,Proveedor,Área,Fondos,Movimiento,Importe MXN,Flujo efectivo MXN,Referencia,Categoría,Estado,Fecha de reverso,Motivo de reverso";
+    "ID,Origen,Fecha,Concepto,Cliente,Proyecto,Obra,Proveedor,Área,Fondos,Movimiento,Importe MXN,Flujo efectivo MXN,Referencia,Categoría,Estado,Fecha de reverso,Motivo de reverso,Paquete,Línea";
   const escape = (s: string | null) =>
     '"' +
     (/^\s*[=+@-]/.test(s ?? "") ? "'" : "") +
@@ -56,6 +58,8 @@ export function ledgerCsv(rows: Row[]) {
           r.reversed ? "Revertido" : "Vigente",
           r.reversed_at ?? "",
           escape(r.reversal_reason),
+          escape(r.package_name),
+          escape(r.line_name),
         ].join(","),
       ),
     ].join("\r\n") +

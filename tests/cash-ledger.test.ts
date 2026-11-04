@@ -10,6 +10,8 @@ it("escapa celdas de terceros y conserva el importe original con flujo cero en u
     project_name: null,
     work_name: null,
     supplier: null,
+    package_name: "Planos",
+    line_name: "Visualización",
     area: "construction" as const,
     managed: true,
     direction: "out",
@@ -26,6 +28,7 @@ it("escapa celdas de terceros y conserva el importe original con flujo cero en u
   ]);
   expect(csv).toContain('"\'=SUM(1,2)"');
   expect(csv).toContain('"Peña ""A"""');
+  expect(csv).toContain('","Planos","Visualización"');
   expect(csv).toContain("Pago,125.01,-125.01");
   expect(csv).toContain("Pago,125.01,0.00");
   expect(csv).toContain('Revertido,,"Corrección"');

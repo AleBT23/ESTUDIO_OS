@@ -1,12 +1,10 @@
+import { SchedulePaymentForm } from "@/modules/finance/schedule-payment-form";
 import { ReplanForm } from "@/modules/finance/replan-form";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canReadFinance } from "@/shared/permissions";
 import { formatMoney } from "@/shared/money";
-import {
-  PaymentForm,
-  ReversePaymentForm,
-} from "@/modules/finance/payment-forms";
+import { ReversePaymentForm } from "@/modules/finance/payment-forms";
 import { AmountForm } from "./forms";
 import { projectWorkspaceReady } from "./availability";
 export async function ProjectFinance({
@@ -48,13 +46,13 @@ export async function ProjectFinance({
     .eq("organization_id", ctx.organization.id)
     .eq("project_id", project);
   const historyQuery = ctx.db
-    .from("payments")
+    .from("project_payment_history")
     .select(
-      "id,amount_cents,paid_on,reference,state,version,reversal_reason,payment_schedules!inner(project_id,scope_change_id)",
+      "id,amount_cents,paid_on,reference,state,version,reversal_reason,package_name",
       { count: "exact" },
     )
     .eq("organization_id", ctx.organization.id)
-    .eq("payment_schedules.project_id", project);
+    .eq("project_id", project);
   const planLink = (n: number) =>
     `?planes=${n}&payments=${page}${change ? "&ampliacion=" + change : ""}#plan-cobro`;
   const [summary, plans, payments] = await Promise.all([
@@ -70,10 +68,7 @@ export async function ProjectFinance({
       .order("due_date")
       .order("id")
       .range((planPage - 1) * 30, planPage * 30 - 1),
-    (change
-      ? historyQuery.eq("payment_schedules.scope_change_id", change)
-      : historyQuery
-    )
+    (change ? historyQuery.eq("scope_change_id", change) : historyQuery)
       .order("paid_on", { ascending: false })
       .order("created_at", { ascending: false })
       .range((page - 1) * 30, page * 30 - 1),
@@ -152,7 +147,7 @@ export async function ProjectFinance({
           )}
         </details>
       </div>
-      <PaymentForm
+      <SchedulePaymentForm
         key={`${change ?? "todos"}-${planPage}`}
         plans={(plans.data || [])
           .filter((p) => BigInt(p.balance_text) > 0n)
@@ -179,7 +174,8 @@ export async function ProjectFinance({
             <div>
               <strong>{formatMoney(payment.amount_cents)}</strong>
               <p>
-                {payment.paid_on} · {payment.reference || "Sin referencia"}
+                {payment.paid_on} · {payment.reference || "Sin referencia"} ·{" "}
+                {payment.package_name ?? "Sin paquete asignado"}
               </p>
               <span className="tag">
                 {payment.state === "posted" ? "Recibido" : "Revertido"}
