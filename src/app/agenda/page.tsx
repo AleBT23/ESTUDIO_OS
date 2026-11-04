@@ -1,8 +1,10 @@
+import { StudioCalendar } from "@/modules/projects/calendar";
 import Link from "next/link";
 import { z } from "zod";
 import { requireContext } from "@/shared/auth/context";
 import { DashboardTasks } from "@/modules/projects/workspace";
 const views = {
+  calendar: "Calendario",
   today: "Hoy",
   week: "Próximos siete días",
   overdue: "Vencidos",
@@ -57,11 +59,18 @@ export default async function Agenda({
           <button className="button button-outline">Ver fecha</button>
         </form>
       )}
-      <DashboardTasks
-        page={Math.max(1, Math.min(10000, parseInt(q.page ?? "1") || 1))}
-        view={view}
-        date={view === "date" ? date : undefined}
-      />
+      {view === "calendar" ? (
+        <StudioCalendar
+          date={date ?? today}
+          page={Math.max(1, Math.min(10000, parseInt(q.page ?? "1") || 1))}
+        />
+      ) : (
+        <DashboardTasks
+          page={Math.max(1, Math.min(10000, parseInt(q.page ?? "1") || 1))}
+          view={view}
+          date={view === "date" ? date : undefined}
+        />
+      )}
     </>
   );
 }

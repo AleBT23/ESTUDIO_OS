@@ -2002,3 +2002,12 @@ it("el entregable conserva revisiones ordenadas y se cierra al aprobar",async()=
  await asUser(reader);expect((await db.query("select state,revision from deliverable_status where id=$1",[id])).rows).toEqual([{state:"approved",revision:4}]);await expect(add(5,"review")).rejects.toThrow();
  await asUser(other);expect((await db.query("select * from deliverable_revisions where deliverable_id=$1",[id])).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el calendario deriva cobros efectivos pendientes, respeta permisos y retira el aviso al liquidar",async()=>{
+ await asUser(owner);const project=(await db.query<{id:string}>("select public.create_project_record($1,$2,'Proyecto con vencimiento',current_date,4000,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const dues=()=>db.query<{id:string}>("select id from agenda_events where organization_id=$1 and project_id=$2 and kind='collection'",[org,project]);
+ const schedule=(await dues()).rows[0].id;
+ await asUser(reader);expect((await dues()).rows).toHaveLength(0);
+ await asUser(owner);await db.query("select public.record_payment($1,$2,1500,current_date-1,'Parcial',$3)",[org,schedule,crypto.randomUUID()]);expect((await dues()).rows).toHaveLength(1);
+ await db.query("select public.record_payment($1,$2,2500,current_date-1,'Liquidación',$3)",[org,schedule,crypto.randomUUID()]);expect((await dues()).rows).toHaveLength(0);
+});

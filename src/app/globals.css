@@ -1662,3 +1662,9 @@ dialog {
 :root { color-scheme: light; }
 :root[data-theme=dark] { color-scheme: dark; }
 :root[data-theme=dark] .studio-brand img { background: #eff3ed; border-radius: 4px; }
+
+.month-calendar { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; margin-block:16px; }
+.month-calendar strong { text-align:center; font-size:.82rem; color:var(--muted); }
+.calendar-day { min-height:44px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; border:1px solid var(--line); border-radius:6px; }
+.calendar-day:hover,.calendar-day[aria-current=date] { background:var(--soft); border-color:var(--accent); }
+.calendar-day small { color:var(--accent); font-weight:700; }
