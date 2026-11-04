@@ -35,7 +35,7 @@
 | SOP-01 | Implementado localmente | Procedimientos reutilizables, ejecuciones independientes por proyecto y pasos reversibles. Preview autenticada pendiente. |
 | CORE-01 | Supabase SSR, roles, RLS y cambio de rol auditado de miembros existentes por el propietario (057). Prueba de concesión y retiro de acceso financiero en SQL. | Invitaciones con caducidad y verificación de correo (058). Pendientes alcance por proyecto y validación autenticada con dos cuentas. |
 | CORE-02 | Parcial: auditoría, versiones, archivo de clientes/contactos/servicios, reversos de cobro | Completar recuperación en restantes entidades |
-| CORE-03 | Exportador legado con SHA-256, migraciones con checksums y respaldo real hasta 010. db:restore-test restaura en base vacía la estructura actual con datos sintéticos y comprueba saldos, documentos y RLS. | Revisión por folio, clientes (068), servicios (075), presets (076) y archivo histórico de propuestas (077) en staging. Conceptos reutilizables (078). Pendientes exportación general y ensayo de la copia real con Storage. |
+| CORE-03 | Exportador legado con SHA-256, migraciones con checksums y respaldo real hasta 010. db:restore-test restaura en base vacía la estructura actual con datos sintéticos y comprueba saldos, documentos y RLS. | Revisión por folio, clientes (068), servicios (075), presets (076) y archivo histórico de propuestas (077) en staging. Conceptos reutilizables (078). Exportación operativa por módulo con SHA-256 para propietario (079). Pendiente ensayo con copia real y Storage. |
 | CORE-04 | Agenda y avisos internos por usuario. Incluye seguimientos, vencimientos de acuerdos según saldo y recordatorios privados sin proyecto, con reprogramación y recurrencia (038, 048 y 049). | Verificación autenticada de punta a punta y evaluación del proveedor de notificaciones externas. |
 | CORE-05 | Parcial: shell responsive, formularios, foco/reduced-motion; E2E móvil | E2E de formularios autenticados y accesibilidad ampliada |
 
@@ -49,4 +49,4 @@
 ## Secuencia para retomar
 1. Contrastar el historial mediante `npm run db:plan` y repetir la restauración en una copia aislada actualizada, incluidos los objetos de Storage.
 2. Ejecutar los recorridos autenticados del anticipo y del lector con `npm run test:e2e:auth`. Completar la verificación de portal, expedientes, cotizaciones y obras con identidades separadas.
-3. Continuar las funcionalidades abiertas en la matriz, incluidos la exportación general por permisos y el cotejo con muestras reales del archivo histórico y los conceptos (077 y 078), y contrastar importes y PDFs antes de preparar la publicación.
+3. Continuar las funcionalidades abiertas en la matriz, incluidos los paquetes de trabajo manuales y el cotejo con muestras reales del archivo histórico y los conceptos (077 y 078), y contrastar importes y PDFs antes de preparar la publicación.

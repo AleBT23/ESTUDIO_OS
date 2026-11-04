@@ -1,3 +1,4 @@
+import { WorkspaceExportCheck } from "@/shared/ui/workspace-export-check";
 import { StageLegacyPanel } from "@/modules/crm/stage-legacy-panel";
 import { LegacyReviewPanel } from "@/modules/crm/legacy-review-panel";
 import { Check, Circle, ArrowUpRight } from "lucide-react";
@@ -100,6 +101,39 @@ export default async function SettingsPage() {
           </p>
         </section>
       </div>
+      {ctx?.membership?.role === "owner" && (
+        <section className="panel padded">
+          <h2>Exportar datos del despacho</h2>
+          <p>
+            Descarga una instantánea JSON de los registros comerciales,
+            proyectos, obras, finanzas y recursos visibles. Incluye metadatos de
+            los adjuntos. Los archivos binarios, las credenciales y las
+            preferencias personales quedan fuera del archivo. El nombre contiene
+            su huella SHA-256.
+          </p>
+          <form action="/api/exportacion">
+            <label>
+              Sección
+              <select name="seccion">
+                {Object.entries({
+                  todo: "Todo el despacho",
+                  comercial: "Comercial",
+                  proyectos: "Proyectos",
+                  obras: "Obras",
+                  finanzas: "Finanzas",
+                  recursos: "Recursos",
+                }).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="button button-primary">Descargar JSON</button>
+          </form>
+          <WorkspaceExportCheck />
+        </section>
+      )}
       {ctx?.membership?.role === "owner" && <LegacyReviewPanel />}
       {process.env.APP_ENV === "staging" &&
         ctx?.membership?.role === "owner" && (

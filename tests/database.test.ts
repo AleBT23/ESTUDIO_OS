@@ -2850,3 +2850,22 @@ it("importa un concepto sin alterar espacios, acentos ni saltos de línea y prot
  await db.query("update concepts set body='Nueva revisión' where organization_id=$1 and legacy_id=$2",[org,item.id]);
  await expect(apply(item)).rejects.toThrow("distintos");
 });
+it("exporta una instantánea verificable del estudio sin adjuntos binarios ni registros ajenos",async()=>{
+ const download=(organization:string,section:string)=>db.query<{file:string}>("select export_workspace($1,$2) file",[organization,section]);
+ await asUser(owner);
+ const file=JSON.parse((await download(org,"todo")).rows[0].file);
+ expect(file).toMatchObject({format:"estudio-os-workspace",version:1,organization_id:org,section:"todo"});
+ expect(file.collections.clients.rows.some((row:{id:string})=>row.id===client)).toBe(true);
+ for(const collection of Object.values(file.collections) as {count:number;rows:{organization_id:string}[]}[]){
+   expect(collection.count).toBe(collection.rows.length);
+   expect(collection.rows.every(row=>row.organization_id===org)).toBe(true);
+ }
+ expect(file.collections.dossier_files.count).toBeGreaterThan(0);
+ expect(file.collections.dossier_files.rows.every((row:object)=>!("attachment" in row))).toBe(true);
+ const financial=JSON.parse((await download(org,"finanzas")).rows[0].file);
+ expect(financial.collections.finance_cases.count).toBeGreaterThan(0);
+ expect(financial.collections.clients).toBeUndefined();
+ await expect(download(org,"inexistente")).rejects.toThrow("Sección");
+ await expect(download(otherOrg,"todo")).rejects.toThrow("propietario");
+ await asUser(reader);await expect(download(org,"todo")).rejects.toThrow("propietario");await asUser(owner);
+});
