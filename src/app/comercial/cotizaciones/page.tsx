@@ -1,3 +1,5 @@
+import { restoreQuote } from "@/modules/quotes/archive-action";
+import { RecordForm } from "@/shared/ui/record-form";
 import Link from "next/link";
 import { requireContext } from "@/shared/auth/context";
 import { canManageCommercial } from "@/shared/permissions";
@@ -18,6 +20,7 @@ export default async function QuotesPage({
   searchParams: Promise<{
     q?: string;
     page?: string;
+    archived?: string;
     deleted?: string;
     status?: string;
   }>;
@@ -30,6 +33,7 @@ export default async function QuotesPage({
       </p>
     );
   const filter = await searchParams;
+  const archived = filter.archived === "1";
   const q = typeof filter.q === "string" ? filter.q.slice(0, 120) : "";
   const status =
     filter.status && Object.hasOwn(statuses, filter.status)
@@ -48,10 +52,13 @@ export default async function QuotesPage({
       },
     )
     .eq("organization_id", ctx.organization.id)
-    .is("deleted_at", null)
+
     .order("updated_at", { ascending: false })
     .order("id")
     .range((page - 1) * 30, page * 30 - 1);
+  query = archived
+    ? query.not("deleted_at", "is", null)
+    : query.is("deleted_at", null);
   if (status) query = query.eq("status", status);
   if (q) query = query.ilike("name", `%${q.replace(/[\\%_]/g, "\\$&")}%`);
   const { data, error, count } = await query;
@@ -90,6 +97,13 @@ export default async function QuotesPage({
               ))}
             </select>
           </label>
+          <label>
+            Mostrar
+            <select name="archived" defaultValue={archived ? "1" : "0"}>
+              <option value="0">Vigentes</option>
+              <option value="1">Archivadas</option>
+            </select>
+          </label>
           <Button variant="outline">Buscar</Button>
         </form>
         <Button asChild>
@@ -112,12 +126,16 @@ export default async function QuotesPage({
               {data.map((quote) => (
                 <tr key={quote.id}>
                   <td>
-                    <Link
-                      className="client-name"
-                      href={`/comercial/cotizaciones/${quote.id}`}
-                    >
-                      {quote.name}
-                    </Link>
+                    {archived ? (
+                      quote.name
+                    ) : (
+                      <Link
+                        className="client-name"
+                        href={`/comercial/cotizaciones/${quote.id}`}
+                      >
+                        {quote.name}
+                      </Link>
+                    )}
                   </td>
                   <td>
                     <span className="tag">
@@ -132,12 +150,26 @@ export default async function QuotesPage({
                     }).format(new Date(quote.updated_at))}
                   </td>
                   <td>
-                    <QuoteActions
-                      id={quote.id}
-                      name={quote.name}
-                      version={quote.version}
-                      accepted={quote.status === "accepted"}
-                    />
+                    {archived ? (
+                      <RecordForm
+                        save={restoreQuote}
+                        id={quote.id}
+                        submitLabel="Restaurar"
+                      >
+                        <input
+                          type="hidden"
+                          name="version"
+                          value={quote.version}
+                        />
+                      </RecordForm>
+                    ) : (
+                      <QuoteActions
+                        id={quote.id}
+                        name={quote.name}
+                        version={quote.version}
+                        accepted={quote.status === "accepted"}
+                      />
+                    )}
                   </td>
                 </tr>
               ))}
@@ -147,7 +179,7 @@ export default async function QuotesPage({
       ) : (
         <section className="panel empty-state">
           <h2>
-            {q || status
+            {archived || q || status
               ? "Sin cotizaciones para esta selección"
               : "Una propuesta para lo que viene"}
           </h2>
@@ -161,7 +193,7 @@ export default async function QuotesPage({
         {page > 1 && (
           <Button asChild variant="outline">
             <Link
-              href={`/comercial/cotizaciones?${new URLSearchParams({ q, status, page: String(page - 1) })}`}
+              href={`/comercial/cotizaciones?${new URLSearchParams({ q, status, ...(archived ? {archived:"1"} : {}), page: String(page - 1) })}`}
             >
               Anterior
             </Link>
@@ -173,7 +205,7 @@ export default async function QuotesPage({
         {page * 30 < (count || 0) && (
           <Button asChild variant="outline">
             <Link
-              href={`/comercial/cotizaciones?${new URLSearchParams({ q, status, page: String(page + 1) })}`}
+              href={`/comercial/cotizaciones?${new URLSearchParams({ q, status, ...(archived ? {archived:"1"} : {}), page: String(page + 1) })}`}
             >
               Siguiente
             </Link>

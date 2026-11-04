@@ -69,7 +69,7 @@ it("retira concesiones anónimas de RPC incluso con defaults de Supabase", async
        where n.nspname='public' and p.prosecdef`,
     )
   ).rows;
-  expect(rows).toHaveLength(27);
+  expect(rows).toHaveLength(28);
   expect(rows.every((r) => !r.anonymous && r.authenticated)).toBe(true);
   await db.exec("set role anon");
   try {
@@ -2602,4 +2602,17 @@ it("un cliente anterior puede editar el preset sin perder sus condiciones", asyn
   expect((await db.query("select conditions,version from service_presets where id=$1",[id])).rows).toEqual([{conditions:"50% al inicio",version:2}]);
   await db.query("select save_preset_terms($1,$2,2,'Vivienda','',$3::jsonb,'')",[org,id,items]);
   expect((await db.query("select conditions from service_presets where id=$1",[id])).rows).toEqual([{conditions:""}]);
+});
+it("restaura una propuesta emitida conservando su versión documental y audita la recuperación", async () => {
+  await asUser(owner);
+  const {id,version,prepared}=await issuedFixture();
+  await db.query("select archive_quote($1,$2,$3)",[org,id,version]);
+  const restore=(v:number)=>db.query("select restore_quote($1,$2,$3)",[org,id,v]);
+  await asUser(reader); await expect(restore(version+1)).rejects.toThrow("Permisos");
+  await asUser(other); await expect(restore(version+1)).rejects.toThrow("Permisos");
+  await asUser(owner); await expect(restore(version)).rejects.toThrow("cambió");
+  await restore(version+1); await expect(restore(version+1)).rejects.toThrow("cambió");
+  expect((await db.query("select version from quotes where id=$1 and deleted_at is null",[id])).rows).toEqual([{version:version+2}]);
+  expect((await db.query<{snapshot:unknown}>("select snapshot from quote_versions where id=$1",[prepared.id])).rows[0].snapshot).toEqual(prepared.snapshot);
+  expect((await db.query("select actor_id from audit_events where entity_id=$1 and action='restored'",[id])).rows).toEqual([{actor_id:owner}]);
 });

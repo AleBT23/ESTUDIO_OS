@@ -468,3 +468,6 @@ Cada expediente admite enlaces y archivos privados de hasta 2 MiB. Los permisos 
 
 ### Condiciones reutilizables en las cotizaciones
 Los presets guardan condiciones junto a partidas y notas. Al aplicarlos se conservan las cláusulas del borrador. Si el texto combinado excede el límite, el editor conserva el borrador completo. La API anterior mantiene las condiciones cuando edita el mismo preset. Pasaron 188 pruebas, lint, TypeScript, build, 9 recorridos Playwright y restauración local con 61 migraciones. Pendiente validación en preview.
+
+### Recuperación de cotizaciones
+Comercial → Cotizaciones permite filtrar archivadas por nombre y estado y restaurar una propuesta. Se conserva el documento emitido, se registra el actor y se rechazan versiones obsoletas y roles ajenos. Pasaron 189 pruebas, lint, TypeScript, build, 9 recorridos Playwright y restauración sintética con 62 migraciones. Pendiente validación remota.

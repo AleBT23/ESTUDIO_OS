@@ -41,3 +41,27 @@ export async function archiveQuote(
   revalidatePath("/");
   redirect("/comercial/cotizaciones?deleted=1");
 }
+export async function restoreQuote(
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const ctx = await requireContext();
+  if (!canManageCommercial(ctx.membership.role))
+    return { error: "Permisos insuficientes." };
+  const input = z
+    .object({ id: z.uuid(), version: z.coerce.number().int().positive() })
+    .safeParse(Object.fromEntries(form));
+  if (!input.success) return { error: "Referencia inválida." };
+  const { error } = await ctx.db.rpc("restore_quote", {
+    org: ctx.organization.id,
+    quote: input.data.id,
+    expected_version: input.data.version,
+  });
+  if (error)
+    return {
+      error: "No se pudo restaurar. Actualiza la lista y revisa los permisos.",
+    };
+  revalidatePath("/comercial/cotizaciones");
+  revalidatePath("/");
+  redirect("/comercial/cotizaciones/" + input.data.id);
+}
