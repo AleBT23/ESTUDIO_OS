@@ -363,3 +363,6 @@ Inicio consulta la misma función financiera que Administración → Reportes. L
 
 ### Pendientes vencidos y entregas próximas en Inicio
 Dos indicadores con conteo exacto abren vistas específicas de Agenda. Los pendientes completados y las entregas aprobadas se excluyen. Los siete días incluyen hoy y los seis siguientes según la zona horaria del estudio. Se verificaron límites de calendario, cambio de año y año bisiesto. Pasaron 154 pruebas, TypeScript, lint y compilación. Sin migración nueva. Falta contrastar conteos y listados con una sesión autenticada en preview.
+
+### Subtareas de proyecto
+Cada pendiente del expediente admite pasos individuales con avance visible. El cierre desde Agenda, Inicio y el expediente exige que todos estén completos. Las recurrencias comienzan con una copia abierta de los pasos. Se verificaron cierre, reapertura protegida, recurrencia y aislamiento entre estudios. Pasaron 155 pruebas, TypeScript, ESLint, build y 41 migraciones en PostgreSQL local. Pendientes las dependencias entre tareas, la preview autenticada y la migración de producción.

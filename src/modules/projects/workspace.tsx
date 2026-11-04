@@ -1,3 +1,4 @@
+import { Subtasks } from "./subtasks";
 import { studioToday, weekThrough } from "./agenda-window";
 import Link from "next/link";
 import { requireContext, getContext } from "@/shared/auth/context";
@@ -129,7 +130,7 @@ export async function ProjectWorkspace({
     ctx.db
       .from("project_notes")
       .select(
-        "id,project_id,kind,body,due_on,priority,repeat_days,assignee,completed_at,version,created_at",
+        "id,project_id,kind,body,due_on,priority,repeat_days,assignee,completed_at,version,created_at,task_subtasks(id,label,done)",
         { count: "exact" },
       )
       .eq("organization_id", ctx.organization.id)
@@ -183,13 +184,22 @@ export async function ProjectWorkspace({
         )}
         <div>
           {notes.data?.map((note) => (
-            <NoteRow
-              members={members.data ?? []}
-              key={note.id + ":" + note.version}
-              note={note as ProjectNote}
-              writable={writable}
-            />
-          ))}
+            <article key={note.id + ":" + note.version}>
+              <NoteRow
+                members={members.data ?? []}
+                note={note as ProjectNote}
+                writable={writable}
+              />
+              {note.kind === "task" && (
+                <Subtasks
+                  task={note.id}
+                  project={project}
+                  items={note.task_subtasks}
+                  writable={writable && !note.completed_at}
+                />
+              )}
+            </article>
+          ))}{" "}
           {!notes.data?.length && (
             <p className="muted">Todavía no hay notas en esta página.</p>
           )}

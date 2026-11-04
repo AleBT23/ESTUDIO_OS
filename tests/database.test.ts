@@ -2274,3 +2274,16 @@ it("la actividad conserva registro y reverso con permisos financieros",async()=>
  await asUser(reader);expect((await history()).rows).toHaveLength(0);
  await asUser(other);expect((await history()).rows).toHaveLength(0);await asUser(owner);
 });
+
+it("el cierre exige subtareas completas y la siguiente recurrencia comienza con pasos abiertos",async()=>{
+ await asUser(owner);
+ const project=(await db.query<{id:string}>("select create_project_record($1,$2,'Desglose de tareas',current_date,0,$3) id",[org,client,crypto.randomUUID()])).rows[0].id;
+ const task=(await db.query<{id:string}>("insert into project_notes(organization_id,project_id,kind,body,due_on,repeat_days) values($1,$2,'task','Revisión semanal',current_date,7) returning id",[org,project])).rows[0].id;
+ const step=crypto.randomUUID();await db.query("insert into task_subtasks(id,organization_id,task_id,label) values($1,$2,$3,'Revisar cotas')",[step,org,task]);
+ const close=()=>db.query("update project_notes set completed_at=now() where id=$1",[task]);
+ await expect(close()).rejects.toThrow(/subtareas/);
+ await db.query("update task_subtasks set done=true where id=$1",[step]);await close();
+ expect((await db.query("select s.label,s.done from task_subtasks s join project_notes n on n.id=s.task_id where n.previous_occurrence=$1",[task])).rows).toEqual([{label:"Revisar cotas",done:false}]);
+ await expect(db.query("update task_subtasks set done=false where id=$1",[step])).rejects.toThrow(/Reabre/);
+ await asUser(other);expect((await db.query("select id from task_subtasks where id=$1",[step])).rows).toHaveLength(0);await asUser(owner);
+});

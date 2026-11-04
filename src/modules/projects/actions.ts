@@ -95,7 +95,11 @@ export async function toggleProjectNote(
     .select("id")
     .maybeSingle();
   if (error || !data)
-    return { error: "El pendiente cambió. Recarga para ver su estado actual." };
+    return {
+      error: error?.message.includes("Completa las subtareas")
+        ? "Completa las subtareas pendientes desde el expediente antes de cerrar la tarea."
+        : "El pendiente cambió. Recarga para ver su estado actual.",
+    };
   refresh(input.data.project);
   return {
     success:
