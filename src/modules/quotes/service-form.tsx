@@ -9,8 +9,10 @@ import { units, type Service } from "./schema";
 export function ServiceForm({
   service,
   lines,
+  categories,
 }: {
   service?: Service;
+  categories: string[];
   lines: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(saveService, {});
@@ -67,9 +69,15 @@ export function ServiceForm({
           Categoría
           <input
             name="category"
+            list="service-categories"
             maxLength={100}
             defaultValue={service?.category || ""}
           />
+          <datalist id="service-categories">
+            {categories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </label>
         <label>
           Unidad

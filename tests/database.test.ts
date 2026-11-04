@@ -2775,3 +2775,16 @@ it("conserva el historial comercial con autor real y restringe lecturas y escrit
   await expect(add()).rejects.toThrow();
   expect((await read()).rows).toHaveLength(1);
 });
+it("agrupa categorías por estudio y respeta el texto original de cada servicio",async()=>{
+  const {service:first}=await commercialFixture();
+  const {service:second}=await commercialFixture();
+  await db.query("update services set category=' Topografía ' where id=$1",[first]);
+  await db.query("update services set category='TOPOGRAFÍA' where id=$1",[second]);
+  const categories=()=>db.query("select name from service_categories where organization_id=$1 and category_key='topografía'",[org]);
+  expect((await categories()).rows).toEqual([{name:"Topografía"}]);
+  expect((await db.query("select category from services where id=$1 and category_key='topografía'",[first])).rows).toEqual([{category:" Topografía "}]);
+  await db.query("update services set category='' where id=$1",[first]);
+  expect((await db.query("select category_key from services where id=$1",[first])).rows).toEqual([{category_key:null}]);
+  await asUser(other);expect((await categories()).rows).toEqual([]);
+  await asUser(reader);expect((await categories()).rows).toEqual([]);await asUser(owner);
+});

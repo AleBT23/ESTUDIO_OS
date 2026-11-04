@@ -523,3 +523,6 @@ Pipeline conserva llamadas, reuniones, correos y notas con fecha y autor en Supa
 
 ### Flujo del periodo en Inicio
 El resumen y su desglose por área usan la misma consulta SQL y los mismos filtros de fechas y línea que el CSV. La prueba del panel contrasta un servicio propio con fondos de obra administrados y verifica la ausencia de margen propio sobre estos últimos. Pasaron 209 pruebas y nueve recorridos de navegación.
+
+### Categorías de servicios por despacho
+El catálogo ofrece sugerencias reutilizables al crear o editar servicios y permite filtrar activos y archivados por categoría. PostgreSQL agrupa diferencias de mayúsculas y espacios sin reescribir los nombres históricos. Pasaron 210 pruebas y la restauración sintética con 73 migraciones.

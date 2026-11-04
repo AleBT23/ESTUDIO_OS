@@ -16,6 +16,7 @@ export default async function CatalogPage({
     edit?: string;
     archived?: string;
     q?: string;
+    category?: string;
   }>;
 }) {
   const ctx = await requireContext();
@@ -38,8 +39,18 @@ export default async function CatalogPage({
       ? query.not("deleted_at", "is", null)
       : query.is("deleted_at", null);
   if (q) query = query.ilike("name", `%${q.replace(/[\\%_]/g, "\\$&")}%`);
-  const { data, error } = await query;
-  if (error) throw new Error("No se pudo cargar el catálogo.");
+  if (filter.category) query = query.eq("category_key", filter.category);
+  const [{ data, error }, categories] = await Promise.all([
+    query,
+    ctx.db
+      .from("service_categories")
+      .select("category_key,name")
+      .eq("organization_id", ctx.organization.id)
+      .order("name")
+      .limit(1000),
+  ]);
+  if (error || categories.error)
+    throw new Error("No se pudo cargar el catálogo.");
   const services = (data || []) as Service[];
   let selected = services.find((s) => s.id === filter.service);
   if (filter.service && !selected) {
@@ -64,6 +75,7 @@ export default async function CatalogPage({
       (selected && filter.edit === "1" && !selected.deleted_at) ? (
         <ServiceForm
           service={filter.new === "1" ? undefined : selected}
+          categories={(categories.data ?? []).map((c) => c.name)}
           lines={ctx.lines}
         />
       ) : selected ? (
@@ -125,6 +137,18 @@ export default async function CatalogPage({
               >
                 <option value="0">Activos</option>
                 <option value="1">Archivados</option>
+              </select>
+              <select
+                name="category"
+                aria-label="Categoría de servicios"
+                defaultValue={filter.category || ""}
+              >
+                <option value="">Todas las categorías</option>
+                {categories.data?.map((c) => (
+                  <option key={c.category_key} value={c.category_key}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
               <Button variant="outline">Buscar</Button>
             </form>
