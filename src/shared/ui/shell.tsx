@@ -30,6 +30,19 @@ const navigation = [
   { href: "/administracion", label: "Administración", icon: Wallet },
   { href: "/recursos", label: "Recursos del estudio", icon: BookOpen },
 ];
+function routeLabel(segment = "") {
+  const labels: Record<string, string> = {
+    configuracion: "Configuración",
+    buscar: "Búsqueda",
+    catalogo: "Catálogo",
+    notificaciones: "Notificaciones",
+    pipeline: "Oportunidades",
+    nueva: "Nueva cotización",
+    nuevo: "Nuevo registro",
+    presets: "Presets",
+  };
+  return labels[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1);
+}
 export function Shell({
   children,
   organization,
@@ -108,9 +121,23 @@ export function Shell({
         {children}
       </main>
     );
-  const current = navigation.find((n) =>
-    n.href === "/" ? pathname === "/" : pathname.startsWith(n.href),
-  );
+  const parts = pathname.split("/").filter(Boolean);
+  const area =
+    navigation.find((n) => n.href === "/" + (parts[0] ?? ""))?.label ??
+    routeLabel(parts[0]);
+  const last = parts.at(-1) ?? "";
+  const section = /^[a-f\d-]{36}$/i.test(last)
+    ? ({
+        tiempo: "Registro de tiempo",
+        partidas: "Partida de obra",
+        comprobantes: "Comprobante",
+        cotizaciones: "Cotización",
+        proveedores: "Proveedor",
+        operaciones: "Operación",
+        clientes: "Cliente",
+        proyectos: "Expediente",
+      }[parts.at(-2) ?? ""] ?? "Detalle")
+    : routeLabel(last);
   return (
     <div className={compact ? "workspace compact-menu" : "workspace"}>
       <RefreshOnReturn />
@@ -268,22 +295,19 @@ export function Shell({
           >
             <Menu size={18} />
           </button>
-          <div className="breadcrumb">
-            <span>Mi estudio</span>
-            <span>/</span>
-            <strong>
-              {current?.label ||
-                (pathname === "/buscar"
-                  ? "Búsqueda"
-                  : pathname === "/obras"
-                    ? "Obras"
-                    : pathname === "/agenda"
-                      ? "Agenda"
-                      : pathname === "/acceso"
-                        ? "Acceso"
-                        : "Configuración")}
+          <nav aria-label="Ubicación actual" className="breadcrumb">
+            <Link href="/">Mi estudio</Link>
+            <span aria-hidden="true">/</span>
+            {parts.length > 1 && (
+              <>
+                <Link href={"/" + parts[0]}>{area}</Link>
+                <span aria-hidden="true">/</span>
+              </>
+            )}
+            <strong aria-current="page">
+              {parts.length > 1 ? section : area}
             </strong>
-          </div>
+          </nav>
           <button
             className="icon-button"
             aria-label={dark ? "Activar modo claro" : "Activar modo oscuro"}
